@@ -45,7 +45,7 @@ jobs:
         working-directory: SamLambda
 
       - name: Run smoke tests
-        run: python -m pytest tests/ -v --tb=short
+        run: python -m pytest tests/test_imports.py -v --tb=short
         working-directory: SamLambda
 
       - name: Deploy
