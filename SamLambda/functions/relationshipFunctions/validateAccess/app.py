@@ -3,12 +3,10 @@ import json
 import boto3
 from datetime import datetime, timezone
 from botocore.exceptions import ClientError
+from cors import cors_headers
+from responses import error_response
 
-CORS_HEADERS = {
-    'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
-    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS'
-}
+
 
 def lambda_handler(event, context):
     """Validate if a user has access to another user's content"""
@@ -17,7 +15,7 @@ def lambda_handler(event, context):
     if event.get('httpMethod') == 'OPTIONS':
         return {
             'statusCode': 200,
-            'headers': CORS_HEADERS,
+            'headers': cors_headers(event),
             'body': ''
         }
 
@@ -30,7 +28,7 @@ def lambda_handler(event, context):
         if not all([requesting_user_id, target_user_id]):
             return {
                 'statusCode': 400,
-                'headers': CORS_HEADERS,
+                'headers': cors_headers(event),
                 'body': json.dumps({'error': 'Missing required parameters'})
             }
 
@@ -42,7 +40,7 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'headers': CORS_HEADERS,
+            'headers': cors_headers(event),
             'body': json.dumps(access_result)
         }
 
@@ -50,8 +48,8 @@ def lambda_handler(event, context):
         print(f"Error in validateAccess: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': CORS_HEADERS,
-            'body': json.dumps({'error': str(e)})
+            'headers': cors_headers(event),
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
 
 
@@ -63,7 +61,7 @@ def validate_user_access(requesting_user_id, target_user_id):
         return {'hasAccess': True, 'reason': 'self_access'}
 
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('PersonaRelationshipsDB')
+    table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
 
     try:
         # Check if there's an active relationship
@@ -113,14 +111,14 @@ def validate_user_access(requesting_user_id, target_user_id):
         return {'hasAccess': False, 'reason': 'no_relationship'}
 
     except ClientError as e:
-        return {'hasAccess': False, 'reason': 'database_error', 'error': str(e)}
+        return {'hasAccess': False, 'reason': 'database_error', 'error': 'A server error occurred. Please try again.'}
 
 
 def get_access_conditions(initiator_id, related_user_id):
     """Query AccessConditionsDB for all access conditions for a relationship."""
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('AccessConditionsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         relationship_key = f"{initiator_id}#{related_user_id}"
         response = table.query(
             KeyConditionExpression='relationship_key = :rkey',

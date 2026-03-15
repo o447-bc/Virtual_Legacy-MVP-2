@@ -27,6 +27,9 @@ API Gateway Integration:
 import json
 import boto3
 from decimal import Decimal
+from cors import cors_headers
+from responses import error_response
+
 
 # Custom JSON encoder to handle DynamoDB Decimal types
 class DecimalEncoder(json.JSONEncoder):
@@ -59,7 +62,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'POST,OPTIONS'
             },
@@ -71,7 +74,7 @@ def lambda_handler(event, context):
     if not user_id:
         return {
             'statusCode': 401,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'Unauthorized'})
         }
     
@@ -82,16 +85,16 @@ def lambda_handler(event, context):
         
         # Step 4: Initialize DynamoDB resources
         dynamodb = boto3.resource('dynamodb')
-        progress_table = dynamodb.Table('userQuestionLevelProgressDB')
-        user_status_table = dynamodb.Table('userStatusDB')
-        all_questions_table = dynamodb.Table('allQuestionDB')
+        progress_table = dynamodb.Table(os.environ.get('TABLE_QUESTION_PROGRESS', 'userQuestionLevelProgressDB'))
+        user_status_table = dynamodb.Table(os.environ.get('TABLE_USER_STATUS', 'userStatusDB'))
+        all_questions_table = dynamodb.Table(os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB'))
         
         # Step 5: Get user's current global level
         user_status_response = user_status_table.get_item(Key={'userId': user_id})
         if 'Item' not in user_status_response:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'User status not found. Please initialize progress first.'})
             }
         
@@ -140,7 +143,7 @@ def lambda_handler(event, context):
         if len(current_level_items) == 0:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'No progress data found at current level'})
             }
         
@@ -151,7 +154,7 @@ def lambda_handler(event, context):
             if remaining_count > 0:
                 return {
                     'statusCode': 200,
-                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                     'body': json.dumps({
                         'message': 'Complete all question types at current level before advancing',
                         'levelComplete': False,
@@ -191,7 +194,7 @@ def lambda_handler(event, context):
             print(f"ERROR: No questions available at level {new_global_level}")
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': f'No questions available at level {new_global_level}'})
             }
         
@@ -286,7 +289,7 @@ def lambda_handler(event, context):
             
             return {
                 'statusCode': 500,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': f'Level advancement failed: {str(db_error)}',
                     'levelComplete': False,
@@ -298,7 +301,7 @@ def lambda_handler(event, context):
         clean_items = json.loads(json.dumps(new_progress_items, cls=DecimalEncoder))
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'message': f'Global level incremented to {new_global_level}',
                 'levelComplete': True,
@@ -314,6 +317,6 @@ def lambda_handler(event, context):
         print(traceback.format_exc())
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'Failed to increment user level. Please try again.'})
         }

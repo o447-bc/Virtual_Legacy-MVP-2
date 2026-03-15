@@ -42,13 +42,11 @@ All responses include CORS headers for frontend compatibility.
 
 import json
 import boto3
+from cors import cors_headers
+from responses import error_response
+
 
 # Standard CORS headers for all responses
-CORS_HEADERS = {
-    'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
-    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-    'Access-Control-Allow-Methods': 'POST,OPTIONS'
-}
 
 def lambda_handler(event, context):
     """
@@ -72,7 +70,7 @@ def lambda_handler(event, context):
         print("[CORS] Handling OPTIONS request")
         return {
             'statusCode': 200,
-            'headers': CORS_HEADERS,
+            'headers': cors_headers(event),
             'body': ''
         }
     
@@ -86,7 +84,7 @@ def lambda_handler(event, context):
         print("[ERROR] No user_id found in JWT claims")
         return {
             'statusCode': 401,
-            'headers': CORS_HEADERS,
+            'headers': cors_headers(event),
             'body': json.dumps({'error': 'Unauthorized'})
         }
     
@@ -104,7 +102,7 @@ def lambda_handler(event, context):
         print(f"[ERROR] Failed to parse profile: {e}")
         return {
             'statusCode': 400,
-            'headers': CORS_HEADERS,
+            'headers': cors_headers(event),
             'body': json.dumps({'error': 'Invalid profile data'})
         }
     
@@ -114,7 +112,7 @@ def lambda_handler(event, context):
         print(f"[ERROR] Access denied - persona_type: {persona_type}")
         return {
             'statusCode': 403,
-            'headers': CORS_HEADERS,
+            'headers': cors_headers(event),
             'body': json.dumps({'error': 'Only legacy makers allowed'})
         }
     
@@ -123,9 +121,9 @@ def lambda_handler(event, context):
         # userQuestionLevelProgressDB: Stores user progress tracking data
         # allQuestionDB: Contains all questions with metadata (questionType, Difficulty, Valid)
         # userStatusDB: Stores global user level status
-        progress_table = boto3.resource('dynamodb').Table('userQuestionLevelProgressDB')
-        all_questions_table = boto3.resource('dynamodb').Table('allQuestionDB')
-        user_status_table = boto3.resource('dynamodb').Table('userStatusDB')
+        progress_table = boto3.resource('dynamodb').Table(os.environ.get('TABLE_QUESTION_PROGRESS', 'userQuestionLevelProgressDB'))
+        all_questions_table = boto3.resource('dynamodb').Table(os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB'))
+        user_status_table = boto3.resource('dynamodb').Table(os.environ.get('TABLE_USER_STATUS', 'userStatusDB'))
         print("[DB] DynamoDB resources initialized")
         
         # Get existing progress data to determine what needs to be initialized
@@ -249,7 +247,7 @@ def lambda_handler(event, context):
             
         return {
             'statusCode': 200,
-            'headers': CORS_HEADERS,
+            'headers': cors_headers(event),
             'body': json.dumps({'message': message})
         }
         
@@ -264,6 +262,6 @@ def lambda_handler(event, context):
         # Return 500 Internal Server Error with CORS headers
         return {
             'statusCode': 500,
-            'headers': CORS_HEADERS,
-            'body': json.dumps({'error': f'Internal error: {str(e)}'})
+            'headers': cors_headers(event),
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }

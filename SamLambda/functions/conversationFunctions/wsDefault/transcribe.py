@@ -5,6 +5,7 @@ Handles audio transcription using AWS Transcribe
 
 import boto3
 from botocore.client import Config
+import os
 import time
 from datetime import datetime
 
@@ -12,7 +13,7 @@ from datetime import datetime
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
 transcribe_client = boto3.client('transcribe')
 
-S3_BUCKET = 'virtual-legacy'
+S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 
 def transcribe_audio(s3_key: str, user_id: str, question_id: str, turn_number: int) -> dict:
     """

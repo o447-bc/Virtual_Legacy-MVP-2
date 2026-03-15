@@ -6,6 +6,9 @@ import time
 import base64
 from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
+from cors import cors_headers
+from responses import error_response
+
 
 def lambda_handler(event, context):
     """Send invitation email via SES"""
@@ -15,7 +18,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Methods': 'POST,OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
             },
@@ -33,7 +36,7 @@ def lambda_handler(event, context):
         if not all([benefactor_email, invitee_email]):
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Missing required parameters'})
             }
         
@@ -42,7 +45,7 @@ def lambda_handler(event, context):
         if not benefactor_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unable to identify benefactor from token'})
             }
         
@@ -64,7 +67,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'message': 'Invitation sent successfully',
                 'invite_token': invite_token,
@@ -76,8 +79,8 @@ def lambda_handler(event, context):
         print(f"Lambda Error: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': str(e)})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
 
 def send_invite_email(benefactor_email, invitee_email, invite_token):
@@ -235,7 +238,7 @@ def store_invite_token(invite_token, benefactor_id, invitee_email):
     try:
         # Connect to DynamoDB
         dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-        table = dynamodb.Table('PersonaSignupTempDB')
+        table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
         
         # Calculate expiration time (7 days from now)
         expiration_time = int(time.time()) + (7 * 24 * 60 * 60)  # 7 days in seconds

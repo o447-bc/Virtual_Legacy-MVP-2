@@ -36,7 +36,7 @@ def lambda_handler(event, context):
     
     # Initialize DynamoDB connection
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('EngagementDB')
+    table = dynamodb.Table(os.environ.get('TABLE_ENGAGEMENT', 'EngagementDB'))
     
     # Track processing statistics
     updated_count = 0  # Users who had freeze reset
@@ -99,5 +99,5 @@ def lambda_handler(event, context):
         print(f"Fatal error in monthly reset: {e}")
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }

@@ -8,7 +8,7 @@ s3_client = boto3.client('s3')
 lambda_client = boto3.client('lambda')
 dynamodb = boto3.resource('dynamodb')
 
-S3_BUCKET = os.environ['S3_BUCKET']
+S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 SUMMARIZE_FUNCTION_NAME = os.environ.get('SUMMARIZE_FUNCTION_NAME', '')
 MAX_TRANSCRIPT_SIZE = 300000  # 300KB limit for DynamoDB storage
 
@@ -78,7 +78,7 @@ def process_completed_job(user_id, question_id, job_name):
     """Process successfully completed transcription job."""
     try:
         # Query DynamoDB to determine video type
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         response = table.get_item(Key={'userId': user_id, 'questionId': question_id})
         record = response.get('Item', {})
         
@@ -198,7 +198,7 @@ def process_failed_job(user_id, question_id, job_name):
     """Process failed transcription job."""
     try:
         # Query DynamoDB to determine video type
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         response = table.get_item(Key={'userId': user_id, 'questionId': question_id})
         record = response.get('Item', {})
         
@@ -234,7 +234,7 @@ def process_failed_job(user_id, question_id, job_name):
 def update_question_status(user_id, question_id, updates):
     """Update userQuestionStatusDB with transcription results."""
     try:
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         
         # Build update expression dynamically
         update_expr_parts = []

@@ -9,8 +9,8 @@ transcribe_client = boto3.client('transcribe')
 dynamodb = boto3.resource('dynamodb')
 cloudwatch = boto3.client('cloudwatch')
 
-S3_BUCKET = os.environ['S3_BUCKET']
-TRANSCRIBE_ROLE_ARN = os.environ['TRANSCRIBE_ROLE_ARN']
+S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
+TRANSCRIBE_ROLE_ARN = os.environ.get('TRANSCRIBE_ROLE_ARN', '')
 
 def lambda_handler(event, context):
     """
@@ -63,7 +63,7 @@ def process_transcription(user_id, question_id, bucket, key, explicit_video_type
     """Process transcription for a video."""
     try:
         # Query DynamoDB for existing record
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         response = table.get_item(Key={'userId': user_id, 'questionId': question_id})
         existing_record = response.get('Item')
         
@@ -121,7 +121,7 @@ def check_transcription_flag(user_id):
     Returns True if allowed, False otherwise.
     """
     try:
-        table = dynamodb.Table('userStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_USER_STATUS', 'userStatusDB'))
         response = table.get_item(Key={'userId': user_id})
         
         if 'Item' not in response:
@@ -199,7 +199,7 @@ def update_question_status(user_id, question_id, job_name, prefix):
     Update userQuestionStatusDB with transcription job info using correct field names.
     """
     try:
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         table.update_item(
             Key={'userId': user_id, 'questionId': question_id},
             UpdateExpression=f'SET {prefix}TranscriptionJobName = :job, {prefix}TranscriptionStatus = :status, {prefix}TranscriptionStartTime = :time',

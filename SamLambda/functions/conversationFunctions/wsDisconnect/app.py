@@ -1,8 +1,9 @@
 import json
+import os
 import boto3
 
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('WebSocketConnectionsDB')
+table = dynamodb.Table(os.environ.get('TABLE_WS_CONNECTIONS', 'WebSocketConnectionsDB'))
 
 def lambda_handler(event, context):
     connection_id = event['requestContext']['connectionId']

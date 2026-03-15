@@ -23,6 +23,9 @@ import json
 import boto3
 import sys
 import os
+from cors import cors_headers
+from responses import error_response
+
 
 # Import shared timezone utilities (copied during deployment)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../shared'))
@@ -35,13 +38,13 @@ except ImportError:
     TIMEZONE_ENABLED = False
 
 def lambda_handler(event, context):
-    """Handle GET /streak/check requests with status calculation.""
+    """Handle GET /streak/check requests with status calculation."""
     
     if event.get('httpMethod') == 'OPTIONS':
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
             },
@@ -52,13 +55,13 @@ def lambda_handler(event, context):
     if not user_id:
         return {
             'statusCode': 401,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'Unauthorized'})
         }
     
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('EngagementDB')
+        table = dynamodb.Table(os.environ.get('TABLE_ENGAGEMENT', 'EngagementDB'))
         
         response = table.get_item(Key={'userId': user_id})
         
@@ -66,7 +69,7 @@ def lambda_handler(event, context):
             return {
                 'statusCode': 200,
                 'headers': {
-                    'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                    'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                     'Cache-Control': 'max-age=300'
                 },
                 'body': json.dumps({
@@ -102,7 +105,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Cache-Control': 'max-age=3600',  # Cache for 1 hour
                 'ETag': f'"{last_video_date}"'  # Enable conditional requests
             },
@@ -119,6 +122,6 @@ def lambda_handler(event, context):
         print(f"Error checking streak: {e}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': str(e)})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }

@@ -31,7 +31,7 @@ def lambda_handler(event, context):
     
     try:
         dynamodb = boto3.resource('dynamodb')
-        temp_table = dynamodb.Table('PersonaSignupTempDB')
+        temp_table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
         
         # Get persona data using username (stored by PreSignup)
         response = temp_table.get_item(Key={'userName': username})
@@ -181,7 +181,7 @@ def create_benefactor_relationship(benefactor_id, legacy_maker_id):
         print(f"Creating relationship: benefactor={benefactor_id} -> legacy_maker={legacy_maker_id}")
         
         dynamodb = boto3.resource('dynamodb')
-        relationships_table = dynamodb.Table('PersonaRelationshipsDB')
+        relationships_table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         # Create relationship record
         relationships_table.put_item(
@@ -227,7 +227,7 @@ def send_assignment_notification_to_new_user(
     try:
         # Get access conditions for this assignment
         dynamodb = boto3.resource('dynamodb')
-        access_conditions_table = dynamodb.Table('AccessConditionsDB')
+        access_conditions_table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         
         relationship_key = f"{initiator_id}#{new_user_id}"
         

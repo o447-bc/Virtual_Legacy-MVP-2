@@ -4,6 +4,9 @@ import boto3
 from botocore.client import Config
 import uuid
 from datetime import datetime
+from cors import cors_headers
+from responses import error_response
+
 
 # Configure S3 client to use Signature Version 4 (required for KMS-encrypted objects)
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
@@ -14,7 +17,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'POST,OPTIONS'
             },
@@ -26,7 +29,7 @@ def lambda_handler(event, context):
     if not user_id:
         return {
             'statusCode': 401,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'Unauthorized'})
         }
     
@@ -54,7 +57,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'uploadUrl': upload_url,
                 's3Key': s3_key,
@@ -64,14 +67,16 @@ def lambda_handler(event, context):
         }
         
     except KeyError as e:
+        print(f"Missing required field in getUploadUrl: {e}")
         return {
             'statusCode': 400,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': f'Missing required field: {str(e)}'})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'Missing required field in request body'})
         }
     except Exception as e:
+        print(f"Error in getUploadUrl: {e}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': str(e)})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }

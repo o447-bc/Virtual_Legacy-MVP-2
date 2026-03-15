@@ -5,7 +5,7 @@ from botocore.exceptions import ClientError
 def lambda_handler(event, context):
     # Initialize DynamoDB client
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('allQuestionDB')
+    table = dynamodb.Table(os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB'))
     
     try:
         # Scan the table to retrieve all items

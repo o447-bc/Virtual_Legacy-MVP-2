@@ -13,6 +13,9 @@ import boto3
 import base64
 from datetime import datetime
 from botocore.exceptions import ClientError
+from cors import cors_headers
+from responses import error_response
+
 
 # Add shared functions to path
 sys.path.append('/opt/python')
@@ -175,7 +178,7 @@ def get_assignments_for_user(user_id):
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        relationships_table = dynamodb.Table('PersonaRelationshipsDB')
+        relationships_table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         # Query for all relationships where this user is the initiator (all pages)
         relationships = _query_all_pages(
@@ -217,7 +220,7 @@ def get_assignments_as_beneficiary(user_id):
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        relationships_table = dynamodb.Table('PersonaRelationshipsDB')
+        relationships_table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         # Query using RelatedUserIndex GSI for all relationships where this user is the benefactor (all pages)
         relationships = _query_all_pages(
@@ -386,7 +389,7 @@ def get_access_conditions(initiator_id, related_user_id):
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        conditions_table = dynamodb.Table('AccessConditionsDB')
+        conditions_table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         
         # Create composite relationship key
         relationship_key = f"{initiator_id}#{related_user_id}"

@@ -24,6 +24,9 @@ from assignment_dal import (
     get_user_by_email
 )
 from logging_utils import StructuredLogger
+from cors import cors_headers
+from responses import error_response
+
 
 
 def lambda_handler(event, context):
@@ -48,7 +51,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
             },
@@ -61,7 +64,7 @@ def lambda_handler(event, context):
         if not benefactor_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unable to identify user from token'})
             }
         
@@ -74,14 +77,14 @@ def lambda_handler(event, context):
         if not action:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'action is required'})
             }
         
         if not initiator_id:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'initiator_id is required'})
             }
         
@@ -90,7 +93,7 @@ def lambda_handler(event, context):
         if action not in valid_actions:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': f'Invalid action. Must be one of: {", ".join(valid_actions)}'
                 })
@@ -102,7 +105,7 @@ def lambda_handler(event, context):
         if not success:
             return {
                 'statusCode': 500,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': 'Failed to retrieve assignment',
                     'details': assignment.get('error') if assignment else None
@@ -112,7 +115,7 @@ def lambda_handler(event, context):
         if not assignment:
             return {
                 'statusCode': 404,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Assignment not found'})
             }
         
@@ -120,7 +123,7 @@ def lambda_handler(event, context):
         if assignment.get('related_user_id') != benefactor_id:
             return {
                 'statusCode': 403,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'You are not authorized to respond to this assignment'})
             }
         
@@ -129,7 +132,7 @@ def lambda_handler(event, context):
         if current_status != 'pending':
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': f'Cannot {action} assignment with status: {current_status}',
                     'current_status': current_status
@@ -145,15 +148,15 @@ def lambda_handler(event, context):
     except json.JSONDecodeError:
         return {
             'statusCode': 400,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'Invalid JSON in request body'})
         }
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
 
 
@@ -177,7 +180,7 @@ def handle_accept(
     if not success:
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'error': 'Failed to accept assignment',
                 'details': update_result.get('error')
@@ -211,7 +214,7 @@ def handle_accept(
     
     return {
         'statusCode': 200,
-        'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+        'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
         'body': json.dumps({
             'success': True,
             'message': 'Assignment accepted successfully',
@@ -241,7 +244,7 @@ def handle_decline(
     if not success:
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'error': 'Failed to decline assignment',
                 'details': update_result.get('error')
@@ -275,7 +278,7 @@ def handle_decline(
     
     return {
         'statusCode': 200,
-        'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+        'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
         'body': json.dumps({
             'success': True,
             'message': 'Assignment declined successfully',

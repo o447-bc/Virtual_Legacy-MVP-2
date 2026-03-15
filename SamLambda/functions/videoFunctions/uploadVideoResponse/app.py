@@ -8,6 +8,11 @@ import subprocess
 from datetime import datetime
 from botocore.exceptions import ClientError
 from decimal import Decimal
+from cors import cors_headers
+from responses import error_response
+
+
+S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 
 # STREAK TRACKING MODULE IMPORTS
 # Import streak calculation modules from same directory (copied during deployment)
@@ -69,7 +74,7 @@ def update_user_streak(user_id: str) -> dict:
         
         # STEP 2: Fetch existing streak data from EngagementDB
         dynamodb = boto3.resource('dynamodb')
-        progress_table = dynamodb.Table('EngagementDB')
+        progress_table = dynamodb.Table(os.environ.get('TABLE_ENGAGEMENT', 'EngagementDB'))
         
         response = progress_table.get_item(Key={'userId': user_id})
         
@@ -159,7 +164,7 @@ def update_user_streak(user_id: str) -> dict:
         # GRACEFUL DEGRADATION: Catch all exceptions to prevent video upload failure
         print(f"Error updating streak for {user_id}: {e}")
         # Return safe default values - video upload succeeds regardless
-        return {'streakCount': 0, 'streakFreezeAvailable': True, 'error': str(e)}
+        return {'streakCount': 0, 'streakFreezeAvailable': True, 'error': 'A server error occurred. Please try again.'}
 
 def lambda_handler(event, context):
     # Handle CORS preflight OPTIONS request
@@ -167,7 +172,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'POST,OPTIONS'
             },
@@ -179,7 +184,7 @@ def lambda_handler(event, context):
     if not user_id:
         return {
             'statusCode': 401,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'Unauthorized'})
         }
     
@@ -196,7 +201,7 @@ def lambda_handler(event, context):
         if not all([question_id, question_type, video_data]):
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': 'Missing required parameters: questionId, questionType, videoData'
                 }, cls=DecimalEncoder)
@@ -258,15 +263,15 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps(response_body, cls=DecimalEncoder)
         }
         
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': str(e)})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
 
 def upload_to_s3(video_data_base64, s3_key):
@@ -277,7 +282,7 @@ def upload_to_s3(video_data_base64, s3_key):
         
         # Initialize S3 client
         s3_client = boto3.client('s3')
-        bucket_name = 'virtual-legacy'
+        bucket_name = S3_BUCKET
         
         # Upload to S3
         s3_client.put_object(
@@ -296,7 +301,7 @@ def update_user_question_status(user_id, question_id, question_type, filename, s
     try:
         # Initialize DynamoDB client
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         
         # Add entry to database
         table.put_item(
@@ -327,7 +332,7 @@ def update_user_progress(user_id, question_id, question_type):
     """Update progress in userQuestionLevelProgressDB after video submission"""
     try:
         dynamodb = boto3.resource('dynamodb')
-        progress_table = dynamodb.Table('userQuestionLevelProgressDB')
+        progress_table = dynamodb.Table(os.environ.get('TABLE_QUESTION_PROGRESS', 'userQuestionLevelProgressDB'))
         
         # Get current progress item
         response = progress_table.get_item(Key={'userId': user_id, 'questionType': question_type})
@@ -475,7 +480,7 @@ def generate_thumbnail(s3_key, user_id):
     
     # S3 CLIENT AND FILE PATH SETUP
     s3_client = boto3.client('s3')
-    bucket_name = 'virtual-legacy'  # Production S3 bucket
+    bucket_name = S3_BUCKET
     
     # THUMBNAIL FILE NAMING CONVENTION
     # Convert video filename to thumbnail filename (same base name, .jpg extension)

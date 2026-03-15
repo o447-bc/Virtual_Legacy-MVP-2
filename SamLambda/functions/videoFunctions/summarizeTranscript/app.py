@@ -108,7 +108,7 @@ def lambda_handler(event, context):
 def is_already_summarized(user_id, question_id):
     """Check if already summarized (idempotency)."""
     try:
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         response = table.get_item(Key={'userId': user_id, 'questionId': question_id})
         
         if 'Item' in response:
@@ -123,7 +123,7 @@ def is_already_summarized(user_id, question_id):
 def check_enable_transcript_flag(user_id, question_id):
     """Check if summarization enabled."""
     try:
-        table = dynamodb.Table('userQuestionStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         response = table.get_item(Key={'userId': user_id, 'questionId': question_id})
         
         if 'Item' not in response:
@@ -187,7 +187,7 @@ def parse_bedrock_response(bedrock_response):
 
 def update_summarization_status(user_id, question_id, status, error=None):
     """Update DynamoDB with summarization status."""
-    table = dynamodb.Table('userQuestionStatusDB')
+    table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
     
     update_expr = 'SET summarizationStatus = :status, summarizationUpdatedAt = :timestamp'
     expr_values = {
@@ -207,7 +207,7 @@ def update_summarization_status(user_id, question_id, status, error=None):
 
 def update_summarization_results(user_id, question_id, summary_data, video_type='regular_video'):
     """Update DynamoDB with summarization results."""
-    table = dynamodb.Table('userQuestionStatusDB')
+    table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
     
     # Determine field names based on video type
     if video_type == 'audio_conversation':

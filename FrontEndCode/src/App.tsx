@@ -23,8 +23,18 @@ import RecordConversation from "./pages/RecordConversation";
 import QuestionThemes from "./pages/QuestionThemes";
 import NotFound from "./pages/NotFound";
 import { TestS3 } from "./pages/TestS3";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -42,6 +52,8 @@ const App = () => (
             <Route path="/legacy-create-choice" element={<LegacyCreateChoice />} />
             <Route path="/signup-create-legacy" element={<SignUpCreateLegacy />} />
             <Route path="/signup-start-their-legacy" element={<SignUpStartTheirLegacy />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected routes — require authentication */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

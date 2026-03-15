@@ -15,8 +15,7 @@ from transcribe import transcribe_audio
 from transcribe_streaming import transcribe_audio_streaming
 from transcribe_deepgram import transcribe_audio_deepgram
 
-apigateway = boto3.client('apigatewaymanagementapi',
-    endpoint_url=f"https://{os.environ['WEBSOCKET_API_ENDPOINT']}")
+apigateway = None  # Initialized lazily in lambda_handler (endpoint URL comes from env at runtime)
 # Configure S3 client to use Signature Version 4 (required for KMS-encrypted objects)
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
 
@@ -508,6 +507,11 @@ def handle_end_conversation(connection_id: str, user_id: str):
         })
 
 def lambda_handler(event, context):
+    global apigateway
+    if apigateway is None:
+        apigateway = boto3.client('apigatewaymanagementapi',
+            endpoint_url=f"https://{os.environ['WEBSOCKET_API_ENDPOINT']}")
+
     print(f"[HANDLER] Event: {json.dumps(event)}")
     
     connection_id = event['requestContext']['connectionId']

@@ -39,7 +39,7 @@ def lambda_handler(event, context):
     # Store persona data in DynamoDB for PostConfirmation to read
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaSignupTempDB')
+        table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
         
         username = event.get('userName', '')
         ttl = int(time.time()) + 3600  # Expire in 1 hour

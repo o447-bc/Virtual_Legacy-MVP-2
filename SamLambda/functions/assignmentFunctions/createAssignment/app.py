@@ -31,6 +31,9 @@ from assignment_dal import (
 from invitation_utils import create_invitation_token
 from assignment_dal import delete_assignment
 from logging_utils import StructuredLogger
+from cors import cors_headers
+from responses import error_response
+
 
 
 def lambda_handler(event, context):
@@ -64,7 +67,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
             },
@@ -77,7 +80,7 @@ def lambda_handler(event, context):
         if not legacy_maker_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unable to identify user from token'})
             }
 
@@ -90,7 +93,7 @@ def lambda_handler(event, context):
         if not benefactor_email:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'benefactor_email is required'})
             }
 
@@ -99,7 +102,7 @@ def lambda_handler(event, context):
         if not is_valid:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': error_msg})
             }
 
@@ -124,7 +127,7 @@ def lambda_handler(event, context):
         if duplicate_exists:
             return {
                 'statusCode': 409,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': f'Assignment already exists for benefactor {benefactor_email}'
                 })
@@ -141,7 +144,7 @@ def lambda_handler(event, context):
         if not success:
             return {
                 'statusCode': 500,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': assignment_record.get('error', 'Failed to create assignment')})
             }
 
@@ -157,7 +160,7 @@ def lambda_handler(event, context):
             delete_assignment(legacy_maker_id, benefactor_id)
             return {
                 'statusCode': 500,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': conditions_result.get('error', 'Failed to create access conditions')})
             }
 
@@ -184,7 +187,7 @@ def lambda_handler(event, context):
                 delete_assignment(legacy_maker_id, benefactor_id)
                 return {
                     'statusCode': 500,
-                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                     'body': json.dumps({'error': token_result.get('error', 'Failed to create invitation token')})
                 }
 
@@ -200,12 +203,12 @@ def lambda_handler(event, context):
             if not email_sent:
                 # Rollback: remove relationship, conditions, and invitation token
                 delete_assignment(legacy_maker_id, benefactor_id)
-                boto3.resource('dynamodb').Table('PersonaSignupTempDB').delete_item(
+                boto3.resource('dynamodb').Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB')).delete_item(
                     Key={'userName': invitation_token}
                 )
                 return {
                     'statusCode': 500,
-                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                     'body': json.dumps({'error': 'Failed to send invitation email. No assignment was created.'})
                 }
 
@@ -223,7 +226,7 @@ def lambda_handler(event, context):
                 delete_assignment(legacy_maker_id, benefactor_id)
                 return {
                     'statusCode': 500,
-                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                     'body': json.dumps({'error': 'Failed to send notification email. No assignment was created.'})
                 }
 
@@ -247,7 +250,7 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 201,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps(response_body)
         }
 
@@ -257,8 +260,8 @@ def lambda_handler(event, context):
         traceback.print_exc()
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
 
 

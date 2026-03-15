@@ -4,7 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 cognito = boto3.client('cognito-idp')
-USER_POOL_ID = os.environ['USER_POOL_ID']
+USER_POOL_ID = os.environ.get('USER_POOL_ID', '')
 
 def lambda_handler(event, context):
     print(f"[AUTHORIZER] Event received: {json.dumps(event)}")

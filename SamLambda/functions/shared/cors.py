@@ -18,7 +18,7 @@ _ALLOWED_ORIGINS = [
 # Primary allowed origin — used when no Origin header is present
 ALLOWED_ORIGIN = os.environ.get(
     'ALLOWED_ORIGIN',
-    'https://main.d33jt7rnrasyvj.amplifyapp.com'
+    'https://www.soulreel.net'
 )
 
 

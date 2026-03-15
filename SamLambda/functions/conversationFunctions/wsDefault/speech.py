@@ -3,6 +3,7 @@ Speech Synthesis Module
 Converts text to speech using Amazon Polly
 """
 
+import os
 import base64
 import boto3
 from botocore.client import Config
@@ -12,7 +13,7 @@ polly = boto3.client('polly', region_name='us-east-1')
 # Configure S3 client to use Signature Version 4 (required for KMS-encrypted objects)
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
 
-S3_BUCKET = 'virtual-legacy'
+S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 
 def text_to_speech(text: str, user_id: str, question_id: str, turn_number: int, voice_id: str, engine: str) -> str:
     """Convert text to speech, upload to S3, and return S3 URL"""
@@ -36,7 +37,6 @@ def text_to_speech(text: str, user_id: str, question_id: str, turn_number: int, 
         s3_key = f"conversations/{user_id}/{question_id}/ai-audio/turn-{turn_number}-{timestamp}.mp3"
         
         # Get KMS key ARN from environment
-        import os
         kms_key_arn = os.environ.get('KMS_KEY_ARN')
         
         if not kms_key_arn:

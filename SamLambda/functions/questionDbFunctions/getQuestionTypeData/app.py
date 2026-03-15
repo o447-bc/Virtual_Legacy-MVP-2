@@ -31,6 +31,9 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 import time
+from cors import cors_headers
+from responses import error_response
+
 
 # Global cache variables (persist between Lambda invocations)
 cached_data = None
@@ -47,7 +50,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'GET,OPTIONS'
             },
@@ -56,7 +59,7 @@ def lambda_handler(event, context):
     
     # Initialize DynamoDB client to access the questions database
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('allQuestionDB')
+    table = dynamodb.Table(os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB'))
     
     try:
         # Scan the entire allQuestionDB table to get all question records
@@ -113,22 +116,23 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'GET,OPTIONS'
             },
             'body': json.dumps(response_data)
         }
     except ClientError as e:
+        print(f"DynamoDB error in getQuestionTypeData: {e}")
         return {
             'statusCode': 500,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'GET,OPTIONS'
             },
             'body': json.dumps({
-                'error': f"Error accessing DynamoDB: {str(e)}"
+                'error': 'A server error occurred. Please try again.'
             })
         }
     

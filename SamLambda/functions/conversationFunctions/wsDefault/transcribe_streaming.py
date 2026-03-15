@@ -15,7 +15,7 @@ from amazon_transcribe.model import TranscriptEvent
 
 # Configure S3 client to use Signature Version 4 (required for KMS-encrypted objects)
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
-S3_BUCKET = 'virtual-legacy'
+S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 
 class TranscriptHandler(TranscriptResultStreamHandler):
     """Handler for processing streaming transcript events"""

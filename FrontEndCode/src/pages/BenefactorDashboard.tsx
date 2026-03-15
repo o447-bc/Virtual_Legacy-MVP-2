@@ -52,12 +52,6 @@ const BenefactorDashboard: React.FC = () => {
       setEmailError('Please enter a valid email address');
       return false;
     }
-    // Check for test email addresses
-    const testEmails = ['legacymaker1@o447.net', 'legacymaker2@o447.net'];
-    if (!testEmails.includes(email.toLowerCase().trim())) {
-      setEmailError('For testing, please use legacyMaker1@o447.net or legacyMaker2@o447.net');
-      return false;
-    }
     setEmailError('');
     return true;
   };
@@ -154,17 +148,19 @@ const BenefactorDashboard: React.FC = () => {
     const validateAllAccess = async () => {
       if (!user?.id || assignments.length === 0) return;
       
+      const results = await Promise.all(
+        assignments.map(async (assignment) => {
+          try {
+            const result = await validateAccess(user.id, assignment.initiator_id);
+            return { key: assignment.initiator_id, value: result };
+          } catch {
+            return null;
+          }
+        })
+      );
+      
       const statusMap: Record<string, ValidateAccessResponse> = {};
-      
-      for (const assignment of assignments) {
-        try {
-          const result = await validateAccess(user.id, assignment.initiator_id);
-          statusMap[assignment.initiator_id] = result;
-        } catch (error) {
-          console.error(`Error validating access for ${assignment.initiator_id}:`, error);
-        }
-      }
-      
+      results.forEach(r => { if (r) statusMap[r.key] = r.value; });
       setAccessStatus(statusMap);
     };
     
@@ -176,13 +172,15 @@ const BenefactorDashboard: React.FC = () => {
     const fetchAllProgress = async () => {
       if (relationships.length === 0) return;
       
+      const results = await Promise.all(
+        relationships.map(async (rel) => {
+          const data = await getUserProgress(rel.related_user_id);
+          return { key: rel.related_user_id, value: data };
+        })
+      );
+      
       const progressMap: Record<string, ProgressData> = {};
-      
-      for (const rel of relationships) {
-        const data = await getUserProgress(rel.related_user_id);
-        progressMap[rel.related_user_id] = data;
-      }
-      
+      results.forEach(r => { progressMap[r.key] = r.value; });
       setMakerProgress(progressMap);
     };
     

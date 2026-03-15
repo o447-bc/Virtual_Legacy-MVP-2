@@ -3,6 +3,9 @@ import os
 import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor
+from cors import cors_headers
+from responses import error_response
+
 
 def lambda_handler(event, context):
     """Get relationships for a user"""
@@ -82,7 +85,7 @@ def get_user_relationships(user_id):
     """Get all relationships for a user (as initiator or related user), with pagination."""
 
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('PersonaRelationshipsDB')
+    table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
 
     relationships = []
 

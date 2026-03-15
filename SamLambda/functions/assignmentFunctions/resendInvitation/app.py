@@ -19,6 +19,9 @@ sys.path.append('/opt/python')
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../shared'))
 
 from invitation_utils import create_invitation_token
+from cors import cors_headers
+from responses import error_response
+
 
 
 def lambda_handler(event, context):
@@ -44,7 +47,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Methods': 'POST,OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
             },
@@ -57,7 +60,7 @@ def lambda_handler(event, context):
         if not legacy_maker_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unable to identify user from token'})
             }
         
@@ -70,7 +73,7 @@ def lambda_handler(event, context):
         if not related_user_id and not benefactor_email:
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Either related_user_id or benefactor_email is required'})
             }
         
@@ -83,7 +86,7 @@ def lambda_handler(event, context):
                 # User has already registered
                 return {
                     'statusCode': 400,
-                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                     'body': json.dumps({
                         'error': 'Cannot resend invitation to registered user',
                         'message': 'This benefactor has already registered'
@@ -96,7 +99,7 @@ def lambda_handler(event, context):
         
         # Connect to DynamoDB
         dynamodb = boto3.resource('dynamodb')
-        relationships_table = dynamodb.Table('PersonaRelationshipsDB')
+        relationships_table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         # Verify assignment exists and user owns it
         try:
@@ -110,7 +113,7 @@ def lambda_handler(event, context):
             if 'Item' not in response:
                 return {
                     'statusCode': 404,
-                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                     'body': json.dumps({
                         'error': 'Assignment not found',
                         'message': 'No assignment found for this benefactor'
@@ -123,7 +126,7 @@ def lambda_handler(event, context):
             print(f"Error retrieving assignment: {e.response['Error']['Message']}")
             return {
                 'statusCode': 500,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': 'Failed to retrieve assignment',
                     'details': e.response['Error']['Message']
@@ -135,7 +138,7 @@ def lambda_handler(event, context):
         if assignment_status != 'pending':
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': 'Cannot resend invitation',
                     'message': f'Assignment status is "{assignment_status}". Can only resend for pending assignments.',
@@ -147,7 +150,7 @@ def lambda_handler(event, context):
         if not related_user_id.startswith('pending#'):
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': 'Cannot resend invitation',
                     'message': 'Benefactor has already registered'
@@ -155,7 +158,7 @@ def lambda_handler(event, context):
             }
         
         # Get access conditions for this assignment
-        access_conditions_table = dynamodb.Table('AccessConditionsDB')
+        access_conditions_table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         relationship_key = f"{legacy_maker_id}#{related_user_id}"
         
         try:
@@ -203,7 +206,7 @@ def lambda_handler(event, context):
         if not success:
             return {
                 'statusCode': 500,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'error': 'Failed to create invitation token',
                     'details': token_result.get('error')
@@ -228,7 +231,7 @@ def lambda_handler(event, context):
         # Return success response
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'success': True,
                 'message': 'Invitation resent successfully',
@@ -241,15 +244,15 @@ def lambda_handler(event, context):
     except json.JSONDecodeError:
         return {
             'statusCode': 400,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'Invalid JSON in request body'})
         }
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
 
 

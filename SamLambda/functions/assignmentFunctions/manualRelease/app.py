@@ -23,6 +23,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../shared'))
 
 from assignment_dal import update_relationship_status
 from logging_utils import StructuredLogger
+from cors import cors_headers
+from responses import error_response
+
 
 
 def lambda_handler(event, context):
@@ -61,7 +64,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Methods': 'POST,OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
             },
@@ -74,7 +77,7 @@ def lambda_handler(event, context):
         if not legacy_maker_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unable to identify user from token'})
             }
         
@@ -86,7 +89,7 @@ def lambda_handler(event, context):
         if not manual_release_conditions:
             return {
                 'statusCode': 200,
-                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({
                     'success': True,
                     'message': 'No manual release conditions found',
@@ -145,7 +148,7 @@ def lambda_handler(event, context):
         # Return success response with summary
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'success': True,
                 'message': f"Manual release completed. Released {summary['newly_released']} assignments.",
@@ -158,8 +161,8 @@ def lambda_handler(event, context):
         print(f"Unexpected error in manual release: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
-            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
 
 
@@ -178,7 +181,7 @@ def get_manual_release_conditions(legacy_maker_id: str) -> List[Dict]:
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('AccessConditionsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         
         # Query using ConditionTypeIndex GSI
         response = table.query(
@@ -324,7 +327,7 @@ def process_manual_release_condition(
             'benefactor_email': get_benefactor_email(related_user_id),
             'status': 'error',
             'notification_sent': False,
-            'error': str(e)
+            'error': 'A server error occurred. Please try again.'
         }
 
 
@@ -348,7 +351,7 @@ def update_condition_released(
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('AccessConditionsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         
         table.update_item(
             Key={

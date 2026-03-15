@@ -19,6 +19,9 @@ sys.path.append('/opt/python')
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../shared'))
 
 from logging_utils import StructuredLogger
+from cors import cors_headers
+from responses import error_response
+
 
 
 def lambda_handler(event, context):
@@ -57,8 +60,8 @@ def lambda_handler(event, context):
         
         # Validate token and retrieve check-in details
         dynamodb = boto3.resource('dynamodb')
-        temp_table = dynamodb.Table('PersonaSignupTempDB')
-        conditions_table = dynamodb.Table('AccessConditionsDB')
+        temp_table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
+        conditions_table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         
         # Look up token in temp table
         try:
@@ -315,7 +318,7 @@ def build_success_response():
         'statusCode': 200,
         'headers': {
             'Content-Type': 'text/html',
-            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')
+            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')
         },
         'body': html_content
     }
@@ -441,7 +444,7 @@ def build_error_response(status_code, message):
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'text/html',
-            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')
+            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')
         },
         'body': html_content
     }

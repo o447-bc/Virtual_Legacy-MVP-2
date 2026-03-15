@@ -58,8 +58,8 @@ def lambda_handler(event, context):
     
     try:
         dynamodb = boto3.resource('dynamodb')
-        conditions_table = dynamodb.Table('AccessConditionsDB')
-        temp_table = dynamodb.Table('PersonaSignupTempDB')
+        conditions_table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
+        temp_table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
         
         # Get current time in UTC
         current_time = datetime.now(timezone.utc)

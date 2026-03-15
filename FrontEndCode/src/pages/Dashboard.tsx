@@ -247,26 +247,20 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
   // PROGRESS DATA FETCHING EFFECT
   useEffect(() => {
     const fetchProgressData = async () => {
-      console.log('Dashboard: Starting fetchProgressData');
-      console.log('Dashboard: navigationState:', navigationState);
-      console.log('Dashboard: user:', user?.email);
       
       try {
         setLoading(true);
-        console.log('Dashboard: Set loading to true');
         
         const currentUser = await getCurrentUser();
         const authSession = await fetchAuthSession();
         const userId = currentUser.userId;
         const idToken = authSession.tokens?.idToken?.toString();
         
-        console.log('Dashboard: Got auth data, userId:', userId);
         
         if (!idToken) {
           throw new Error('No authentication token available. Please log in again.');
         }
 
-        console.log('Dashboard: Making API call to PROGRESS_SUMMARY_2');
         const progressResponse = await fetch(
           buildApiUrl(API_CONFIG.ENDPOINTS.PROGRESS_SUMMARY_2, { userId }),
           {
@@ -276,21 +270,17 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
           }
         );
         
-        console.log('Dashboard: API response status:', progressResponse.status);
         
         if (!progressResponse.ok) {
           throw new Error('Failed to fetch progress data');
         }
         
         const progressJson = await progressResponse.json();
-        console.log('Dashboard: API response data:', progressJson);
-        console.log('Dashboard: progressItems length:', progressJson.progressItems?.length);
         
         let progressItems = progressJson.progressItems || [];
         
         // If we have passed updated data, use it to update the specific item
         if (navigationState?.updatedProgressItem) {
-          console.log('Dashboard: Processing passed updated data');
           const updatedItem = navigationState.updatedProgressItem;
           
           // Validate updated data consistency
@@ -305,7 +295,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
           // Note: Level progression is now handled by the automatic check below
         }
         
-        console.log('Dashboard: Processing progress items, count:', progressItems.length);
         
         // Process the progress items
         const questionTypes = [];
@@ -317,7 +306,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
         
         try {
           progressItems.forEach((item, index) => {
-            console.log(`Dashboard: Processing item ${index}:`, item);
             questionTypes.push(item.questionType);
             friendlyNames.push(item.friendlyName);
             numValidQuestions.push(item.totalQuestAtCurrLevel);
@@ -330,9 +318,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
           throw processingError;
         }
         
-        console.log('Dashboard: Processed data - questionTypes:', questionTypes);
-        console.log('Dashboard: Processed data - friendlyNames:', friendlyNames);
-        console.log('Dashboard: Processed data - progressDataMap:', progressDataMap);
         
         // AUTOMATIC LEVEL PROGRESSION CHECK
         // Check if all current level questions are completed and advance level if needed
@@ -340,18 +325,8 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
           item.remainQuestAtCurrLevel && item.remainQuestAtCurrLevel.length === 0
         );
         
-        console.log('Dashboard: Level completion check:', {
-          progressItemsCount: progressItems.length,
-          allCurrentLevelComplete,
-          progressItems: progressItems.map(item => ({
-            questionType: item.questionType,
-            remainingCount: item.remainQuestAtCurrLevel?.length || 0,
-            currentLevel: item.currentQuestLevel
-          }))
-        });
         
         if (allCurrentLevelComplete) {
-          console.log('Dashboard: All current level questions complete, calling INCREMENT_LEVEL_2');
           
           try {
             const incrementResponse = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.INCREMENT_LEVEL_2), {
@@ -363,14 +338,11 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
               body: JSON.stringify({ questionType: progressItems[0]?.questionType || 'auto' })
             });
             
-            console.log('Dashboard: INCREMENT_LEVEL_2 response status:', incrementResponse.status);
             
             if (incrementResponse.ok) {
               const result = await incrementResponse.json();
-              console.log('Dashboard: INCREMENT_LEVEL_2 result:', result);
               
               if (result.levelComplete && result.updatedProgressItems) {
-                console.log('Dashboard: Level advanced successfully, updating progress items');
                 
                 // Update progressItems with new level data
                 progressItems = result.updatedProgressItems;
@@ -403,7 +375,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
                 Object.assign(unansweredQuestionsMap, updatedUnansweredQuestionsMap);
                 Object.assign(unansweredQuestionTextsMap, updatedUnansweredQuestionTextsMap);
                 
-                console.log('Dashboard: Successfully processed level advancement');
                 
                 // Show success toast
                 try {
@@ -456,7 +427,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
           }
         }
         
-        console.log('Dashboard: Setting state data');
         setQuestionTypeData({
           questionTypes,
           friendlyNames,
@@ -467,31 +437,25 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
         setUnansweredQuestionTextsData(unansweredQuestionTextsMap);
         setProgressItems(progressItems);
         
-        console.log('Dashboard: State data set successfully');
         
       } catch (error) {
         console.error('Dashboard: Error in fetchProgressData:', error);
         setError(error.message);
       } finally {
-        console.log('Dashboard: Setting loading to false');
         setLoading(false);
       }
     };
 
     if (user) {
-      console.log('Dashboard: User exists, calling fetchProgressData');
       fetchProgressData();
     } else {
-      console.log('Dashboard: No user, skipping fetchProgressData');
     }
   }, [user, navigationState]);
 
-  console.log('Dashboard render - loading:', loading, 'error:', error, 'questionTypeData:', questionTypeData);
 
   // LOADING STATE RENDER
   // Show loading message while fetching progress data
   if (loading) {
-    console.log('Dashboard: Showing loading state');
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-xl font-semibold mb-4">Your Progress</h3>
@@ -503,7 +467,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
   // ERROR STATE RENDER
   // Show error message with retry option if API call fails
   if (error) {
-    console.log('Dashboard: Showing error state:', error);
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-xl font-semibold mb-4">Your Progress</h3>
@@ -522,7 +485,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
   // NO DATA STATE RENDER
   // Handle case where API returns successfully but with no question data
   if (!questionTypeData) {
-    console.log('Dashboard: Showing no data state');
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-xl font-semibold mb-4">Your Progress</h3>
@@ -531,7 +493,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
     );
   }
 
-  console.log('Dashboard: Rendering progress bars for', questionTypeData.questionTypes.length, 'question types');
 
   // Calculate if there are any incomplete categories
   const hasIncompleteCategories = questionTypeData.questionTypes.some((questionType, index) => {

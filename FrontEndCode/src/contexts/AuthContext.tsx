@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
-import { signIn, signUp, signOut, getCurrentUser, confirmSignUp, resendSignUpCode, fetchUserAttributes } from 'aws-amplify/auth';
+import { signIn, signUp, signOut, getCurrentUser, confirmSignUp, resendSignUpCode, fetchUserAttributes, resetPassword as amplifyResetPassword, confirmResetPassword } from 'aws-amplify/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +12,8 @@ interface AuthContextType {
   resendConfirmationCode: (email: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -45,17 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Force fresh fetch of user attributes
         const userAttributes = await fetchUserAttributes({ forceRefresh: true });
-        console.log('Fetched user attributes (with refresh):', userAttributes);
         
         if (userAttributes.profile) {
-          console.log('Profile data found:', userAttributes.profile);
           const profileJson = JSON.parse(userAttributes.profile);
-          console.log('Parsed profile JSON:', profileJson);
           personaType = profileJson.persona_type || 'legacy_maker';
-          console.log('Final persona type:', personaType);
-        } else {
-          console.log('No profile attribute found in fetched attributes');
-          console.log('Available attributes:', Object.keys(userAttributes));
         }
         
         // Extract first and last names
@@ -66,8 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastName = userAttributes.family_name;
         }
       } catch (parseError) {
-        console.log('Error parsing persona type:', parseError);
-        console.log('Defaulting to legacy_maker');
+        // Defaulting to legacy_maker
       }
       
       setUser({
@@ -126,7 +120,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           error.message?.toLowerCase().includes('already') ||
           error.message?.toLowerCase().includes('signed in')) {
         
-        console.log("User already authenticated, refreshing state");
         await checkAuthState();
         toast.info("You are already signed in");
         navigate("/dashboard");
@@ -135,7 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Handle all other errors
       toast.error(error.message || "Login failed. Please try again.");
-      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -162,14 +154,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate(`/confirm-signup?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       toast.error(error.message || "Signup failed. Please try again.");
-      console.error("Signup error:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const signupWithPersona = async (email: string, password: string, personaChoice: string, personaType: string, firstName: string, lastName: string, inviteToken?: string) => {
-    setIsLoading(true);
     try {
       const normalizedEmail = email.toLowerCase();
       const clientMetadata: Record<string, string> = {
@@ -202,18 +192,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const signInResult = await signIn({ username: normalizedEmail, password });
 
           if (signInResult.isSignedIn) {
-            // postConfirmation Lambda runs asynchronously and may not have finished writing
-            // the profile attribute to Cognito yet (race condition). We call checkAuthState
-            // to get the real user.id, then forcibly set personaType to 'legacy_benefactor'
-            // because we know from the invite context that this user is a benefactor.
+            // Poll for the postConfirmation Lambda to finish writing the persona attribute.
+            // The Lambda runs async after Cognito confirms the user — without polling we'd
+            // race and potentially read a missing/wrong persona_type.
+            const waitForPersona = async (expected: string, maxAttempts = 5): Promise<boolean> => {
+              for (let i = 0; i < maxAttempts; i++) {
+                try {
+                  const attrs = await fetchUserAttributes({ forceRefresh: true });
+                  if (attrs.profile) {
+                    const profile = JSON.parse(attrs.profile);
+                    if (profile.persona_type === expected) return true;
+                  }
+                } catch { /* retry */ }
+                await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+              }
+              return false;
+            };
+
+            await waitForPersona('legacy_benefactor');
             await checkAuthState();
-            setUser(prev => prev ? { ...prev, personaType: 'legacy_benefactor' } : prev);
             toast.success("Account created! Welcome to SoulReel.");
             navigate('/benefactor-dashboard');
             return;
           }
         } catch (signInError: any) {
-          console.error('Auto sign-in after invite signup failed:', signInError);
+          // Auto sign-in after invite signup failed — fall through to login
         }
 
         // Auto sign-in failed for any reason — account was created, send to login
@@ -227,7 +230,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate(`/confirm-signup?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       toast.error(error.message || "Signup failed. Please try again.");
-      console.error("Signup error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -242,7 +244,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
       } catch (signOutError) {
         // Ignore if no user is signed in
-        console.log('No existing session to sign out');
       }
       
       await confirmSignUp({ username: email.toLowerCase(), confirmationCode: code });
@@ -250,7 +251,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       navigate("/login");
     } catch (error: any) {
       toast.error(error.message || "Verification failed. Please try again.");
-      console.error("Confirmation error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -263,7 +263,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("Verification code sent! Check your email.");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend code. Please try again.");
-      console.error("Resend code error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const forgotPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+      await amplifyResetPassword({ username: email.toLowerCase() });
+      toast.success("Reset code sent! Check your email.");
+      navigate(`/reset-password?email=${encodeURIComponent(email)}`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send reset code. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string, code: string, newPassword: string) => {
+    setIsLoading(true);
+    try {
+      await confirmResetPassword({ username: email.toLowerCase(), confirmationCode: code, newPassword });
+      toast.success("Password reset! You can now sign in.");
+      navigate("/login");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reset password. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -299,7 +324,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, signupWithPersona, confirmSignup, resendConfirmationCode, logout, refreshUser: checkAuthState, isLoading }}>
+    <AuthContext.Provider value={{ user, login, signup, signupWithPersona, confirmSignup, resendConfirmationCode, logout, refreshUser: checkAuthState, forgotPassword, resetPassword, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,7 +10,7 @@ import traceback
 
 from cors import cors_headers
 
-_DEFAULT_ORIGIN = os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')
+_DEFAULT_ORIGIN = os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')
 
 
 def error_response(status_code: int, public_message: str, exception: Exception = None,

@@ -3,6 +3,9 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime, timedelta
+from cors import cors_headers
+from responses import error_response
+
 
 # Constants
 SSM_PARAM_PREFIX = '/virtuallegacy/user_completed_count/'
@@ -91,7 +94,7 @@ def lambda_handler(event, context):
     
     # CORS headers (consistent with project pattern)
     headers = {
-        'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
+        'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
         'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
     }
@@ -155,7 +158,7 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'headers': headers,
             'body': json.dumps({
-                'error': f"Database error: {str(e)}"
+                'error': 'A server error occurred. Please try again.'
             })
         }
     except Exception as e:
@@ -164,6 +167,6 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'headers': headers,
             'body': json.dumps({
-                'error': f"Internal error: {str(e)}"
+                'error': 'A server error occurred. Please try again.'
             })
         }

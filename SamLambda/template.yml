@@ -27,6 +27,16 @@ Globals:
     Environment:
       Variables:
         ALLOWED_ORIGIN: 'https://www.soulreel.net'
+        S3_BUCKET: 'virtual-legacy'
+        TABLE_ENGAGEMENT: 'EngagementDB'
+        TABLE_QUESTION_STATUS: 'userQuestionStatusDB'
+        TABLE_QUESTION_PROGRESS: 'userQuestionLevelProgressDB'
+        TABLE_RELATIONSHIPS: 'PersonaRelationshipsDB'
+        TABLE_ACCESS_CONDITIONS: 'AccessConditionsDB'
+        TABLE_ALL_QUESTIONS: 'allQuestionDB'
+        TABLE_USER_STATUS: 'userStatusDB'
+        TABLE_SIGNUP_TEMP: 'PersonaSignupTempDB'
+        TABLE_WS_CONNECTIONS: 'WebSocketConnectionsDB'
   Api:
     Cors:
       AllowMethods: '''GET,POST,PUT,OPTIONS'''
@@ -863,6 +873,8 @@ Resources:
   GetNumQuestionTypesFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getNumQuestionTypes/
       Handler: app.lambda_handler
       Architectures:
@@ -882,6 +894,8 @@ Resources:
   GetQuestionTypeDataFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getQuestionTypeData/
       Handler: app.lambda_handler
       Architectures:
@@ -901,6 +915,8 @@ Resources:
   GetAudioQuestionSummaryForVideoRecordingFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getAudioQuestionSummaryForVideoRecording/
       Handler: app.lambda_handler
       Architectures:
@@ -933,6 +949,8 @@ Resources:
   GetNumValidQuestionsForQTypeFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getNumValidQuestionsForQType/
       Handler: app.lambda_handler
       Architectures:
@@ -952,6 +970,8 @@ Resources:
   GetTotalValidAllQuestionsFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getTotalValidAllQuestions/
       Handler: app.lambda_handler
       Architectures:
@@ -984,6 +1004,8 @@ Resources:
   InvalidateTotalValidQuestionsCacheFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/invalidateTotalValidQuestionsCache/
       Handler: app.lambda_handler
       Architectures:
@@ -1013,6 +1035,8 @@ Resources:
   GetUserCompletedQuestionCountFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getUserCompletedQuestionCount/
       Handler: app.lambda_handler
       Architectures:
@@ -1054,6 +1078,8 @@ Resources:
   GetQuestionTypesFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getQuestionTypes/
       Handler: app.lambda_handler
       Architectures:
@@ -1073,6 +1099,8 @@ Resources:
   GetUnansweredQuestionsFromUserFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getUnansweredQuestionsFromUser/
       Handler: app.lambda_handler
       Architectures:
@@ -1109,6 +1137,8 @@ Resources:
   GetQuestionByIdFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getQuestionById/
       Handler: app.lambda_handler
       Architectures:
@@ -1128,6 +1158,8 @@ Resources:
   GetUnansweredQuestionsWithTextFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getUnansweredQuestionsWithText/
       Handler: app.lambda_handler
       Architectures:
@@ -1164,6 +1196,8 @@ Resources:
   GetProgressSummary2Function:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/getProgressSummary2/
       Handler: app.lambda_handler
       Architectures:
@@ -1208,6 +1242,8 @@ Resources:
   CreateRelationshipFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/relationshipFunctions/createRelationship/
       Handler: app.lambda_handler
       Architectures:
@@ -1233,6 +1269,8 @@ Resources:
   GetRelationshipsFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/relationshipFunctions/getRelationships/
       Handler: app.lambda_handler
       Architectures:
@@ -1267,6 +1305,8 @@ Resources:
   ValidateAccessFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/relationshipFunctions/validateAccess/
       Handler: app.lambda_handler
       Architectures:
@@ -1826,6 +1866,8 @@ Resources:
   GetUploadUrlFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/videoFunctions/getUploadUrl/
       Handler: app.lambda_handler
       Architectures:
@@ -1982,6 +2024,9 @@ Resources:
               Action:
                 - cloudwatch:PutMetricData
               Resource: '*'
+              Condition:
+                StringEquals:
+                  'cloudwatch:namespace': 'VirtualLegacy'
         - Statement:
             - Effect: Allow
               Action:
@@ -2017,6 +2062,8 @@ Resources:
   GetMakerVideosFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/videoFunctions/getMakerVideos/
       Handler: app.lambda_handler
       Architectures:
@@ -2065,6 +2112,8 @@ Resources:
   InitializeUserProgressFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/initializeUserProgress/
       Handler: app.lambda_handler
       Architectures:
@@ -2109,6 +2158,8 @@ Resources:
   SendInviteEmailFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/inviteFunctions/sendInviteEmail/
       Handler: app.lambda_handler
       Architectures:
@@ -2147,6 +2198,8 @@ Resources:
   IncrementUserLevel2Function:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/questionDbFunctions/incrementUserLevel2/
       Handler: app.lambda_handler
       Architectures:
@@ -2233,6 +2286,8 @@ Resources:
   GetStreakFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/streakFunctions/getStreak/
       Handler: app.lambda_handler
       Architectures:
@@ -2265,6 +2320,8 @@ Resources:
   MonthlyResetFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/streakFunctions/monthlyReset/
       Handler: app.lambda_handler
       Architectures:
@@ -2309,6 +2366,8 @@ Resources:
   StartTranscriptionFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/videoFunctions/startTranscription/
       Handler: app.lambda_handler
       Runtime: python3.12
@@ -2343,6 +2402,9 @@ Resources:
               Action:
                 - cloudwatch:PutMetricData
               Resource: '*'
+              Condition:
+                StringEquals:
+                  'cloudwatch:namespace': 'VirtualLegacy'
         - Statement:
             - Effect: Allow
               Action:
@@ -2358,6 +2420,8 @@ Resources:
   ProcessTranscriptFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/videoFunctions/processTranscript/
       Handler: app.lambda_handler
       Runtime: python3.12
@@ -2421,6 +2485,8 @@ Resources:
   SummarizeTranscriptFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
       CodeUri: functions/videoFunctions/summarizeTranscript/
       Handler: app.lambda_handler
       Runtime: python3.12
@@ -2460,6 +2526,9 @@ Resources:
               Action:
                 - cloudwatch:PutMetricData
               Resource: '*'
+              Condition:
+                StringEquals:
+                  'cloudwatch:namespace': 'VirtualLegacy'
         - Statement:
             - Effect: Allow
               Action:

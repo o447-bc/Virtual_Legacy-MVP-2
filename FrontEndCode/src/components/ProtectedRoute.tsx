@@ -19,7 +19,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPerso
   }
 
   if (requiredPersona && user.personaType !== requiredPersona) {
-    return <Navigate to="/dashboard" replace />;
+    const fallback = user.personaType === 'legacy_benefactor'
+      ? '/benefactor-dashboard'
+      : '/dashboard';
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;
