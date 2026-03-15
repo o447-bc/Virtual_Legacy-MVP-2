@@ -1,0 +1,96 @@
+{
+  "themeId": "messagetolovedones",
+  "themeName": "Messages to Loved Ones / Future Generations",
+  "questions": [
+    {
+      "questionId": "MessageToLovedOnes-0001",
+      "difficulty": 9,
+      "text": "What is one happy memory or simple story about your life that you’d love your children, grandchildren or loved ones to know?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0002",
+      "difficulty": 9,
+      "text": "What’s one piece of advice you’d give someone you care about deeply — something you wish you had heard earlier?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0003",
+      "difficulty": 9,
+      "text": "What are you really proud of in your life that you want your family to remember about you?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0004",
+      "difficulty": 9,
+      "text": "What song, book, place, tradition or object do you want to share with the people you love — and why?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0005",
+      "difficulty": 9,
+      "text": "What do you want your family to remember about the way you loved them?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0006",
+      "difficulty": 9,
+      "text": "Is there something you wish you had said to someone important to you while they were still here?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0007",
+      "difficulty": 10,
+      "text": "What values or ways of treating people do you most hope the next generation carries forward from you?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0008",
+      "difficulty": 10,
+      "text": "What forgiveness or understanding would you like to offer — or ask for — from someone you loved?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0009",
+      "difficulty": 10,
+      "text": "If this were one of the last messages your loved ones would have from you, what do you most want them to know?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0010",
+      "difficulty": 10,
+      "text": "What do you hope your great-grandchildren or future generations will say about who you were?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0011",
+      "difficulty": 10,
+      "text": "Is there a regret you want to release or explain to your family so they don’t carry it?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0012",
+      "difficulty": 10,
+      "text": "What do you want the next generations to do differently — or keep doing — because of the life you lived?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0013",
+      "difficulty": 10,
+      "text": "If you could leave one guiding truth or sentence for your family forever, what would it be?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0014",
+      "difficulty": 10,
+      "text": "What do you want people to feel when they remember you years from now?",
+      "active": true
+    },
+    {
+      "questionId": "MessageToLovedOnes-0015",
+      "difficulty": 10,
+      "text": "Looking at your whole life — what is the one message you most want to pass on?",
+      "active": true
+    }
+  ]
+}

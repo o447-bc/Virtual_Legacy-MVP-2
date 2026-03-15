@@ -1,0 +1,7 @@
+{
+  "httpMethod": "POST",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\"benefactor_email\":\"oliver@o447.net\",\"invitee_email\":\"oastley@gmail.com\"}"
+}

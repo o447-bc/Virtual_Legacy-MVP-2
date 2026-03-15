@@ -1,0 +1,16 @@
+{
+  "Subject": {
+    "Data": "You're invited to create your Virtual Legacy",
+    "Charset": "UTF-8"
+  },
+  "Body": {
+    "Html": {
+      "Data": "<!DOCTYPE html><html><head><style>body{font-family:Arial,sans-serif;line-height:1.6;color:#333}.container{max-width:600px;margin:0 auto;padding:20px}.header{background-color:#6366f1;color:white;padding:20px;text-align:center}.content{padding:30px;background-color:#f9fafb}.button{display:inline-block;padding:12px 24px;background-color:#6366f1;color:white;text-decoration:none;border-radius:6px;margin:20px 0}.footer{padding:20px;text-align:center;color:#666;font-size:12px}</style></head><body><div class='container'><div class='header'><h1>Virtual Legacy</h1></div><div class='content'><h2>You're invited to preserve your legacy</h2><p>Someone who cares about you has invited you to create your Virtual Legacy account.</p><p>Virtual Legacy helps you record your memories, stories, and wisdom to share with future generations.</p><p>Click the button below to get started:</p><a href='https://soulreel.net/signup-create-legacy?invite=test-token-123' class='button'>Create Your Legacy</a><p><strong>What you'll be able to do:</strong></p><ul><li>Record video responses to thoughtful questions</li><li>Share your life experiences and wisdom</li><li>Create a lasting digital legacy for your loved ones</li></ul><p>This invitation will expire in 7 days.</p></div><div class='footer'><p>This invitation was sent on behalf of oliver@o447.net</p><p>Virtual Legacy - Preserving memories for future generations</p><p><a href='https://soulreel.net'>Visit our website</a></p></div></div></body></html>",
+      "Charset": "UTF-8"
+    },
+    "Text": {
+      "Data": "You're invited to create your Virtual Legacy!\n\nSomeone who cares about you has invited you to create your Virtual Legacy account.\n\nVirtual Legacy helps you record your memories, stories, and wisdom to share with future generations.\n\nVisit this link to get started:\nhttps://soulreel.net/signup-create-legacy?invite=test-token-123\n\nWhat you'll be able to do:\n- Record video responses to thoughtful questions\n- Share your life experiences and wisdom\n- Create a lasting digital legacy for your loved ones\n\nThis invitation will expire in 7 days.\n\nThis invitation was sent on behalf of oliver@o447.net\nVirtual Legacy - Preserving memories for future generations\nhttps://soulreel.net",
+      "Charset": "UTF-8"
+    }
+  }
+}

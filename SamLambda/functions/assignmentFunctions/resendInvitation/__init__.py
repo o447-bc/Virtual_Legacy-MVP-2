@@ -1,0 +1,1 @@
+# ResendInvitation Lambda Function

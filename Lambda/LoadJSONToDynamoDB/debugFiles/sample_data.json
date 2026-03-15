@@ -1,0 +1,16 @@
+[
+    {
+        "questionId": "sports_001",
+        "question": "What sport is known as 'the beautiful game'?",
+        "options": ["Basketball", "Soccer", "Tennis", "Golf"],
+        "correctAnswer": "Soccer",
+        "difficulty": "easy"
+    },
+    {
+        "questionId": "sports_002", 
+        "question": "How many players are on a basketball team on the court at one time?",
+        "options": ["4", "5", "6", "7"],
+        "correctAnswer": "5",
+        "difficulty": "medium"
+    }
+]

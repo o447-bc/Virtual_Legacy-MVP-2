@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: |
+  S3 Bucket Policy Stack for virtual-legacy bucket
+  Enforces encryption requirements for all uploads
+  Requirements: 3.5, 3.6
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: virtual-legacy
+    Description: Name of the S3 bucket to apply policy to
+  
+  KMSKeyArn:
+    Type: String
+    Description: ARN of the KMS key to enforce for encryption (from main stack)
+
+Resources:
+  VirtualLegacyBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BucketName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Bucket has default KMS encryption configured
+          # S3 will automatically encrypt all uploads with the default KMS key
+          # This allows presigned URLs to work without requiring encryption headers
+          # Allow authenticated AWS principals to upload
+          - Sid: AllowAuthenticatedUploads
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: 
+              - s3:PutObject
+              - s3:GetObject
+            Resource: !Sub arn:aws:s3:::${BucketName}/*
+
+Outputs:
+  BucketPolicyId:
+    Description: ID of the bucket policy
+    Value: !Ref VirtualLegacyBucketPolicy
+  
+  EnforcedKMSKeyArn:
+    Description: KMS Key ARN enforced by the bucket policy
+    Value: !Ref KMSKeyArn

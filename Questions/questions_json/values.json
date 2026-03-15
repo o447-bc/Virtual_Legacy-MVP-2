@@ -1,0 +1,102 @@
+{
+  "themeId": "values",
+  "themeName": "Values & Guiding Principles",
+  "questions": [
+    {
+      "questionId": "Values-0001",
+      "difficulty": 7,
+      "text": "What is one value or principle you hold very dear — where do you think it came from?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0002",
+      "difficulty": 7,
+      "text": "What does 'success' mean to you personally — not what the world says, but what feels true for you?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0003",
+      "difficulty": 7,
+      "text": "What is one thing you will never compromise on, no matter the situation?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0004",
+      "difficulty": 7,
+      "text": "How do you decide what is right or wrong when there's no clear rule?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0005",
+      "difficulty": 8,
+      "text": "What role does honesty play in your life — how far would you go to protect it?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0006",
+      "difficulty": 8,
+      "text": "How do you show respect to other people, even when you disagree with them?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0007",
+      "difficulty": 8,
+      "text": "What principle or belief guides your biggest life decisions the most?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0008",
+      "difficulty": 8,
+      "text": "Was there a moment when you had to choose between two values that were both important to you?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0009",
+      "difficulty": 9,
+      "text": "What do you believe is the most important way to treat other people?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0010",
+      "difficulty": 9,
+      "text": "Is there a value you used to hold strongly that you no longer believe — what changed your mind?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0011",
+      "difficulty": 9,
+      "text": "Looking back, which of your core values has been the hardest to live by — and why?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0012",
+      "difficulty": 9,
+      "text": "What one guiding principle would you want written on your tombstone or remembered by?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0013",
+      "difficulty": 10,
+      "text": "What do you hope your children, grandchildren or loved ones carry forward from your values?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0014",
+      "difficulty": 10,
+      "text": "If you could pass on only one core belief or lesson to the next generation, what would it be?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0015",
+      "difficulty": 10,
+      "text": "Is there a value you wish society cared more about — and how do you try to live it anyway?",
+      "active": true
+    },
+    {
+      "questionId": "Values-0016",
+      "difficulty": 10,
+      "text": "What principle do you want to be remembered for embodying, even on your hardest days?",
+      "active": true
+    }
+  ]
+}

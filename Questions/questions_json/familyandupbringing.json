@@ -1,0 +1,168 @@
+{
+  "themeId": "familyandupbringing",
+  "themeName": "Family & Upbringing",
+  "questions": [
+    {
+      "questionId": "familyAndUpbringing-0001",
+      "difficulty": 1,
+      "text": "Who all lived in your household when you were growing up (parents, siblings, grandparents, aunts/uncles, others)?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0002",
+      "difficulty": 1,
+      "text": "What was the first name or nickname you used for each of your main caregivers?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0003",
+      "difficulty": 1,
+      "text": "What did a typical family dinner or evening meal look like — who sat where, what food, what conversations?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0004",
+      "difficulty": 1,
+      "text": "Did your family have any special sayings, nicknames, or inside jokes that were used all the time?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0005",
+      "difficulty": 1,
+      "text": "What was one chore or small responsibility you had around the house as a child?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0006",
+      "difficulty": 1,
+      "text": "Describe the feeling or sound of coming home after school or play — door opening, smells, voices.",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0007",
+      "difficulty": 2,
+      "text": "Who in your family made you laugh the most — what kind of humour did they have?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0008",
+      "difficulty": 2,
+      "text": "What was your favourite family holiday, birthday or celebration memory from childhood?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0009",
+      "difficulty": 2,
+      "text": "Did anyone in your family have a special talent, hobby or skill that fascinated you?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0010",
+      "difficulty": 2,
+      "text": "How did people in your family show affection or care (words, hugs, gifts, doing things for each other…)?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0011",
+      "difficulty": 2,
+      "text": "Was there a small family tradition or ritual that meant a lot to you, even if it was very simple?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0012",
+      "difficulty": 3,
+      "text": "Was there ever a time you felt really protected, safe or deeply loved by your family?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0013",
+      "difficulty": 3,
+      "text": "Did you ever feel pressure to live up to a certain role or expectation in your family?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0014",
+      "difficulty": 3,
+      "text": "Was there a moment when you saw a parent, sibling or relative in a new light (more vulnerable, stronger, human)?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0015",
+      "difficulty": 3,
+      "text": "What was one time your family came together to support someone during a difficult moment?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0016",
+      "difficulty": 4,
+      "text": "Looking back, what is one thing about the way you were raised that you deeply appreciate today?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0017",
+      "difficulty": 4,
+      "text": "Was there a family conflict or difficult period that changed how you saw your family?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0018",
+      "difficulty": 4,
+      "text": "What is one thing you wish you had understood better about a family member when you were younger?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0019",
+      "difficulty": 4,
+      "text": "If you could go back and have one more ordinary day with your childhood family exactly as it was, what would that day be like?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0020",
+      "difficulty": 5,
+      "text": "What value or lesson did your family pass on to you — intentionally or just through how they lived?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0021",
+      "difficulty": 5,
+      "text": "Is there something you wish you had said to a family member while they were still here?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0022",
+      "difficulty": 5,
+      "text": "What part of your family upbringing do you most want to carry forward into your own relationships or family?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0023",
+      "difficulty": 5,
+      "text": "What part of your family upbringing do you consciously want to do differently if you have/had children?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0024",
+      "difficulty": 6,
+      "text": "Looking back, what one family member do you wish you could thank or apologise to today?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0025",
+      "difficulty": 6,
+      "text": "Is there a family story, secret or unspoken truth that shaped how your family functioned?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0026",
+      "difficulty": 6,
+      "text": "What do you hope your own children or future generations understand about where you came from?",
+      "active": true
+    },
+    {
+      "questionId": "familyAndUpbringing-0027",
+      "difficulty": 6,
+      "text": "If your family could hear one honest message from your adult heart, what would you say?",
+      "active": true
+    }
+  ]
+}

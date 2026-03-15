@@ -1,0 +1,168 @@
+{
+  "themeId": "schoolandeducation",
+  "themeName": "School Days & Education",
+  "questions": [
+    {
+      "questionId": "SchoolAndEducation-0001",
+      "difficulty": 1,
+      "text": "What was the name of your first school and how old were you when you started there?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0002",
+      "difficulty": 1,
+      "text": "What did your school building, playground or classroom look like — any details you still picture clearly?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0003",
+      "difficulty": 1,
+      "text": "What was your favourite subject or class in primary/elementary school and why did you like it?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0004",
+      "difficulty": 1,
+      "text": "What was your favourite school lunch, snack or treat you looked forward to every day?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0005",
+      "difficulty": 1,
+      "text": "How did you usually get to school — walk, bus, bike, car — and what was that journey like?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0006",
+      "difficulty": 1,
+      "text": "What did recess or break time feel like — what games did you play most often?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0007",
+      "difficulty": 2,
+      "text": "Who was your favourite teacher from your early school years and what made them stand out?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0008",
+      "difficulty": 2,
+      "text": "Who were your closest school friends during primary/elementary years — what did you do together?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0009",
+      "difficulty": 2,
+      "text": "Did you take part in any clubs, sports, music, drama or after-school activities?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0010",
+      "difficulty": 2,
+      "text": "What was the funniest, most embarrassing or most memorable thing that happened at school?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0011",
+      "difficulty": 2,
+      "text": "Was there a school trip, assembly, performance or event you still remember fondly?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0012",
+      "difficulty": 3,
+      "text": "What was one moment at school when you felt really proud of something you achieved?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0013",
+      "difficulty": 3,
+      "text": "Did you ever feel like you didn't quite fit in or struggled to find your place at school?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0014",
+      "difficulty": 3,
+      "text": "Was there a teacher, classmate or school friend who influenced how you saw yourself?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0015",
+      "difficulty": 3,
+      "text": "What was one school challenge (academic, social, bullying, exams…) that felt big at the time?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0016",
+      "difficulty": 4,
+      "text": "Looking back, what skill or habit did you learn at school that you still use today?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0017",
+      "difficulty": 4,
+      "text": "Was there a time you felt unfairly treated by a teacher or the school system — how did it affect you?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0018",
+      "difficulty": 4,
+      "text": "What part of your school experience do you now realise shaped your confidence or self-view the most?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0019",
+      "difficulty": 4,
+      "text": "If you could go back to one school day and relive it differently, which day would it be and why?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0020",
+      "difficulty": 5,
+      "text": "What do you wish you had known or believed about yourself during your school years?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0021",
+      "difficulty": 5,
+      "text": "Is there one school memory that still makes you smile, cringe or feel emotional today?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0022",
+      "difficulty": 5,
+      "text": "What lesson from school (academic or social) turned out to be surprisingly important later in life?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0023",
+      "difficulty": 5,
+      "text": "Looking back, what one teacher or classmate do you wish you could thank or apologise to?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0024",
+      "difficulty": 6,
+      "text": "What part of your school experience do you most want your own children or future generations to have?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0025",
+      "difficulty": 6,
+      "text": "Is there a school experience you now see as a quiet turning point in your life path?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0026",
+      "difficulty": 6,
+      "text": "What do you hope people who knew you at school would remember about the person you were?",
+      "active": true
+    },
+    {
+      "questionId": "SchoolAndEducation-0027",
+      "difficulty": 6,
+      "text": "If your school-age self could see who you are today, what do you think they would feel?",
+      "active": true
+    }
+  ]
+}

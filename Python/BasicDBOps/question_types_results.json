@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-07-13 08:37:12.954968",
+  "total_count": 3,
+  "question_types": [
+    "childhood",
+    "schooling",
+    "values"
+  ],
+  "friendly_names": {
+    "childhood": "Childhood Experiences",
+    "schooling": "Academics and school",
+    "values": "Values"
+  }
+}

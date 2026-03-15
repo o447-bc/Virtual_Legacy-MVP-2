@@ -1,0 +1,15 @@
+{
+  "httpMethod": "POST",
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-123",
+        "profile": "{\"persona_type\": \"legacy_maker\"}"
+      }
+    }
+  },
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{}"
+}

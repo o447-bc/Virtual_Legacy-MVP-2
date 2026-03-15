@@ -1,0 +1,20 @@
+# Q Chats - excluded per project rules
+Q Chats/
+
+# Dependencies
+node_modules/
+FrontEndCode/node_modules/
+
+# Build output
+FrontEndCode/dist/
+FrontEndCode/dist.zip
+
+# OS junk
+.DS_Store
+**/.DS_Store
+
+# Temp/lock files
+~$*
+
+# SSH key artifacts
+ssh-keygen*

@@ -1,0 +1,41 @@
+===========================================
+VIRTUAL LEGACY - DEPLOYMENT INFORMATION
+===========================================
+
+Deployment Date: February 14, 2026 12:50 PM CST
+
+FRONTEND:
+URL: https://main.d33jt7rnrasyvj.amplifyapp.com
+App ID: d33jt7rnrasyvj
+Environment: production
+Branch: main
+
+BACKEND:
+API Gateway: https://qu5zn6mns1.execute-api.us-east-1.amazonaws.com/Prod
+WebSocket: wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod
+Stack Name: Virtual-Legacy-MVP-1
+Stack Status: UPDATE_COMPLETE
+
+AWS DETAILS:
+Region: us-east-1
+Account: 962214556635
+
+CORS CONFIGURATION:
+Allowed Origin: https://main.d33jt7rnrasyvj.amplifyapp.com
+Status: Configured and Deployed ✓
+
+DEPLOYMENT PHASES COMPLETED:
+✓ Phase 1: Backend verified
+✓ Phase 2: Frontend built (dist.zip created)
+✓ Phase 3: Deployed to AWS Amplify
+✓ Phase 4: CORS configured and backend redeployed
+
+NEXT STEPS:
+- Phase 5: Test the application at the URL above
+- Phase 6: Document and commit changes
+
+UPDATE WORKFLOW:
+Frontend: npm run build → create dist.zip → upload to Amplify Console
+Backend: sam build && sam deploy --no-confirm-changeset
+
+===========================================

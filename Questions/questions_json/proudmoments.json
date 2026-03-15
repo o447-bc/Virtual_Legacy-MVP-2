@@ -1,0 +1,138 @@
+{
+  "themeId": "proudmoments",
+  "themeName": "Proudest Moments & Achievements",
+  "questions": [
+    {
+      "questionId": "ProudMoments-0001",
+      "difficulty": 5,
+      "text": "What is one small thing you accomplished as a child or teenager that made you feel really proud at the time?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0002",
+      "difficulty": 5,
+      "text": "Was there a school project, sports moment, art piece or performance you were especially proud of?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0003",
+      "difficulty": 5,
+      "text": "What was the first time you felt you had really earned something through your own effort?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0004",
+      "difficulty": 5,
+      "text": "Did you ever surprise yourself by achieving something you didn't think you could do?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0005",
+      "difficulty": 5,
+      "text": "What compliment or recognition from someone else meant the most to you in your younger years?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0006",
+      "difficulty": 5,
+      "text": "Looking back, what early achievement still makes you smile when you think about it?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0007",
+      "difficulty": 6,
+      "text": "What was a bigger goal or milestone you worked hard toward in your 20s or 30s?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0008",
+      "difficulty": 6,
+      "text": "Was there a career, personal or creative accomplishment that felt like a major breakthrough?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0009",
+      "difficulty": 6,
+      "text": "Did you ever overcome a significant obstacle or doubt to reach something you're proud of?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0010",
+      "difficulty": 6,
+      "text": "What achievement made you feel you had truly proven something to yourself?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0011",
+      "difficulty": 7,
+      "text": "Was there a moment when you felt proud not just of what you did, but of who you became while doing it?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0012",
+      "difficulty": 7,
+      "text": "What accomplishment required the most persistence, sacrifice or courage from you?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0013",
+      "difficulty": 7,
+      "text": "Looking back, which proud moment do you now realise had a bigger impact on your life path than you knew at the time?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0014",
+      "difficulty": 7,
+      "text": "Is there an achievement you're proud of that other people might not fully understand or appreciate?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0015",
+      "difficulty": 8,
+      "text": "What do you hope your children, grandchildren or loved ones know about the things you're most proud of?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0016",
+      "difficulty": 8,
+      "text": "Was there a proud moment that came after a long period of struggle or failure — how did that feel?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0017",
+      "difficulty": 8,
+      "text": "What achievement do you look back on and think: 'I did that, and I'm really glad I did'?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0018",
+      "difficulty": 8,
+      "text": "If you could relive one proud moment exactly as it happened, which one would it be and why?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0019",
+      "difficulty": 9,
+      "text": "Looking at your entire life so far, what single achievement would you put on a highlight reel for yourself?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0020",
+      "difficulty": 9,
+      "text": "What proud moment do you hope defines how future generations remember you?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0021",
+      "difficulty": 9,
+      "text": "Is there an accomplishment you're proud of that came at a personal cost — would you do it again?",
+      "active": true
+    },
+    {
+      "questionId": "ProudMoments-0022",
+      "difficulty": 9,
+      "text": "What do you want people to feel when they hear about the things you're most proud of?",
+      "active": true
+    }
+  ]
+}

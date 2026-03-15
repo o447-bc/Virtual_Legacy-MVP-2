@@ -1,0 +1,162 @@
+{
+  "themeId": "loveromance",
+  "themeName": "Love, Romance & Early Partnerships",
+  "questions": [
+    {
+      "questionId": "LoveRomance-0001",
+      "difficulty": 3,
+      "text": "Who was your very first crush — how old were you and what made them stand out to you?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0002",
+      "difficulty": 3,
+      "text": "What was the silliest, most awkward or innocent thing you ever did because you liked someone?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0003",
+      "difficulty": 3,
+      "text": "Did you have a favourite love song, movie scene, book couple or TV romance when you were a teenager?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0004",
+      "difficulty": 3,
+      "text": "What was your idea of a perfect date when you were 13–16 years old?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0005",
+      "difficulty": 3,
+      "text": "Did you ever pass notes, send secret messages or use coded ways to talk to someone you liked?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0006",
+      "difficulty": 3,
+      "text": "What was the most memorable school dance, party or group hangout where you felt butterflies?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0007",
+      "difficulty": 4,
+      "text": "Who was your first real boyfriend, girlfriend or partner — how did you meet and what was the first date like?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0008",
+      "difficulty": 4,
+      "text": "What was one sweet, thoughtful or romantic thing someone did for you early in a relationship?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0009",
+      "difficulty": 4,
+      "text": "Did you ever have your heart broken for the first time — what happened and how did you cope?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0010",
+      "difficulty": 4,
+      "text": "Was there an early relationship (even a short one) that made you feel really seen or understood?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0011",
+      "difficulty": 5,
+      "text": "Looking back at your early romantic experiences, what did you learn about what you actually wanted in a partner?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0012",
+      "difficulty": 5,
+      "text": "Was there a time you stayed in a relationship longer than you should have — and why?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0013",
+      "difficulty": 5,
+      "text": "Which early romantic experience (good or painful) shaped how you approach love today the most?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0014",
+      "difficulty": 5,
+      "text": "What is one thing you wish you had known about relationships when you were first falling in love?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0015",
+      "difficulty": 6,
+      "text": "Was there a moment in an early relationship when you felt truly vulnerable — and how did it go?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0016",
+      "difficulty": 6,
+      "text": "What part of your early romantic life do you now realise was more about discovering yourself than about the other person?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0017",
+      "difficulty": 6,
+      "text": "Is there a past love or crush you now wish you had treated differently — or that you wish had treated you differently?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0018",
+      "difficulty": 6,
+      "text": "What do you hope your own children or future generations understand about love from your experiences?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0019",
+      "difficulty": 7,
+      "text": "Looking back, what one romantic memory still makes you smile, laugh or feel bittersweet?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0020",
+      "difficulty": 7,
+      "text": "Was there an early relationship that quietly changed how you see trust, commitment or heartbreak?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0021",
+      "difficulty": 7,
+      "text": "What lesson from your early romances turned out to be surprisingly important later in life?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0022",
+      "difficulty": 7,
+      "text": "If you could go back and give your teenage self one piece of advice about love or relationships, what would it be?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0023",
+      "difficulty": 8,
+      "text": "What do you hope people who knew you during your early romantic years would remember about how you loved?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0024",
+      "difficulty": 8,
+      "text": "Is there an early love story from your life that you now see as a quiet turning point in your path?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0025",
+      "difficulty": 8,
+      "text": "What do you want your future loved ones (children, grandchildren) to know about how you experienced love?",
+      "active": true
+    },
+    {
+      "questionId": "LoveRomance-0026",
+      "difficulty": 8,
+      "text": "If your younger self in love could see who you are today, what do you think they would feel about your journey?",
+      "active": true
+    }
+  ]
+}

@@ -1,0 +1,2525 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: |
+  Virtual-Legacy-MVP-1
+  SAM Template for Virtual-Legacy-MVP-1 - v2
+
+Parameters:
+  ExistingUserPoolId:
+    Type: String
+    Default: us-east-1_KsG65yYlo
+    Description: Existing Cognito User Pool ID
+  ExistingUserPoolArn:
+    Type: String
+    Default: arn:aws:cognito-idp:us-east-1:962214556635:userpool/us-east-1_KsG65yYlo
+    Description: Existing Cognito User Pool ARN
+  SecurityAlertEmail:
+    Type: String
+    Default: ''
+    Description: Email address for GuardDuty security alerts (leave empty to skip email subscription)
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+    Runtime: python3.12
+  Api:
+    Cors:
+      AllowMethods: '''GET,POST,PUT,OPTIONS'''
+      AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+      # Using wildcard for development - allows both localhost:8080 and soulreel.net
+      # TODO: Implement dynamic CORS or separate stages for production security
+      AllowOrigin: '''*'''
+    Auth:
+      Authorizers:
+        CognitoAuthorizer:
+          UserPoolArn: !Ref ExistingUserPoolArn
+
+Conditions:
+  HasSecurityAlertEmail: !Not [!Equals [!Ref SecurityAlertEmail, '']]
+
+Resources:
+
+  # KMS Customer-Managed Encryption Key for data at rest
+  DataEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Customer-managed key for encrypting SoulReel data at rest
+      EnableKeyRotation: true
+      Tags:
+        - Key: Project
+          Value: SoulReel
+        - Key: SecurityPhase
+          Value: Phase1
+        - Key: CostCenter
+          Value: Security
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          # Root account full access (required by AWS)
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+          
+          # CloudWatch Logs encryption/decryption
+          - Sid: Allow CloudWatch Logs
+            Effect: Allow
+            Principal:
+              Service: logs.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: '*'
+            Condition:
+              ArnLike:
+                kms:EncryptionContext:aws:logs:arn: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          
+          # Lambda decryption (via service principal)
+          - Sid: Allow Lambda Service
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource: '*'
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub lambda.${AWS::Region}.amazonaws.com
+          
+          # DynamoDB encryption/decryption
+          - Sid: Allow DynamoDB Service
+            Effect: Allow
+            Principal:
+              Service: dynamodb.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: '*'
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub dynamodb.${AWS::Region}.amazonaws.com
+          
+          # S3 encryption/decryption
+          - Sid: Allow S3 Service
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: '*'
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub s3.${AWS::Region}.amazonaws.com
+          
+          # CloudTrail encryption
+          - Sid: Allow CloudTrail
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:DecryptDataKey
+            Resource: '*'
+            Condition:
+              StringLike:
+                kms:EncryptionContext:aws:cloudtrail:arn: !Sub arn:aws:cloudtrail:*:${AWS::AccountId}:trail/*
+          
+          # Allow IAM principals with explicit KMS permissions (for presigned URLs)
+          # This allows Lambda execution roles to decrypt KMS-encrypted S3 objects
+          # when accessed via presigned URLs (which don't go through the service principal)
+          # The IAM policies on the Lambda roles control which principals can use this
+          - Sid: Allow IAM Principals with KMS Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:GenerateDataKey
+            Resource: '*'
+            Condition:
+              StringEquals:
+                kms:CallerAccount: !Ref AWS::AccountId
+
+  # KMS Key Alias for easier reference
+  DataEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/soulreel-data-encryption
+      TargetKeyId: !Ref DataEncryptionKey
+
+  # S3 Bucket for CloudTrail audit logs
+  AuditLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub soulreel-audit-logs-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt DataEncryptionKey.Arn
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: TransitionToGlacier
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 30
+                StorageClass: GLACIER
+          - Id: DeleteOldLogs
+            Status: Enabled
+            ExpirationInDays: 90
+      Tags:
+        - Key: Project
+          Value: SoulReel
+        - Key: SecurityPhase
+          Value: Phase1
+        - Key: CostCenter
+          Value: Security
+
+  # Bucket policy to allow CloudTrail to write logs
+  AuditLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AuditLogBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AWSCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !GetAtt AuditLogBucket.Arn
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub ${AuditLogBucket.Arn}/AWSLogs/${AWS::AccountId}/*
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+
+  # CloudTrail trail for data access logging
+  DataAccessTrail:
+    Type: AWS::CloudTrail::Trail
+    DependsOn: AuditLogBucketPolicy
+    Properties:
+      TrailName: soulreel-data-access-trail
+      S3BucketName: !Ref AuditLogBucket
+      IsLogging: true
+      IsMultiRegionTrail: true
+      EnableLogFileValidation: true
+      IncludeGlobalServiceEvents: true
+      Tags:
+        - Key: Project
+          Value: SoulReel
+        - Key: SecurityPhase
+          Value: Phase1
+        - Key: CostCenter
+          Value: Security
+      EventSelectors:
+        # S3 data events for virtual-legacy bucket
+        - ReadWriteType: All
+          IncludeManagementEvents: true
+          DataResources:
+            - Type: AWS::S3::Object
+              Values:
+                - arn:aws:s3:::virtual-legacy/*
+        # DynamoDB data events for all tables
+        - ReadWriteType: All
+          IncludeManagementEvents: false
+          DataResources:
+            - Type: AWS::DynamoDB::Table
+              Values:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !GetAtt EngagementTable.Arn
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+
+  # GuardDuty threat detection
+  GuardDutyDetector:
+    Type: AWS::GuardDuty::Detector
+    Properties:
+      Enable: true
+      FindingPublishingFrequency: FIFTEEN_MINUTES
+      DataSources:
+        S3Logs:
+          Enable: true
+      Tags:
+        - Key: Project
+          Value: SoulReel
+        - Key: SecurityPhase
+          Value: Phase1
+        - Key: CostCenter
+          Value: Security
+
+  # SNS topic for security alerts
+  SecurityAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: soulreel-security-alerts
+      DisplayName: SoulReel Security Alerts
+      Tags:
+        - Key: Project
+          Value: SoulReel
+        - Key: SecurityPhase
+          Value: Phase1
+        - Key: CostCenter
+          Value: Security
+
+  # SNS topic policy to allow EventBridge to publish
+  SecurityAlertTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref SecurityAlertTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEventBridgeToPublish
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref SecurityAlertTopic
+
+  # SNS email subscription (conditional on parameter)
+  SecurityAlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasSecurityAlertEmail
+    Properties:
+      Protocol: email
+      TopicArn: !Ref SecurityAlertTopic
+      Endpoint: !Ref SecurityAlertEmail
+
+  # EventBridge rule for high-severity GuardDuty findings
+  GuardDutyAlertRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: soulreel-guardduty-high-severity-alerts
+      Description: Route high-severity GuardDuty findings (severity >= 7.0) to SNS
+      State: ENABLED
+      EventPattern:
+        source:
+          - aws.guardduty
+        detail-type:
+          - GuardDuty Finding
+        detail:
+          severity:
+            - numeric:
+                - '>='
+                - 7.0
+      Targets:
+        - Arn: !Ref SecurityAlertTopic
+          Id: SecurityAlertTopicTarget
+
+  # Gateway Response for CORS on 401 Unauthorized
+  GatewayResponseUnauthorized:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ServerlessRestApi
+      ResponseType: UNAUTHORIZED
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+
+  # Gateway Response for CORS on all 4XX errors
+  GatewayResponseDefault4XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ServerlessRestApi
+      ResponseType: DEFAULT_4XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+
+  # Gateway Response for CORS on all 5XX errors
+  GatewayResponseDefault5XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ServerlessRestApi
+      ResponseType: DEFAULT_5XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+        gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
+
+  # Temporary table for storing persona data during signup process
+  PersonaSignupTempTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PersonaSignupTempDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userName
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userName
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  PersonaRelationshipsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PersonaRelationshipsDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: initiator_id
+          AttributeType: S
+        - AttributeName: related_user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: initiator_id
+          KeyType: HASH
+        - AttributeName: related_user_id
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: RelatedUserIndex
+          KeySchema:
+            - AttributeName: related_user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  AccessConditionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: AccessConditionsDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: relationship_key
+          AttributeType: S
+        - AttributeName: condition_id
+          AttributeType: S
+        - AttributeName: condition_type
+          AttributeType: S
+        - AttributeName: activation_date
+          AttributeType: S
+      KeySchema:
+        - AttributeName: relationship_key
+          KeyType: HASH
+        - AttributeName: condition_id
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: ConditionTypeIndex
+          KeySchema:
+            - AttributeName: condition_type
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: ActivationDateIndex
+          KeySchema:
+            - AttributeName: condition_type
+              KeyType: HASH
+            - AttributeName: activation_date
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  EngagementTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: EngagementDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  WebSocketConnectionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: WebSocketConnectionsDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: connectionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connectionId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # Note: userStatusDB table is managed outside CloudFormation (created via AWS console)
+  # Note: Cognito User Pool, Client, Identity Pool, and IAM roles are managed outside CloudFormation
+  # The existing User Pool us-east-1_ZUrIoF6al and related resources are referenced via parameters
+
+  # WebSocket API
+  ConversationWebSocketApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: ConversationWebSocketApi
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: $request.body.action
+
+  WebSocketAuthorizer:
+    Type: AWS::ApiGatewayV2::Authorizer
+    Properties:
+      Name: CognitoWebSocketAuthorizer
+      ApiId: !Ref ConversationWebSocketApi
+      AuthorizerType: REQUEST
+      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketAuthorizerFunction.Arn}/invocations
+      IdentitySource:
+        - route.request.querystring.token
+
+  ConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ConversationWebSocketApi
+      RouteKey: $connect
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref WebSocketAuthorizer
+      Target: !Sub integrations/${ConnectIntegration}
+
+  ConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ConversationWebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketConnectFunction.Arn}/invocations
+
+  DisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ConversationWebSocketApi
+      RouteKey: $disconnect
+      Target: !Sub integrations/${DisconnectIntegration}
+
+  DisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ConversationWebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketDisconnectFunction.Arn}/invocations
+
+  DefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ConversationWebSocketApi
+      RouteKey: $default
+      Target: !Sub integrations/${DefaultIntegration}
+
+  DefaultIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ConversationWebSocketApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebSocketDefaultFunction.Arn}/invocations
+
+  WebSocketStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref ConversationWebSocketApi
+      StageName: prod
+      AutoDeploy: true
+
+  # WebSocket Lambda Functions
+  WebSocketAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/conversationFunctions/wsAuthorizer/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 10
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:GetUser
+              Resource: !Ref ExistingUserPoolArn
+
+  WebSocketAuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WebSocketAuthorizerFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ConversationWebSocketApi}/*
+
+  WebSocketConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/conversationFunctions/wsConnect/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 10
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref WebSocketConnectionsTable
+
+  WebSocketConnectPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WebSocketConnectFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ConversationWebSocketApi}/*
+
+  WebSocketDisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/conversationFunctions/wsDisconnect/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 10
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+              Resource: !GetAtt WebSocketConnectionsTable.Arn
+
+  WebSocketDisconnectPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WebSocketDisconnectFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ConversationWebSocketApi}/*
+
+  WebSocketDefaultFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/conversationFunctions/wsDefault/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Timeout: 30
+      MemorySize: 512
+      Layers:
+        - arn:aws:lambda:us-east-1:962214556635:layer:ffmpeg-layer:1
+      Environment:
+        Variables:
+          WEBSOCKET_API_ENDPOINT: !Sub ${ConversationWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod
+          CONNECTIONS_TABLE: !Ref WebSocketConnectionsTable
+          KMS_KEY_ARN: !GetAtt DataEncryptionKey.Arn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref WebSocketConnectionsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - execute-api:ManageConnections
+              Resource: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ConversationWebSocketApi}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+              Resource: !Sub 'arn:aws:transcribe:${AWS::Region}:${AWS::AccountId}:transcription-job/*'
+            - Effect: Allow
+              Action:
+                - transcribe:StartStreamTranscription
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource:
+                - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0
+                - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0
+                - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0
+                - !Sub arn:aws:bedrock:us-east-1:${AWS::AccountId}:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0
+        - Statement:
+            - Effect: Allow
+              Action:
+                - polly:SynthesizeSpeech
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  'aws:RequestedRegion': !Ref AWS::Region
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/conversation/*
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/deepgram/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy/conversations/*
+                - arn:aws:s3:::virtual-legacy/test-audio/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource:
+                - arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+                - arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:DeleteParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/user_completed_count/*
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SummarizeTranscriptFunction
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+
+  WebSocketDefaultPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref WebSocketDefaultFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ConversationWebSocketApi}/*
+
+  # Cognito Trigger Functions
+  PreSignupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/cognitoTriggers/preSignup/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 10
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaSignupTempTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+
+  PostConfirmationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/cognitoTriggers/postConfirmation/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 10
+      Environment:
+        Variables:
+          SENDER_EMAIL: noreply@soulreel.net
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+              Resource: !GetAtt PersonaSignupTempTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt PersonaRelationshipsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt AccessConditionsTable.Arn
+                - !Sub "${AccessConditionsTable.Arn}/index/*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminUpdateUserAttributes
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+
+  GetNumQuestionTypesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getNumQuestionTypes/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+      Events:
+        CountQuestionTypesApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetQuestionTypeDataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getQuestionTypeData/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+      Events:
+        GetQuestionTypeDataApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/typedata
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetAudioQuestionSummaryForVideoRecordingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getAudioQuestionSummaryForVideoRecording/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 5
+      MemorySize: 128
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetAudioSummaryApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/get-audio-summary-for-video
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetAudioSummaryOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/get-audio-summary-for-video
+            Method: OPTIONS
+
+  GetNumValidQuestionsForQTypeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getNumValidQuestionsForQType/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+      Events:
+        GetNumValidQuestionsForQTypeApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/validcount
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetTotalValidAllQuestionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getTotalValidAllQuestions/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:PutParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/total_valid_questions_cache
+      Events:
+        GetTotalValidAllQuestionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/totalvalidcount
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetTotalValidAllQuestionsOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/totalvalidcount
+            Method: OPTIONS
+
+  InvalidateTotalValidQuestionsCacheFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/invalidateTotalValidQuestionsCache/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 3
+      MemorySize: 128
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:DeleteParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/total_valid_questions_cache
+      Events:
+        InvalidateCacheApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/invalidate-total-cache
+            Method: DELETE
+            Auth:
+              Authorizer: CognitoAuthorizer
+        InvalidateCacheOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/invalidate-total-cache
+            Method: OPTIONS
+
+  GetUserCompletedQuestionCountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getUserCompletedQuestionCount/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:PutParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/user_completed_count/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetUserCompletedQuestionCountApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/usercompletedcount
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetUserCompletedQuestionCountOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/usercompletedcount
+            Method: OPTIONS
+
+  GetQuestionTypesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getQuestionTypes/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+      Events:
+        GetQuestionTypesApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/types
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetUnansweredQuestionsFromUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getUnansweredQuestionsFromUser/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:GetItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetUnansweredQuestionsFromUserApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/unanswered
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetUnansweredQuestionsFromUserOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/unanswered
+            Method: OPTIONS
+
+  GetQuestionByIdFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getQuestionById/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+      Events:
+        GetQuestionByIdApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/question
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetUnansweredQuestionsWithTextFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getUnansweredQuestionsWithText/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:GetItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetUnansweredQuestionsWithTextApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/unansweredwithtext
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetUnansweredQuestionsWithTextOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/unansweredwithtext
+            Method: OPTIONS
+
+  GetProgressSummaryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getProgressSummary/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:GetItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetProgressSummaryApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/progress-summary
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetProgressSummaryOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/progress-summary
+            Method: OPTIONS
+
+  GetProgressSummary2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/getProgressSummary2/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetProgressSummary2Api:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/progress-summary-2
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetProgressSummary2OptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/progress-summary-2
+            Method: OPTIONS
+
+  CreateRelationshipFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/relationshipFunctions/createRelationship/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        CreateRelationshipApi:
+          Type: Api
+          Properties:
+            Path: /relationships
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  GetRelationshipsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/relationshipFunctions/getRelationships/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 10
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetRelationshipsApi:
+          Type: Api
+          Properties:
+            Path: /relationships
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  ValidateAccessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/relationshipFunctions/validateAccess/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ValidateAccessApi:
+          Type: Api
+          Properties:
+            Path: /relationships/validate
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ValidateAccessOptionsApi:
+          Type: Api
+          Properties:
+            Path: /relationships/validate
+            Method: OPTIONS
+
+  CreateAssignmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/assignmentFunctions/createAssignment/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+          SENDER_EMAIL: noreply@soulreel.net
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:GetItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !Sub "${PersonaRelationshipsTable.Arn}/index/*"
+                - !GetAtt AccessConditionsTable.Arn
+                - !Sub "${AccessConditionsTable.Arn}/index/*"
+                - !GetAtt PersonaSignupTempTable.Arn
+                - !Sub "${PersonaSignupTempTable.Arn}/index/*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        CreateAssignmentApi:
+          Type: Api
+          Properties:
+            Path: /assignments
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        CreateAssignmentOptionsApi:
+          Type: Api
+          Properties:
+            Path: /assignments
+            Method: OPTIONS
+
+  GetAssignmentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/assignmentFunctions/getAssignments/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AccessConditionsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+                - cognito-idp:ListUsers
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetAssignmentsApi:
+          Type: Api
+          Properties:
+            Path: /assignments
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  UpdateAssignmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/assignmentFunctions/updateAssignment/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !Sub "${PersonaRelationshipsTable.Arn}/index/*"
+                - !GetAtt AccessConditionsTable.Arn
+                - !Sub "${AccessConditionsTable.Arn}/index/*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        UpdateAssignmentApi:
+          Type: Api
+          Properties:
+            Path: /assignments
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  AcceptDeclineAssignmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/assignmentFunctions/acceptDeclineAssignment/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AcceptDeclineAssignmentApi:
+          Type: Api
+          Properties:
+            Path: /assignments/respond
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AcceptDeclineAssignmentOptionsApi:
+          Type: Api
+          Properties:
+            Path: /assignments/respond
+            Method: OPTIONS
+
+  ManualReleaseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/assignmentFunctions/manualRelease/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 60
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ManualReleaseApi:
+          Type: Api
+          Properties:
+            Path: /assignments/manual-release
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ManualReleaseOptionsApi:
+          Type: Api
+          Properties:
+            Path: /assignments/manual-release
+            Method: OPTIONS
+
+  ResendInvitationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/assignmentFunctions/resendInvitation/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaSignupTempTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ResendInvitationApi:
+          Type: Api
+          Properties:
+            Path: /assignments/resend-invitation
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ResendInvitationOptionsApi:
+          Type: Api
+          Properties:
+            Path: /assignments/resend-invitation
+            Method: OPTIONS
+
+  # Scheduled Jobs for Assignment Processing
+  TimeDelayProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/scheduledJobs/timeDelayProcessor/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/TimeDelayProcessorFunction:*'
+      Events:
+        HourlySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 * * * ? *)'
+            Description: Process time-delayed access conditions hourly
+            Enabled: true
+
+  CheckInSenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/scheduledJobs/checkInSender/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaSignupTempTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/CheckInSenderFunction:*'
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 12 * * ? *)'
+            Description: Send check-in emails daily at noon UTC
+            Enabled: true
+
+  InactivityProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/scheduledJobs/inactivityProcessor/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaRelationshipsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/InactivityProcessorFunction:*'
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 12 * * ? *)'
+            Description: Process inactivity triggers daily at noon UTC
+            Enabled: true
+
+  CheckInResponseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/assignmentFunctions/checkInResponse/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PersonaSignupTempTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaSignupTempTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AccessConditionsTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref AccessConditionsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:Encrypt
+              Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/CheckInResponseFunction:*'
+      Events:
+        CheckInResponseApi:
+          Type: Api
+          Properties:
+            Path: /check-in
+            Method: GET
+        CheckInResponseOptionsApi:
+          Type: Api
+          Properties:
+            Path: /check-in
+            Method: OPTIONS
+
+  GetUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/videoFunctions/getUploadUrl/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 10
+      MemorySize: 128
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: arn:aws:s3:::virtual-legacy/user-responses/*
+            - Effect: Allow
+              Action:
+                - kms:GenerateDataKey
+                - kms:Decrypt
+              Resource: arn:aws:kms:us-east-1:962214556635:key/60f17a52-85bf-4c15-b571-ba216a69bb1a
+      Events:
+        GetUploadUrlApi:
+          Type: Api
+          Properties:
+            Path: /functions/videoFunctions/get-upload-url
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetUploadUrlOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/videoFunctions/get-upload-url
+            Method: OPTIONS
+
+  ProcessVideoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/videoFunctions/processVideo/
+      Handler: app.lambda_handler
+      Architectures:
+        - x86_64
+      Timeout: 60
+      MemorySize: 1024
+      Layers:
+        - arn:aws:lambda:us-east-1:962214556635:layer:ffmpeg-layer:1
+      Environment:
+        Variables:
+          START_TRANSCRIPTION_FUNCTION_NAME: !GetAtt StartTranscriptionFunction.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: !GetAtt EngagementTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  'cloudwatch:namespace': 'VirtualLegacy'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource: arn:aws:s3:::virtual-legacy/user-responses/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:DeleteParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/user_completed_count/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !GetAtt StartTranscriptionFunction.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ProcessVideoApi:
+          Type: Api
+          Properties:
+            Path: /functions/videoFunctions/process-video
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ProcessVideoOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/videoFunctions/process-video
+            Method: OPTIONS
+
+  UploadVideoResponseFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/videoFunctions/uploadVideoResponse/
+      Handler: app.lambda_handler
+      Architectures:
+        - x86_64
+      Timeout: 60
+      MemorySize: 1024
+      Layers:
+        - arn:aws:lambda:us-east-1:962214556635:layer:ffmpeg-layer:1
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: !GetAtt EngagementTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource: arn:aws:s3:::virtual-legacy/user-responses/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:DeleteParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/user_completed_count/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        UploadVideoResponseApi:
+          Type: Api
+          Properties:
+            Path: /functions/videoFunctions/upload
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UploadVideoResponseOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/videoFunctions/upload
+            Method: OPTIONS
+
+  GetMakerVideosFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/videoFunctions/getMakerVideos/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:GetItem
+              Resource:
+                - arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+                - arn:aws:dynamodb:*:*:table/PersonaRelationshipsDB
+                - arn:aws:dynamodb:*:*:table/allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - arn:aws:s3:::virtual-legacy/user-responses/*
+                - arn:aws:s3:::virtual-legacy/conversations/*
+                - arn:aws:s3:::virtual-legacy
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetMakerVideosApi:
+          Type: Api
+          Properties:
+            Path: /videos/maker/{makerId}
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetMakerVideosOptionsApi:
+          Type: Api
+          Properties:
+            Path: /videos/maker/{makerId}
+            Method: OPTIONS
+
+  InitializeUserProgressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/initializeUserProgress/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        InitializeProgressApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/initialize-progress
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        InitializeProgressOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/initialize-progress
+            Method: OPTIONS
+
+  SendInviteEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/inviteFunctions/sendInviteEmail/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+        - DynamoDBWritePolicy:
+            TableName: !Ref PersonaSignupTempTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        SendInviteEmailApi:
+          Type: Api
+          Properties:
+            Path: /invites/send
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SendInviteEmailOptionsApi:
+          Type: Api
+          Properties:
+            Path: /invites/send
+            Method: OPTIONS
+
+  IncrementUserLevelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/incrementUserLevel/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        IncrementUserLevelApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/increment-level
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        IncrementUserLevelOptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/increment-level
+            Method: OPTIONS
+
+  IncrementUserLevel2Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/questionDbFunctions/incrementUserLevel2/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        IncrementUserLevel2Api:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/increment-level-2
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        IncrementUserLevel2OptionsApi:
+          Type: Api
+          Properties:
+            Path: /functions/questionDbFunctions/increment-level-2
+            Method: OPTIONS
+
+  # Streak Tracking Functions
+  CheckStreakFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/streakFunctions/checkStreak/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 5
+      MemorySize: 128
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EngagementTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        CheckStreakApi:
+          Type: Api
+          Properties:
+            Path: /streak/check
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        CheckStreakOptionsApi:
+          Type: Api
+          Properties:
+            Path: /streak/check
+            Method: OPTIONS
+
+  GetStreakFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/streakFunctions/getStreak/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 3
+      MemorySize: 128
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EngagementTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetStreakApi:
+          Type: Api
+          Properties:
+            Path: /streak
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetStreakOptionsApi:
+          Type: Api
+          Properties:
+            Path: /streak
+            Method: OPTIONS
+
+  MonthlyResetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/streakFunctions/monthlyReset/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 512
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:BatchWriteItem
+                - dynamodb:PutItem
+              Resource: !GetAtt EngagementTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  'cloudwatch:namespace': 'VirtualLegacy/Streaks'
+                ForAllValues:StringEquals:
+                  'cloudwatch:metricName':
+                    - MonthlyResetSuccess
+                    - MonthlyResetErrors
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        MonthlySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'cron(0 0 1 * ? *)'
+            Description: Reset streak freeze on first of month
+            Enabled: true
+
+  # Video Transcription Functions
+  StartTranscriptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/videoFunctions/startTranscription/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          S3_BUCKET: virtual-legacy
+          TRANSCRIBE_ROLE_ARN: !Sub arn:aws:iam::${AWS::AccountId}:role/TranscribeServiceRole
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/TranscribeServiceRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+
+  ProcessTranscriptFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/videoFunctions/processTranscript/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          S3_BUCKET: virtual-legacy
+          SUMMARIZE_FUNCTION_NAME: !Ref SummarizeTranscriptFunction
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - transcribe:GetTranscriptionJob
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: 
+                - arn:aws:s3:::virtual-legacy/transcripts/*
+                - arn:aws:s3:::virtual-legacy/user-responses/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: arn:aws:s3:::virtual-legacy/user-responses/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !GetAtt SummarizeTranscriptFunction.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        TranscribeComplete:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - aws.transcribe
+              detail-type:
+                - Transcribe Job State Change
+              detail:
+                TranscriptionJobStatus:
+                  - COMPLETED
+                  - FAILED
+
+  SummarizeTranscriptFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/videoFunctions/summarizeTranscript/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 120
+      MemorySize: 512
+      Environment:
+        Variables:
+          S3_BUCKET: virtual-legacy
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: 
+                - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0
+                - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/life-story-app/llm-prompts/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: arn:aws:s3:::virtual-legacy/user-responses/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  GetNumQuestionTypesApi:
+    Description: API Gateway endpoint URL for counting unique question types
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/
+  GetQuestionTypeDataApi:
+    Description: API Gateway endpoint URL for retrieving question type data
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/typedata/
+  GetNumValidQuestionsForQTypeApi:
+    Description: API Gateway endpoint URL for counting valid questions by question type
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/validcount/
+  GetTotalValidAllQuestionsApi:
+    Description: API Gateway endpoint URL for getting total valid questions count (cached)
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/totalvalidcount/
+  InvalidateTotalValidQuestionsCacheApi:
+    Description: API Gateway endpoint URL for invalidating total questions cache
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/invalidate-total-cache/
+  GetUserCompletedQuestionCountApi:
+    Description: API Gateway endpoint URL for getting user completed question count (cached)
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/usercompletedcount/
+  GetQuestionTypesApi:
+    Description: API Gateway endpoint URL for retrieving question types
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/types/
+  GetUnansweredQuestionsFromUserApi:
+    Description: API Gateway endpoint URL for retrieving unanswered questions for a user
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/unanswered/
+  GetQuestionByIdApi:
+    Description: API Gateway endpoint URL for retrieving a specific question by ID
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/question/
+  GetUnansweredQuestionsWithTextApi:
+    Description: API Gateway endpoint URL for retrieving unanswered questions with
+      text for a user
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/unansweredwithtext/
+  UploadVideoResponseApi:
+    Description: API Gateway endpoint URL for uploading video responses
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/videoFunctions/upload/
+  InitializeUserProgressApi:
+    Description: API Gateway endpoint URL for initializing user progress
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/functions/questionDbFunctions/initialize-progress/
+  SendInviteEmailApi:
+    Description: API Gateway endpoint URL for sending invitation emails
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/invites/send/
+  # Cognito resources are managed outside CloudFormation
+  # User Pool ID: us-east-1_KsG65yYlo
+  # User Pool Client ID: gcj7ke19nrev9gjmvg564rv6j
+  # Identity Pool ID: us-east-1:4f912954-ea9f-4d5c-b30f-563a45107715
+  PersonaRelationshipsTableName:
+    Description: PersonaRelationships DynamoDB Table Name
+    Value: !Ref PersonaRelationshipsTable
+  WebSocketApiEndpoint:
+    Description: WebSocket API endpoint URL for conversation feature
+    Value: !Sub wss://${ConversationWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod

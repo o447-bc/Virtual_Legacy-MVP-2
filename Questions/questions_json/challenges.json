@@ -1,0 +1,138 @@
+{
+  "themeId": "challenges",
+  "themeName": "Challenges & Hard Times",
+  "questions": [
+    {
+      "questionId": "Challenges-0001",
+      "difficulty": 6,
+      "text": "What was one of the first big challenges or disappointments you remember facing as a child or teenager?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0002",
+      "difficulty": 6,
+      "text": "Was there a time in your younger years when something felt unfair or out of your control?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0003",
+      "difficulty": 6,
+      "text": "What was a difficult situation at home, school or with friends that you had to navigate alone or with little support?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0004",
+      "difficulty": 6,
+      "text": "Did you ever fail at something important early on — how did you handle that feeling?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0005",
+      "difficulty": 6,
+      "text": "What was one loss (person, pet, place, dream) that hit you hard when you were younger?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0006",
+      "difficulty": 6,
+      "text": "Looking back, what small hardship taught you an early lesson about resilience?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0007",
+      "difficulty": 7,
+      "text": "What was a major challenge in your 20s or 30s (career, relationship, health, finances…)?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0008",
+      "difficulty": 7,
+      "text": "Was there a time you felt completely overwhelmed or like you were at your lowest point?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0009",
+      "difficulty": 7,
+      "text": "Did you ever face a betrayal, rejection or deep disappointment that changed how you trusted people?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0010",
+      "difficulty": 7,
+      "text": "What was a period of prolonged struggle (illness, grief, financial stress, addiction…) that tested you the most?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0011",
+      "difficulty": 8,
+      "text": "Looking back, which hard time do you now realise quietly built your strength or character?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0012",
+      "difficulty": 8,
+      "text": "Was there a challenge you overcame that you're most proud of — even if no one else saw how hard it was?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0013",
+      "difficulty": 8,
+      "text": "Did any difficult experience ever lead to a positive change or new direction in your life?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0014",
+      "difficulty": 8,
+      "text": "What is one thing you wish you had known or had during your darkest moments?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0015",
+      "difficulty": 9,
+      "text": "Is there a hardship you still carry some anger, sadness or unresolved feeling about?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0016",
+      "difficulty": 9,
+      "text": "What forgiveness (to yourself or someone else) have you had to work toward after a hard time?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0017",
+      "difficulty": 9,
+      "text": "Looking back, what one challenge do you now see as a defining part of your story?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0018",
+      "difficulty": 9,
+      "text": "What do you hope your children or loved ones learn from the hard times you've been through?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0019",
+      "difficulty": 10,
+      "text": "If you could speak directly to yourself during your most painful moment, what would you say?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0020",
+      "difficulty": 10,
+      "text": "What do you want future generations to know about how you survived or grew through difficulty?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0021",
+      "difficulty": 10,
+      "text": "Is there a loss or challenge you still grieve in some way — and how do you carry it now?",
+      "active": true
+    },
+    {
+      "questionId": "Challenges-0022",
+      "difficulty": 10,
+      "text": "Looking at your entire life, what one hard experience would you say shaped your deepest values?",
+      "active": true
+    }
+  ]
+}

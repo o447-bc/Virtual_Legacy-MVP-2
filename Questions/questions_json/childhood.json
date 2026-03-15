@@ -1,0 +1,156 @@
+{
+  "themeId": "childhood",
+  "themeName": "Childhood Memories",
+  "questions": [
+    {
+      "questionId": "childhood-0001",
+      "difficulty": 1,
+      "text": "Where did you grow up — what kind of place was it (city, small town, village, farm, suburb, coastal area…)?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0002",
+      "difficulty": 1,
+      "text": "What did the street, road or path right outside your childhood home look like?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0003",
+      "difficulty": 1,
+      "text": "What was your bedroom like as a child — colours on the walls, posters, bed, toys, smell?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0004",
+      "difficulty": 1,
+      "text": "What single toy, game, doll, bike, puzzle or object did you play with the most?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0005",
+      "difficulty": 1,
+      "text": "What was your favourite snack, sweet or treat you ate as a child?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0006",
+      "difficulty": 1,
+      "text": "What did a normal afternoon or Saturday look like when you were around 7–10 years old?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0007",
+      "difficulty": 2,
+      "text": "Who was your closest friend or main playmate in early childhood?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0008",
+      "difficulty": 2,
+      "text": "What was the funniest, silliest or most adventurous thing you and your friends ever did?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0009",
+      "difficulty": 2,
+      "text": "Was there a favourite outdoor spot (tree, park, creek, field, wall, empty lot…) that felt like “your place”?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0010",
+      "difficulty": 2,
+      "text": "Did you have any pets growing up? What were their names and what were they like?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0011",
+      "difficulty": 3,
+      "text": "What was one moment in childhood when you felt really proud of something you did?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0012",
+      "difficulty": 3,
+      "text": "Which grown-up (parent, grandparent, teacher, neighbour, aunt/uncle…) made you feel truly safe or understood?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0013",
+      "difficulty": 3,
+      "text": "Was there ever a time as a child when you felt scared, very sad, lonely or left out — what was happening?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0014",
+      "difficulty": 3,
+      "text": "What was the most magical, exciting or joyful day you remember from being under 12?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0015",
+      "difficulty": 3,
+      "text": "Was there a rule at home or school that felt especially unfair or hard to follow?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0016",
+      "difficulty": 4,
+      "text": "If you could sit down with your 8–10-year-old self for five minutes, what would you say to comfort or guide them?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0017",
+      "difficulty": 4,
+      "text": "What part of your childhood do you now realise had the biggest influence on who you became?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0018",
+      "difficulty": 4,
+      "text": "Was there a childhood friend, cousin or family member you were very close to but later lost touch with — what happened?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0019",
+      "difficulty": 4,
+      "text": "What childhood experience or belief do you now see very differently as an adult?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0020",
+      "difficulty": 5,
+      "text": "Is there one specific childhood memory that still brings up strong feelings (happy, bittersweet, painful) when you think about it today?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0021",
+      "difficulty": 5,
+      "text": "Looking back, what one thing from your childhood would you most want your own children or grandchildren to experience?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0022",
+      "difficulty": 5,
+      "text": "Which childhood moment taught you the biggest early lesson about yourself or about other people?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0023",
+      "difficulty": 5,
+      "text": "What is one childhood experience you now regret — and what would you do differently if you could?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0024",
+      "difficulty": 5,
+      "text": "Looking back, what one person from your childhood do you wish you had thanked, forgiven or said something important to?",
+      "active": true
+    },
+    {
+      "questionId": "childhood-0025",
+      "difficulty": 5,
+      "text": "What do you hope people who knew you as a child would remember about the person you were?",
+      "active": true
+    }
+  ]
+}

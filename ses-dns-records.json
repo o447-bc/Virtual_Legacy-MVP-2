@@ -1,0 +1,59 @@
+{
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "ecc6fan3vxsjkxa7olwvo5osek6nlke6._domainkey.soulreel.net",
+        "Type": "CNAME",
+        "TTL": 1800,
+        "ResourceRecords": [
+          { "Value": "ecc6fan3vxsjkxa7olwvo5osek6nlke6.dkim.amazonses.com" }
+        ]
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "bzn52pcm4h3iogif4alqn4efueeyunua._domainkey.soulreel.net",
+        "Type": "CNAME",
+        "TTL": 1800,
+        "ResourceRecords": [
+          { "Value": "bzn52pcm4h3iogif4alqn4efueeyunua.dkim.amazonses.com" }
+        ]
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "nk3fif33d7jm4y6i4hgdaaaokbqhuzud._domainkey.soulreel.net",
+        "Type": "CNAME",
+        "TTL": 1800,
+        "ResourceRecords": [
+          { "Value": "nk3fif33d7jm4y6i4hgdaaaokbqhuzud.dkim.amazonses.com" }
+        ]
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "soulreel.net",
+        "Type": "TXT",
+        "TTL": 1800,
+        "ResourceRecords": [
+          { "Value": "\"v=spf1 include:amazonses.com ~all\"" }
+        ]
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "_dmarc.soulreel.net",
+        "Type": "TXT",
+        "TTL": 1800,
+        "ResourceRecords": [
+          { "Value": "\"v=DMARC1; p=none; rua=mailto:oliver@o447.net\"" }
+        ]
+      }
+    }
+  ]
+}

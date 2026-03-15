@@ -1,0 +1,9 @@
+{
+  "requestContext": {
+    "connectionId": "test-connection-id",
+    "authorizer": {
+      "userId": "test-user-id"
+    }
+  },
+  "body": "{\"action\": \"test_import\"}"
+}

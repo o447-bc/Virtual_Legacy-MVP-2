@@ -1,0 +1,18 @@
+{
+  "httpMethod": "POST",
+  "body": "{\"userId\":\"test-user\",\"questionId\":\"test-question\",\"questionType\":\"test\",\"videoData\":\"dGVzdCB2aWRlbyBkYXRh\"}",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "test-user",
+        "email": "test@example.com",
+        "custom:persona_type": "legacy_maker",
+        "custom:initiator_id": "test-user",
+        "custom:related_user_id": ""
+      }
+    }
+  }
+}

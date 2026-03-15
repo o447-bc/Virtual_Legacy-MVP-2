@@ -1,0 +1,162 @@
+{
+  "themeId": "traditionscelebrations",
+  "themeName": "Traditions, Holidays & Celebrations",
+  "questions": [
+    {
+      "questionId": "TraditionsCelebrations-0001",
+      "difficulty": 2,
+      "text": "What was your favourite holiday, festival or family celebration when you were growing up?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0002",
+      "difficulty": 2,
+      "text": "Describe the decorations, lights, smells or sounds that filled your home during your favourite holiday.",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0003",
+      "difficulty": 2,
+      "text": "What special food, dish or treat did you only get during holidays or big family gatherings?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0004",
+      "difficulty": 2,
+      "text": "Did your family have any quirky, funny or unique traditions that other people found strange?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0005",
+      "difficulty": 2,
+      "text": "What was your favourite gift-giving or gift-receiving moment from childhood holidays?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0006",
+      "difficulty": 2,
+      "text": "Was there a song, movie, story, game or ritual that was always part of a certain celebration?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0007",
+      "difficulty": 3,
+      "text": "Who usually led or organised the holiday preparations in your family — how did they do it?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0008",
+      "difficulty": 3,
+      "text": "Did you have any traditions that were just for your immediate family or close relatives?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0009",
+      "difficulty": 3,
+      "text": "Was there a holiday tradition you looked forward to all year long?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0010",
+      "difficulty": 3,
+      "text": "Did you ever help create or start a new tradition with friends or your own family later on?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0011",
+      "difficulty": 4,
+      "text": "Was there a holiday or celebration that felt different, difficult or bittersweet one year?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0012",
+      "difficulty": 4,
+      "text": "Looking back, which tradition taught you the most about your family’s values or history?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0013",
+      "difficulty": 4,
+      "text": "Is there a tradition from childhood that you still carry on today — or one you wish you could bring back?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0014",
+      "difficulty": 4,
+      "text": "What one holiday memory makes you feel most connected to your family or younger self?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0015",
+      "difficulty": 5,
+      "text": "If you could design one perfect holiday tradition for future generations of your family, what would it include?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0016",
+      "difficulty": 5,
+      "text": "Was there a holiday tradition that quietly shaped how you think about belonging or family?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0017",
+      "difficulty": 5,
+      "text": "What do you hope your children or grandchildren experience in the way of celebrations or traditions?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0018",
+      "difficulty": 5,
+      "text": "Is there a holiday or celebration memory that still brings up strong feelings today?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0019",
+      "difficulty": 6,
+      "text": "Did any holiday tradition ever cause tension, disappointment or conflict in your family?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0020",
+      "difficulty": 6,
+      "text": "Looking back, what one tradition do you now realise was a way your family showed love or resilience?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0021",
+      "difficulty": 6,
+      "text": "What part of your childhood celebrations do you consciously want to recreate or avoid in your own life?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0022",
+      "difficulty": 6,
+      "text": "If you could go back and relive one holiday exactly as it was, which one would it be and why?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0023",
+      "difficulty": 7,
+      "text": "What do you hope people who shared those traditions with you remember about those times?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0024",
+      "difficulty": 7,
+      "text": "Is there a holiday tradition or celebration that you now see as a quiet turning point in your family story?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0025",
+      "difficulty": 7,
+      "text": "What message about family, joy or togetherness do you hope your holiday memories pass on?",
+      "active": true
+    },
+    {
+      "questionId": "TraditionsCelebrations-0026",
+      "difficulty": 7,
+      "text": "If your younger self could see how you celebrate (or don’t celebrate) today, what do you think they would feel?",
+      "active": true
+    }
+  ]
+}

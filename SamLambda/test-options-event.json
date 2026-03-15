@@ -1,0 +1,6 @@
+{
+  "httpMethod": "OPTIONS",
+  "headers": {
+    "Content-Type": "application/json"
+  }
+}

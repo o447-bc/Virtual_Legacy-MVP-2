@@ -1,0 +1,138 @@
+{
+  "themeId": "workandcareerbegins",
+  "themeName": "Work & Career Beginnings",
+  "questions": [
+    {
+      "questionId": "WorkAndCareerBegins-0001",
+      "difficulty": 4,
+      "text": "What was your very first paid job, chore-for-money or way you earned anything as a child/teen?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0002",
+      "difficulty": 4,
+      "text": "How old were you and what did a typical day or shift look like in that first job?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0003",
+      "difficulty": 4,
+      "text": "What was the first thing you bought with money you earned yourself — how did it feel?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0004",
+      "difficulty": 4,
+      "text": "Who was your first boss, supervisor or person who paid you — what do you remember about them?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0005",
+      "difficulty": 4,
+      "text": "Did you have a summer job, paper round, babysitting, lawn mowing or other early work experience?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0006",
+      "difficulty": 4,
+      "text": "What uniform, tool, badge, apron or piece of equipment from your early jobs stands out in your memory?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0007",
+      "difficulty": 5,
+      "text": "What was the most surprising or unexpected thing you learned about work when you first started?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0008",
+      "difficulty": 5,
+      "text": "Who was a coworker, mentor or older colleague in your early jobs that helped you or made it more bearable?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0009",
+      "difficulty": 5,
+      "text": "Was there a small win, compliment or accomplishment at work early on that made you feel proud?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0010",
+      "difficulty": 5,
+      "text": "Did you ever have a funny, embarrassing or chaotic moment at your first job?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0011",
+      "difficulty": 6,
+      "text": "Looking back, what skill, habit or mindset did you pick up in your early working years that you still use?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0012",
+      "difficulty": 6,
+      "text": "Was there a time in your early jobs when you felt overwhelmed, underpaid, undervalued or out of your depth?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0013",
+      "difficulty": 6,
+      "text": "Which early job, boss or coworker taught you the most important lesson about work or yourself?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0014",
+      "difficulty": 6,
+      "text": "Did you ever quit, get let go from or walk away from an early job — how did that feel at the time?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0015",
+      "difficulty": 7,
+      "text": "What part of your early work life do you now realise was more about discovering who you were than about money?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0016",
+      "difficulty": 7,
+      "text": "Was there an early career choice or job path you took that you now see as a quiet turning point?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0017",
+      "difficulty": 7,
+      "text": "What do you wish you had known or believed about work when you were just starting out?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0018",
+      "difficulty": 7,
+      "text": "If you could go back to your first day at your very first job, what advice would you give yourself?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0019",
+      "difficulty": 8,
+      "text": "Looking back, what one early work experience still makes you smile, cringe or feel proud today?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0020",
+      "difficulty": 8,
+      "text": "What lesson from your early career turned out to be surprisingly important later in life?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0021",
+      "difficulty": 8,
+      "text": "Is there an early boss, coworker or job you now wish you could thank or apologise to?",
+      "active": true
+    },
+    {
+      "questionId": "WorkAndCareerBegins-0022",
+      "difficulty": 8,
+      "text": "What do you hope your own children or future generations understand about work from your early experiences?",
+      "active": true
+    }
+  ]
+}
