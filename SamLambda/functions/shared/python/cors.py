@@ -40,3 +40,4 @@ def cors_headers(event: dict = None) -> dict:
         ),
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     }
+
