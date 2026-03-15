@@ -2,6 +2,7 @@
 Timezone utilities for streak tracking system.
 Handles timezone-aware date calculations with caching for performance.
 """
+import os
 import pytz
 from datetime import datetime
 from typing import Optional
@@ -13,7 +14,7 @@ def get_user_timezone(user_id: str) -> str:
     """Fetch user timezone with caching. Returns 'UTC' if not found."""
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('userStatusDB')
+        table = dynamodb.Table(os.environ.get('TABLE_USER_STATUS', 'userStatusDB'))
         response = table.get_item(Key={'userId': user_id})
         
         if 'Item' in response and 'timeZone' in response['Item']:
