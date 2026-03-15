@@ -59,6 +59,15 @@ jobs:
 
       - name: Deploy to Amplify
         run: |
+          # Cancel any stuck/pending job before creating a new deployment
+          PENDING=$(aws amplify list-jobs --app-id d33jt7rnrasyvj --branch-name main \
+            --query "jobSummaries[?status=='PENDING' || status=='RUNNING'].jobId" \
+            --output text)
+          for JID in $PENDING; do
+            echo "Cancelling stuck job $JID"
+            aws amplify stop-job --app-id d33jt7rnrasyvj --branch-name main --job-id "$JID" || true
+          done
+
           # Create a manual deployment slot and get the pre-signed upload URL
           RESPONSE=$(aws amplify create-deployment \
             --app-id d33jt7rnrasyvj \
