@@ -10,7 +10,7 @@ import json
 import os
 import sys
 import boto3
-import base64
+
 from datetime import datetime
 from botocore.exceptions import ClientError
 
@@ -59,8 +59,8 @@ def lambda_handler(event, context):
         }
     
     try:
-        # Extract Benefactor ID from JWT token
-        benefactor_id = extract_user_id_from_jwt(event)
+        # Extract Benefactor ID from Cognito authorizer claims
+        benefactor_id = event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('sub')
         if not benefactor_id:
             return {
                 'statusCode': 401,
@@ -288,56 +288,6 @@ def handle_decline(
     }
 
 
-def extract_user_id_from_jwt(event):
-    """
-    Extract user ID from JWT token in Authorization header.
-    
-    Args:
-        event: Lambda event containing headers with Authorization token
-        
-    Returns:
-        str: User ID from JWT token, or None if extraction fails
-    """
-    try:
-        # Get Authorization header
-        auth_header = event.get('headers', {}).get('Authorization', '')
-        if not auth_header.startswith('Bearer '):
-            print("No Bearer token found in Authorization header")
-            return None
-        
-        # Extract JWT token (remove 'Bearer ' prefix)
-        jwt_token = auth_header[7:]
-        
-        # Parse JWT payload (second part after first dot)
-        # JWT format: header.payload.signature
-        token_parts = jwt_token.split('.')
-        if len(token_parts) != 3:
-            print("Invalid JWT token format")
-            return None
-        
-        # Decode payload (add padding if needed for base64 decoding)
-        payload_b64 = token_parts[1]
-        # Add padding if needed
-        payload_b64 += '=' * (4 - len(payload_b64) % 4)
-        
-        # Decode base64 payload
-        payload_json = base64.b64decode(payload_b64).decode('utf-8')
-        payload = json.loads(payload_json)
-        
-        # Extract user ID from 'sub' claim (standard JWT claim for subject/user ID)
-        user_id = payload.get('sub')
-        if user_id:
-            print(f"Extracted user ID from JWT: {user_id}")
-            return user_id
-        else:
-            print("No 'sub' claim found in JWT payload")
-            return None
-            
-    except Exception as e:
-        print(f"Error extracting user ID from JWT: {str(e)}")
-        return None
-
-
 def get_user_email_by_id(user_id: str) -> str:
     """
     Get user email by Cognito user ID.
@@ -431,7 +381,7 @@ def send_acceptance_email(legacy_maker_email: str, benefactor_id: str) -> bool:
                     <p>{benefactor_name} has accepted your benefactor assignment.</p>
                     <p>They will now have access to your legacy content according to the access conditions you configured.</p>
                     <p>You can manage your benefactor assignments at any time from your dashboard.</p>
-                    <a href="http://localhost:8080/manage-benefactors" class="button">Manage Benefactors</a>
+                    <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/manage-benefactors" class="button">Manage Benefactors</a>
                 </div>
                 <div class="footer">
                     <p>Virtual Legacy - Preserving memories for future generations</p>
@@ -451,7 +401,7 @@ def send_acceptance_email(legacy_maker_email: str, benefactor_id: str) -> bool:
         
         You can manage your benefactor assignments at any time from your dashboard.
         
-        Visit: http://localhost:8080/manage-benefactors
+        Visit: {os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/manage-benefactors
         
         Virtual Legacy - Preserving memories for future generations
         """
@@ -530,7 +480,7 @@ def send_decline_email(legacy_maker_email: str, benefactor_id: str) -> bool:
                     <p>{benefactor_name} has declined your benefactor assignment.</p>
                     <p>They will not have access to your legacy content.</p>
                     <p>You can manage your benefactor assignments or create new ones at any time from your dashboard.</p>
-                    <a href="http://localhost:8080/manage-benefactors" class="button">Manage Benefactors</a>
+                    <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/manage-benefactors" class="button">Manage Benefactors</a>
                 </div>
                 <div class="footer">
                     <p>Virtual Legacy - Preserving memories for future generations</p>
@@ -550,7 +500,7 @@ def send_decline_email(legacy_maker_email: str, benefactor_id: str) -> bool:
         
         You can manage your benefactor assignments or create new ones at any time from your dashboard.
         
-        Visit: http://localhost:8080/manage-benefactors
+        Visit: {os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/manage-benefactors
         
         Virtual Legacy - Preserving memories for future generations
         """

@@ -11,7 +11,7 @@ import json
 import os
 import sys
 import boto3
-import base64
+
 from datetime import datetime
 from botocore.exceptions import ClientError
 from typing import Dict, List, Tuple, Set
@@ -72,8 +72,8 @@ def lambda_handler(event, context):
         }
     
     try:
-        # Extract Legacy Maker ID from JWT token
-        legacy_maker_id = extract_user_id_from_jwt(event)
+        # Extract Legacy Maker ID from Cognito authorizer claims
+        legacy_maker_id = event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('sub')
         if not legacy_maker_id:
             return {
                 'statusCode': 401,
@@ -441,17 +441,17 @@ def send_access_granted_email(benefactor_email: str, legacy_maker_id: str) -> bo
         subject = "Legacy Content Access Granted"
         
         # HTML email body
-        html_body = """
+        html_body = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #6366f1; color: white; padding: 20px; text-align: center; }
-                .content { padding: 30px; background-color: #f9fafb; }
-                .button { display: inline-block; padding: 12px 24px; background-color: #6366f1; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-                .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #6366f1; color: white; padding: 20px; text-align: center; }}
+                .content {{ padding: 30px; background-color: #f9fafb; }}
+                .button {{ display: inline-block; padding: 12px 24px; background-color: #6366f1; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }}
+                .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
             </style>
         </head>
         <body>
@@ -464,7 +464,7 @@ def send_access_granted_email(benefactor_email: str, legacy_maker_id: str) -> bo
                     <p>Good news! A Legacy Maker has granted you access to their legacy content.</p>
                     <p>You can now view their videos, audio recordings, and text responses.</p>
                     <p>Click the button below to access the content:</p>
-                    <a href="http://localhost:8080/dashboard" class="button">View Legacy Content</a>
+                    <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard" class="button">View Legacy Content</a>
                     <p>Thank you for being a trusted Benefactor.</p>
                 </div>
                 <div class="footer">
@@ -476,14 +476,14 @@ def send_access_granted_email(benefactor_email: str, legacy_maker_id: str) -> bo
         """
         
         # Plain text version
-        text_body = """
+        text_body = f"""
         Legacy Content Access Granted
         
         Good news! A Legacy Maker has granted you access to their legacy content.
         
         You can now view their videos, audio recordings, and text responses.
         
-        Visit your dashboard to access the content: http://localhost:8080/dashboard
+        Visit your dashboard to access the content: {os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard
         
         Thank you for being a trusted Benefactor.
         
@@ -512,52 +512,3 @@ def send_access_granted_email(benefactor_email: str, legacy_maker_id: str) -> bo
         print(f"Error sending access granted email: {str(e)}")
         return False
 
-
-def extract_user_id_from_jwt(event):
-    """
-    Extract user ID from JWT token in Authorization header.
-    
-    Args:
-        event: Lambda event containing headers with Authorization token
-        
-    Returns:
-        str: User ID from JWT token, or None if extraction fails
-    """
-    try:
-        # Get Authorization header
-        auth_header = event.get('headers', {}).get('Authorization', '')
-        if not auth_header.startswith('Bearer '):
-            print("No Bearer token found in Authorization header")
-            return None
-        
-        # Extract JWT token (remove 'Bearer ' prefix)
-        jwt_token = auth_header[7:]
-        
-        # Parse JWT payload (second part after first dot)
-        # JWT format: header.payload.signature
-        token_parts = jwt_token.split('.')
-        if len(token_parts) != 3:
-            print("Invalid JWT token format")
-            return None
-        
-        # Decode payload (add padding if needed for base64 decoding)
-        payload_b64 = token_parts[1]
-        # Add padding if needed
-        payload_b64 += '=' * (4 - len(payload_b64) % 4)
-        
-        # Decode base64 payload
-        payload_json = base64.b64decode(payload_b64).decode('utf-8')
-        payload = json.loads(payload_json)
-        
-        # Extract user ID from 'sub' claim (standard JWT claim for subject/user ID)
-        user_id = payload.get('sub')
-        if user_id:
-            print(f"Extracted user ID from JWT: {user_id}")
-            return user_id
-        else:
-            print("No 'sub' claim found in JWT payload")
-            return None
-            
-    except Exception as e:
-        print(f"Error extracting user ID from JWT: {str(e)}")
-        return None

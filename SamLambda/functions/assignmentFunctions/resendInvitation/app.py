@@ -10,7 +10,7 @@ import json
 import os
 import sys
 import boto3
-import base64
+
 from datetime import datetime
 from botocore.exceptions import ClientError
 
@@ -55,8 +55,8 @@ def lambda_handler(event, context):
         }
     
     try:
-        # Extract Legacy Maker ID from JWT token
-        legacy_maker_id = extract_user_id_from_jwt(event)
+        # Extract Legacy Maker ID from Cognito authorizer claims
+        legacy_maker_id = event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('sub')
         if not legacy_maker_id:
             return {
                 'statusCode': 401,
@@ -256,56 +256,6 @@ def lambda_handler(event, context):
         }
 
 
-def extract_user_id_from_jwt(event):
-    """
-    Extract user ID from JWT token in Authorization header.
-    
-    Args:
-        event: Lambda event containing headers with Authorization token
-        
-    Returns:
-        str: User ID from JWT token, or None if extraction fails
-    """
-    try:
-        # Get Authorization header
-        auth_header = event.get('headers', {}).get('Authorization', '')
-        if not auth_header.startswith('Bearer '):
-            print("No Bearer token found in Authorization header")
-            return None
-        
-        # Extract JWT token (remove 'Bearer ' prefix)
-        jwt_token = auth_header[7:]
-        
-        # Parse JWT payload (second part after first dot)
-        # JWT format: header.payload.signature
-        token_parts = jwt_token.split('.')
-        if len(token_parts) != 3:
-            print("Invalid JWT token format")
-            return None
-        
-        # Decode payload (add padding if needed for base64 decoding)
-        payload_b64 = token_parts[1]
-        # Add padding if needed
-        payload_b64 += '=' * (4 - len(payload_b64) % 4)
-        
-        # Decode base64 payload
-        payload_json = base64.b64decode(payload_b64).decode('utf-8')
-        payload = json.loads(payload_json)
-        
-        # Extract user ID from 'sub' claim (standard JWT claim for subject/user ID)
-        user_id = payload.get('sub')
-        if user_id:
-            print(f"Extracted user ID from JWT: {user_id}")
-            return user_id
-        else:
-            print("No 'sub' claim found in JWT payload")
-            return None
-            
-    except Exception as e:
-        print(f"Error extracting user ID from JWT: {str(e)}")
-        return None
-
-
 def send_invitation_email(benefactor_email, legacy_maker_id, invitation_token, access_conditions):
     """
     Send invitation email to unregistered benefactor.
@@ -360,7 +310,7 @@ def send_invitation_email(benefactor_email, legacy_maker_id, invitation_token, a
                         {conditions_text}
                     </div>
                     <p>Click the button below to register and accept this assignment:</p>
-                    <a href="http://localhost:8080/signup?invite={invitation_token}" class="button">Register & Accept Assignment</a>
+                    <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/signup?invite={invitation_token}" class="button">Register & Accept Assignment</a>
                     <p>This invitation will expire in 30 days.</p>
                 </div>
                 <div class="footer">
@@ -382,7 +332,7 @@ def send_invitation_email(benefactor_email, legacy_maker_id, invitation_token, a
         Access Conditions:
         {conditions_text}
         
-        Visit this link to register and accept: http://localhost:8080/signup?invite={invitation_token}
+        Visit this link to register and accept: {os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/signup?invite={invitation_token}
         
         This invitation will expire in 30 days.
         
