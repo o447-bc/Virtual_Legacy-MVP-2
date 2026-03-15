@@ -70,7 +70,7 @@ jobs:
 
           # Upload the zip to the pre-signed S3 URL
           curl --silent --show-error --fail \
-            -T FrontEndCode/dist.zip \
+            -T FrontEndCode/dist/dist.zip \
             -H "Content-Type: application/zip" \
             "$UPLOAD_URL"
 
