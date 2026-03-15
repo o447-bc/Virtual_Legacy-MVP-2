@@ -489,16 +489,13 @@ const BenefactorDashboard: React.FC = () => {
                 <Input
                   id="inviteEmail"
                   type="email"
-                  placeholder="legacyMaker1@o447.net or legacyMaker2@o447.net"
+                  placeholder="Enter their email address"
                   value={formState.email}
                   onChange={handleEmailChange}
                   disabled={formState.isLoading}
                   className={emailError ? 'border-red-500' : ''}
                 />
                 {emailError && <p className="text-sm text-red-500">{emailError}</p>}
-                <p className="text-xs text-gray-500">
-                  For testing: Use legacyMaker1@o447.net or legacyMaker2@o447.net
-                </p>
               </div>
               
               <Button 
