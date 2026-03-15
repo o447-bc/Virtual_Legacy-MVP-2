@@ -448,7 +448,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
 
     if (user) {
       fetchProgressData();
-    } else {
     }
   }, [user, navigationState]);
 
