@@ -2384,7 +2384,7 @@ Resources:
             - Effect: Allow
               Action:
                 - transcribe:StartTranscriptionJob
-              Resource: '*'
+              Resource: !Sub 'arn:aws:transcribe:${AWS::Region}:${AWS::AccountId}:transcription-job/*'
         - Statement:
             - Effect: Allow
               Action:
@@ -2438,7 +2438,7 @@ Resources:
             - Effect: Allow
               Action:
                 - transcribe:GetTranscriptionJob
-              Resource: '*'
+              Resource: !Sub 'arn:aws:transcribe:${AWS::Region}:${AWS::AccountId}:transcription-job/*'
         - Statement:
             - Effect: Allow
               Action:
