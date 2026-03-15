@@ -24,13 +24,15 @@ Globals:
     Timeout: 3
     MemorySize: 128
     Runtime: python3.12
+    Environment:
+      Variables:
+        ALLOWED_ORIGIN: 'https://www.soulreel.net'
   Api:
     Cors:
       AllowMethods: '''GET,POST,PUT,OPTIONS'''
       AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
-      # Using wildcard for development - allows both localhost:8080 and soulreel.net
-      # TODO: Implement dynamic CORS or separate stages for production security
-      AllowOrigin: '''*'''
+      # Restrict to known origins. Add localhost variants for local dev via ALLOWED_ORIGIN env var.
+      AllowOrigin: '''https://www.soulreel.net'''
     Auth:
       Authorizers:
         CognitoAuthorizer:
@@ -346,7 +348,7 @@ Resources:
       RestApiId: !Ref ServerlessRestApi
       ResponseType: UNAUTHORIZED
       ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Origin: '''https://www.soulreel.net'''
         gatewayresponse.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
         gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
 
@@ -357,7 +359,7 @@ Resources:
       RestApiId: !Ref ServerlessRestApi
       ResponseType: DEFAULT_4XX
       ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Origin: '''https://www.soulreel.net'''
         gatewayresponse.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
         gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
 
@@ -368,7 +370,7 @@ Resources:
       RestApiId: !Ref ServerlessRestApi
       ResponseType: DEFAULT_5XX
       ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Origin: '''https://www.soulreel.net'''
         gatewayresponse.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
         gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS'''
 
@@ -498,6 +500,27 @@ Resources:
         Enabled: true
       SSESpecification:
         SSEEnabled: true
+
+  ConversationStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: ConversationStateDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: connectionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connectionId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
 
   # Note: userStatusDB table is managed outside CloudFormation (created via AWS console)
   # Note: Cognito User Pool, Client, Identity Pool, and IAM roles are managed outside CloudFormation
@@ -662,6 +685,10 @@ Resources:
           WEBSOCKET_API_ENDPOINT: !Sub ${ConversationWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod
           CONNECTIONS_TABLE: !Ref WebSocketConnectionsTable
           KMS_KEY_ARN: !GetAtt DataEncryptionKey.Arn
+          S3_BUCKET: virtual-legacy
+          TABLE_QUESTION_STATUS: userQuestionStatusDB
+          TABLE_QUESTION_PROGRESS: userQuestionLevelProgressDB
+          CONVERSATION_STATE_TABLE: !Ref ConversationStateTable
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref WebSocketConnectionsTable
@@ -701,6 +728,7 @@ Resources:
             - Effect: Allow
               Action:
                 - ssm:GetParameter
+                - ssm:GetParameters
               Resource:
                 - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/conversation/*
                 - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/deepgram/*
@@ -718,8 +746,15 @@ Resources:
                 - dynamodb:PutItem
                 - dynamodb:GetItem
               Resource:
-                - arn:aws:dynamodb:*:*:table/userQuestionStatusDB
-                - arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:DeleteItem
+              Resource: !GetAtt ConversationStateTable.Arn
         - Statement:
             - Effect: Allow
               Action:
@@ -762,6 +797,17 @@ Resources:
                 - kms:DescribeKey
               Resource: !GetAtt DataEncryptionKey.Arn
 
+  SharedUtilsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: soulreel-shared-utils
+      ContentUri: functions/shared/
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - arm64
+      RetentionPolicy: Retain
+
   PostConfirmationFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -770,6 +816,8 @@ Resources:
       Architectures:
         - arm64
       Timeout: 10
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           SENDER_EMAIL: noreply@soulreel.net
@@ -976,7 +1024,7 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:Query
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1037,7 +1085,7 @@ Resources:
               Action:
                 - dynamodb:Query
                 - dynamodb:GetItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1092,7 +1140,7 @@ Resources:
               Action:
                 - dynamodb:Query
                 - dynamodb:GetItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1113,44 +1161,6 @@ Resources:
             Path: /functions/questionDbFunctions/unansweredwithtext
             Method: OPTIONS
 
-  GetProgressSummaryFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/questionDbFunctions/getProgressSummary/
-      Handler: app.lambda_handler
-      Architectures:
-        - arm64
-      Timeout: 15
-      MemorySize: 256
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: allQuestionDB
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:Query
-                - dynamodb:GetItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
-        - Statement:
-            - Effect: Allow
-              Action:
-                - kms:Decrypt
-                - kms:DescribeKey
-              Resource: !GetAtt DataEncryptionKey.Arn
-      Events:
-        GetProgressSummaryApi:
-          Type: Api
-          Properties:
-            Path: /functions/questionDbFunctions/progress-summary
-            Method: GET
-            Auth:
-              Authorizer: CognitoAuthorizer
-        GetProgressSummaryOptionsApi:
-          Type: Api
-          Properties:
-            Path: /functions/questionDbFunctions/progress-summary
-            Method: OPTIONS
-
   GetProgressSummary2Function:
     Type: AWS::Serverless::Function
     Properties:
@@ -1168,13 +1178,13 @@ Resources:
               Action:
                 - dynamodb:Query
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:PutItem
                 - dynamodb:GetItem
-              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1293,6 +1303,8 @@ Resources:
         - arm64
       Timeout: 30
       MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1357,6 +1369,8 @@ Resources:
         - arm64
       Timeout: 30
       MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1395,6 +1409,8 @@ Resources:
         - arm64
       Timeout: 30
       MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1449,6 +1465,8 @@ Resources:
         - arm64
       Timeout: 30
       MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1498,6 +1516,8 @@ Resources:
         - arm64
       Timeout: 60
       MemorySize: 512
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1551,6 +1571,8 @@ Resources:
         - arm64
       Timeout: 30
       MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1598,6 +1620,8 @@ Resources:
         - arm64
       Timeout: 300
       MemorySize: 512
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1652,6 +1676,8 @@ Resources:
         - arm64
       Timeout: 300
       MemorySize: 512
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1704,6 +1730,8 @@ Resources:
         - arm64
       Timeout: 300
       MemorySize: 512
+      Layers:
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           USER_POOL_ID: !Ref ExistingUserPoolId
@@ -1758,6 +1786,8 @@ Resources:
         - arm64
       Timeout: 30
       MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref PersonaSignupTempTable
@@ -1838,6 +1868,7 @@ Resources:
       MemorySize: 1024
       Layers:
         - arn:aws:lambda:us-east-1:962214556635:layer:ffmpeg-layer:1
+        - !Ref SharedUtilsLayer
       Environment:
         Variables:
           START_TRANSCRIPTION_FUNCTION_NAME: !GetAtt StartTranscriptionFunction.Arn
@@ -1848,13 +1879,13 @@ Resources:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
                 - dynamodb:UpdateItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1865,7 +1896,7 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
-              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1922,18 +1953,19 @@ Resources:
       MemorySize: 1024
       Layers:
         - arn:aws:lambda:us-east-1:962214556635:layer:ffmpeg-layer:1
+        - !Ref SharedUtilsLayer
       Policies:
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1944,7 +1976,7 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
-              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -1998,9 +2030,9 @@ Resources:
                 - dynamodb:Query
                 - dynamodb:GetItem
               Resource:
-                - arn:aws:dynamodb:*:*:table/userQuestionStatusDB
-                - arn:aws:dynamodb:*:*:table/PersonaRelationshipsDB
-                - arn:aws:dynamodb:*:*:table/allQuestionDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/PersonaRelationshipsDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB
         - Statement:
             - Effect: Allow
               Action:
@@ -2047,13 +2079,13 @@ Resources:
               Action:
                 - dynamodb:Query
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -2112,42 +2144,6 @@ Resources:
             Path: /invites/send
             Method: OPTIONS
 
-  IncrementUserLevelFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: functions/questionDbFunctions/incrementUserLevel/
-      Handler: app.lambda_handler
-      Architectures:
-        - arm64
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: allQuestionDB
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
-        - Statement:
-            - Effect: Allow
-              Action:
-                - kms:Decrypt
-                - kms:DescribeKey
-              Resource: !GetAtt DataEncryptionKey.Arn
-      Events:
-        IncrementUserLevelApi:
-          Type: Api
-          Properties:
-            Path: /functions/questionDbFunctions/increment-level
-            Method: POST
-            Auth:
-              Authorizer: CognitoAuthorizer
-        IncrementUserLevelOptionsApi:
-          Type: Api
-          Properties:
-            Path: /functions/questionDbFunctions/increment-level
-            Method: OPTIONS
-
   IncrementUserLevel2Function:
     Type: AWS::Serverless::Function
     Properties:
@@ -2167,13 +2163,13 @@ Resources:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
                 - dynamodb:DeleteItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionLevelProgressDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -2204,6 +2200,8 @@ Resources:
         - arm64
       Timeout: 5
       MemorySize: 128
+      Layers:
+        - !Ref SharedUtilsLayer
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref EngagementTable
@@ -2211,7 +2209,7 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
-              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -2333,13 +2331,13 @@ Resources:
               Action:
                 - dynamodb:GetItem
                 - dynamodb:PutItem
-              Resource: arn:aws:dynamodb:*:*:table/userStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
         - Statement:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
                 - dynamodb:UpdateItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -2394,7 +2392,7 @@ Resources:
               Action:
                 - dynamodb:GetItem
                 - dynamodb:UpdateItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:
@@ -2446,7 +2444,7 @@ Resources:
               Action:
                 - dynamodb:GetItem
                 - dynamodb:UpdateItem
-              Resource: arn:aws:dynamodb:*:*:table/userQuestionStatusDB
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
         - Statement:
             - Effect: Allow
               Action:

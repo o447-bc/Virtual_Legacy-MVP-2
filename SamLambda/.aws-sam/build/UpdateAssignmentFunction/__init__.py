@@ -1,1 +1,0 @@
-# UpdateAssignment Lambda Function

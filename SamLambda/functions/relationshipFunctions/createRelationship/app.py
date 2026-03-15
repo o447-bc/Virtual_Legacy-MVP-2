@@ -1,3 +1,4 @@
+import os
 import json
 import boto3
 from datetime import datetime
@@ -19,7 +20,7 @@ def lambda_handler(event, context):
         if not all([initiator_id, related_user_id, relationship_type]):
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({'error': 'Missing required parameters'})
             }
         
@@ -28,14 +29,14 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps(result)
         }
         
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({'error': str(e)})
         }
 

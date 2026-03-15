@@ -21,7 +21,7 @@ Region: us-east-1
 Account: 962214556635
 
 CORS CONFIGURATION:
-Allowed Origin: https://main.d33jt7rnrasyvj.amplifyapp.com
+Allowed Origin: https://www.soulreel.net
 Status: Configured and Deployed ✓
 
 DEPLOYMENT PHASES COMPLETED:

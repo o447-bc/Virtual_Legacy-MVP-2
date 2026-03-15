@@ -61,7 +61,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
                 'Access-Control-Allow-Methods': 'POST,OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
             },
@@ -74,7 +74,7 @@ def lambda_handler(event, context):
         if not legacy_maker_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({'error': 'Unable to identify user from token'})
             }
         
@@ -86,7 +86,7 @@ def lambda_handler(event, context):
         if not manual_release_conditions:
             return {
                 'statusCode': 200,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({
                     'success': True,
                     'message': 'No manual release conditions found',
@@ -145,7 +145,7 @@ def lambda_handler(event, context):
         # Return success response with summary
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({
                 'success': True,
                 'message': f"Manual release completed. Released {summary['newly_released']} assignments.",
@@ -158,7 +158,7 @@ def lambda_handler(event, context):
         print(f"Unexpected error in manual release: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({'error': f'Internal server error: {str(e)}'})
         }
 

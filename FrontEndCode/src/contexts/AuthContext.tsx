@@ -107,7 +107,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 fetch(buildApiUrl('/functions/questionDbFunctions/initialize-progress'), {
                   method: 'POST',
                   headers: { Authorization: `Bearer ${token}` }
-                }).catch(() => {}); // Silent fail
+                }).catch((err) => {
+                  console.warn('Progress initialization request failed:', err);
+                });
               }
             } catch (error) {
               console.warn('Progress initialization failed:', error);

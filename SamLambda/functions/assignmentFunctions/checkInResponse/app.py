@@ -315,7 +315,7 @@ def build_success_response():
         'statusCode': 200,
         'headers': {
             'Content-Type': 'text/html',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')
         },
         'body': html_content
     }
@@ -441,7 +441,7 @@ def build_error_response(status_code, message):
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'text/html',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')
         },
         'body': html_content
     }

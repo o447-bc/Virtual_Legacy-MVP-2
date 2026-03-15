@@ -26,10 +26,11 @@ def lambda_handler(event, context):
             })
         }
     except ClientError as e:
+        print(f"[ERROR] getNumQuestionTypes DynamoDB error: {e}")
         return {
             'statusCode': 500,
             'body': json.dumps({
-                'error': f"Error accessing DynamoDB: {str(e)}"
+                'error': 'Failed to retrieve question type count. Please try again.'
             })
         }
     

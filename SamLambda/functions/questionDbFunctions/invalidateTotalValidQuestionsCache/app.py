@@ -1,3 +1,4 @@
+import os
 import json
 import boto3
 
@@ -9,7 +10,7 @@ def lambda_handler(event, context):
     print(f"Invalidating cache: {SSM_PARAM_NAME}")
     
     headers = {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
         'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
         'Access-Control-Allow-Methods': 'DELETE,OPTIONS'
     }
@@ -33,9 +34,9 @@ def lambda_handler(event, context):
             'body': json.dumps({'message': 'Cache was already empty'})
         }
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error invalidating cache: {str(e)}")
         return {
             'statusCode': 500,
             'headers': headers,
-            'body': json.dumps({'error': str(e)})
+            'body': json.dumps({'error': 'Failed to invalidate cache. Please try again.'})
         }

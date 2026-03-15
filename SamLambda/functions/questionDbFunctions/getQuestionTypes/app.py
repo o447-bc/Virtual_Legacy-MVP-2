@@ -35,7 +35,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 500,  # Internal server error status code
             'body': json.dumps({
-                'error': f"Error accessing DynamoDB: {str(e)}"  # Include error details in response
+                'error': 'Failed to retrieve question types. Please try again.'
             })
         }
     

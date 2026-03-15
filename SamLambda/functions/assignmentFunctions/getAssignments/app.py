@@ -49,7 +49,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
             },
@@ -62,7 +62,7 @@ def lambda_handler(event, context):
         if not legacy_maker_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unable to identify user from token'})
             }
         
@@ -81,7 +81,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({
                 'assignments': assignments,
                 'count': len(assignments)
@@ -92,8 +92,8 @@ def lambda_handler(event, context):
         print(f"Unexpected error: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': f'Internal server error: {str(e)}'})
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+            'body': json.dumps({'error': 'Internal server error'})
         }
 
 
@@ -147,6 +147,19 @@ def extract_user_id_from_jwt(event):
         return None
 
 
+def _query_all_pages(table, **kwargs):
+    """Query DynamoDB with automatic pagination, returning all items."""
+    items = []
+    while True:
+        response = table.query(**kwargs)
+        items.extend(response.get('Items', []))
+        last_key = response.get('LastEvaluatedKey')
+        if not last_key:
+            break
+        kwargs['ExclusiveStartKey'] = last_key
+    return items
+
+
 def get_assignments_for_user(user_id):
     """
     Get all assignments for a Legacy Maker.
@@ -164,15 +177,12 @@ def get_assignments_for_user(user_id):
         dynamodb = boto3.resource('dynamodb')
         relationships_table = dynamodb.Table('PersonaRelationshipsDB')
         
-        # Query for all relationships where this user is the initiator
-        response = relationships_table.query(
+        # Query for all relationships where this user is the initiator (all pages)
+        relationships = _query_all_pages(
+            relationships_table,
             KeyConditionExpression='initiator_id = :uid',
-            ExpressionAttributeValues={
-                ':uid': user_id
-            }
+            ExpressionAttributeValues={':uid': user_id}
         )
-        
-        relationships = response.get('Items', [])
         
         # Filter for maker-to-benefactor assignments only
         assignments = []
@@ -209,16 +219,13 @@ def get_assignments_as_beneficiary(user_id):
         dynamodb = boto3.resource('dynamodb')
         relationships_table = dynamodb.Table('PersonaRelationshipsDB')
         
-        # Query using RelatedUserIndex GSI for all relationships where this user is the benefactor
-        response = relationships_table.query(
+        # Query using RelatedUserIndex GSI for all relationships where this user is the benefactor (all pages)
+        relationships = _query_all_pages(
+            relationships_table,
             IndexName='RelatedUserIndex',
             KeyConditionExpression='related_user_id = :uid',
-            ExpressionAttributeValues={
-                ':uid': user_id
-            }
+            ExpressionAttributeValues={':uid': user_id}
         )
-        
-        relationships = response.get('Items', [])
         
         # Filter for maker-to-benefactor assignments only
         assignments = []

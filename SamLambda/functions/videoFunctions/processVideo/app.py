@@ -165,7 +165,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'POST,OPTIONS'
             },
@@ -177,7 +177,7 @@ def lambda_handler(event, context):
     if not user_id:
         return {
             'statusCode': 401,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({'error': 'Unauthorized'})
         }
     
@@ -198,7 +198,7 @@ def lambda_handler(event, context):
         if not all([question_id, question_type, s3_key, filename]):
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({
                     'error': 'Missing required parameters: questionId, questionType, s3Key, filename'
                 }, cls=DecimalEncoder)
@@ -211,7 +211,7 @@ def lambda_handler(event, context):
         except ClientError:
             return {
                 'statusCode': 404,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({'error': 'Video not found in S3'}, cls=DecimalEncoder)
             }
         
@@ -268,14 +268,14 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps(response_body, cls=DecimalEncoder)
         }
         
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({'error': str(e)})
         }
 

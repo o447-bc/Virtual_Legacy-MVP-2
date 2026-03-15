@@ -1,0 +1,44 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'SamLambda/**'
+      - '.github/workflows/backend.yml'
+
+jobs:
+  deploy:
+    name: SAM Build & Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Validate template
+        run: sam validate --lint
+        working-directory: SamLambda
+
+      - name: Build
+        run: sam build --parallel --cached
+        working-directory: SamLambda
+
+      - name: Deploy
+        run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
+        working-directory: SamLambda

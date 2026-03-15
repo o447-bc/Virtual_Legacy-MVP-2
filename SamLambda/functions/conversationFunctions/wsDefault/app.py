@@ -7,7 +7,7 @@ import time
 
 from conversation_state import ConversationState, get_conversation, set_conversation, remove_conversation
 from config import get_conversation_config
-from llm import process_user_response_parallel
+from llm import process_user_response_parallel, generate_ai_response, score_response_depth
 from speech import text_to_speech
 from storage import (save_transcript_to_s3, update_question_status, 
                      update_user_progress, invalidate_cache, trigger_summarization)
@@ -20,7 +20,7 @@ apigateway = boto3.client('apigatewaymanagementapi',
 # Configure S3 client to use Signature Version 4 (required for KMS-encrypted objects)
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
 
-S3_BUCKET = 'virtual-legacy'
+S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 
 def send_message(connection_id: str, message: dict):
     """Send message to WebSocket client"""
@@ -103,24 +103,20 @@ def handle_user_response(connection_id: str, user_id: str, body: dict, config: d
     print(f"[RESPONSE] Processing user response: {len(user_text)} characters")
     
     try:
-        # Score the response
-        turn_score, reasoning = score_response_depth(
-            user_text,
-            config['scoring_prompt'],
-            config['llm_scoring_model']
-        )
-        
-        # Generate AI follow-up
-        ai_response = generate_ai_response(
+        # Score and generate AI response in parallel
+        ai_response, turn_score, reasoning = process_user_response_parallel(
             state.question_text,
             state.turns,
             user_text,
             config['system_prompt'],
-            config['llm_conversation_model']
+            config['scoring_prompt'],
+            config['llm_conversation_model'],
+            config['llm_scoring_model']
         )
-        
-        # Add turn to state
+
+        # Add turn to state and persist
         state.add_turn(user_text, ai_response, turn_score, reasoning)
+        set_conversation(connection_id, state)
         
         # Send score update
         send_message(connection_id, {
@@ -207,7 +203,7 @@ def handle_user_response(connection_id: str, user_id: str, body: dict, config: d
         print(traceback.format_exc())
         send_message(connection_id, {
             'type': 'error',
-            'message': f'Error processing response: {str(e)}'
+            'message': 'Error processing response. Please try again.'
         })
 
 def handle_audio_response(connection_id: str, user_id: str, body: dict, config: dict):
@@ -305,11 +301,12 @@ def handle_audio_response(connection_id: str, user_id: str, body: dict, config: 
             config['llm_scoring_model']
         )
         
-        # Add turn to state (with audio URL)
+        # Add turn to state (with audio URL) and persist
         state.add_turn(user_text, ai_response, turn_score, reasoning)
         # Store audio URL in turn metadata
         if state.turns:
             state.turns[-1]['audio_url'] = audio_url
+        set_conversation(connection_id, state)
         
         # Send score update
         send_message(connection_id, {
@@ -398,7 +395,7 @@ def handle_audio_response(connection_id: str, user_id: str, body: dict, config: 
         print(traceback.format_exc())
         send_message(connection_id, {
             'type': 'error',
-            'message': f'Error processing audio: {str(e)}'
+            'message': 'Error processing audio. Please try again.'
         })
 
 def handle_get_upload_url(connection_id: str, user_id: str):
@@ -471,7 +468,7 @@ def handle_get_upload_url(connection_id: str, user_id: str):
         print(traceback.format_exc())
         send_message(connection_id, {
             'type': 'error',
-            'message': f'Error generating upload URL: {str(e)}'
+            'message': f'Error generating upload URL. Please try again.'
         })
 
 def handle_end_conversation(connection_id: str, user_id: str):
@@ -553,7 +550,7 @@ def lambda_handler(event, context):
         try:
             send_message(connection_id, {
                 'type': 'error',
-                'message': f'Server error: {str(e)}'
+                'message': 'A server error occurred. Please try again.'
             })
         except:
             pass

@@ -4,6 +4,7 @@ Handles S3 storage for conversation transcripts
 """
 
 import json
+import os
 import time
 import boto3
 from botocore.client import Config
@@ -14,7 +15,9 @@ from typing import Dict
 s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
 dynamodb = boto3.resource('dynamodb')
 
-BUCKET_NAME = 'virtual-legacy'
+BUCKET_NAME = os.environ.get('S3_BUCKET', 'virtual-legacy')
+TABLE_QUESTION_STATUS = os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB')
+TABLE_QUESTION_PROGRESS = os.environ.get('TABLE_QUESTION_PROGRESS', 'userQuestionLevelProgressDB')
 
 def save_transcript_to_s3(user_id: str, question_id: str, conversation_data: Dict) -> str:
     """Save conversation transcript to S3"""
@@ -38,7 +41,7 @@ def update_question_status(user_id: str, question_id: str, transcript_url: str,
                           final_score: float, turn_count: int):
     """Update userQuestionStatusDB with completion data"""
     
-    table = dynamodb.Table('userQuestionStatusDB')
+    table = dynamodb.Table(TABLE_QUESTION_STATUS)
     
     print(f"[DYNAMODB] Updating question status for user={user_id}, question={question_id}")
     
@@ -61,7 +64,7 @@ def update_question_status(user_id: str, question_id: str, transcript_url: str,
 def update_user_progress(user_id: str, question_id: str, question_type: str):
     """Update userQuestionLevelProgressDB - matches video upload behavior"""
     try:
-        table = dynamodb.Table('userQuestionLevelProgressDB')
+        table = dynamodb.Table(TABLE_QUESTION_PROGRESS)
         
         response = table.get_item(Key={'userId': user_id, 'questionType': question_type})
         if 'Item' not in response:

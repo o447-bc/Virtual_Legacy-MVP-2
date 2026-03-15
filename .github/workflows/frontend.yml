@@ -1,0 +1,84 @@
+name: Frontend Deploy
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'FrontEndCode/**'
+      - '.github/workflows/frontend.yml'
+
+jobs:
+  deploy:
+    name: Build & Deploy to Amplify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: FrontEndCode/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: FrontEndCode
+
+      - name: Type check
+        run: npx tsc --noEmit
+        working-directory: FrontEndCode
+
+      - name: Lint
+        run: npm run lint
+        working-directory: FrontEndCode
+
+      - name: Build
+        run: npm run build
+        working-directory: FrontEndCode
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_USER_POOL_ID: ${{ secrets.VITE_USER_POOL_ID }}
+          VITE_USER_POOL_CLIENT_ID: ${{ secrets.VITE_USER_POOL_CLIENT_ID }}
+          VITE_IDENTITY_POOL_ID: ${{ secrets.VITE_IDENTITY_POOL_ID }}
+          VITE_AWS_REGION: us-east-1
+          VITE_S3_BUCKET: ${{ secrets.VITE_S3_BUCKET }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Package dist
+        run: zip -r dist.zip .
+        working-directory: FrontEndCode/dist
+
+      - name: Deploy to Amplify
+        run: |
+          # Create a manual deployment slot and get the pre-signed upload URL
+          RESPONSE=$(aws amplify create-deployment \
+            --app-id d33jt7rnrasyvj \
+            --branch-name master \
+            --output json)
+
+          JOB_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['jobId'])")
+          UPLOAD_URL=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['zipUploadUrl'])")
+
+          # Upload the zip to the pre-signed S3 URL
+          curl --silent --show-error --fail \
+            -T FrontEndCode/dist.zip \
+            -H "Content-Type: application/zip" \
+            "$UPLOAD_URL"
+
+          # Start the deployment
+          aws amplify start-deployment \
+            --app-id d33jt7rnrasyvj \
+            --branch-name master \
+            --job-id "$JOB_ID"
+
+          echo "Amplify deployment started — job ID: $JOB_ID"
+          echo "Monitor at: https://console.aws.amazon.com/amplify/home#/d33jt7rnrasyvj"

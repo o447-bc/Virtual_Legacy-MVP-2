@@ -1,3 +1,4 @@
+import os
 import json
 import boto3
 import uuid
@@ -14,7 +15,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
                 'Access-Control-Allow-Methods': 'POST,OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
             },
@@ -32,7 +33,7 @@ def lambda_handler(event, context):
         if not all([benefactor_email, invitee_email]):
             return {
                 'statusCode': 400,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({'error': 'Missing required parameters'})
             }
         
@@ -41,7 +42,7 @@ def lambda_handler(event, context):
         if not benefactor_id:
             return {
                 'statusCode': 401,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({'error': 'Unable to identify benefactor from token'})
             }
         
@@ -63,7 +64,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({
                 'message': 'Invitation sent successfully',
                 'invite_token': invite_token,
@@ -75,7 +76,7 @@ def lambda_handler(event, context):
         print(f"Lambda Error: {str(e)}")
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({'error': str(e)})
         }
 

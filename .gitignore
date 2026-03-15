@@ -16,5 +16,17 @@ FrontEndCode/dist.zip
 # Temp/lock files
 ~$*
 
-# SSH key artifacts
+# SSH key artifacts and credentials
 ssh-keygen*
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+*.pem
+
+# Environment variable files with secrets
+FrontEndCode/.env
+.env
+
+# SAM build artifacts
+SamLambda/.aws-sam/

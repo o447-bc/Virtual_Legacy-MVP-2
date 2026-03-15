@@ -1,3 +1,4 @@
+import os
 """GET /streak - Fast read-only endpoint for current streak data.
 
 PURPOSE:
@@ -32,7 +33,7 @@ def lambda_handler(event, context):
         return {
             'statusCode': 200,
             'headers': {
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
             },
@@ -46,7 +47,7 @@ def lambda_handler(event, context):
     if not user_id:
         return {
             'statusCode': 401,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({'error': 'Unauthorized'})
         }
     
@@ -62,7 +63,7 @@ def lambda_handler(event, context):
         if 'Item' not in response:
             return {
                 'statusCode': 200,
-                'headers': {'Access-Control-Allow-Origin': '*'},
+                'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
                 'body': json.dumps({
                     'streakCount': 0,
                     'streakFreezeAvailable': True
@@ -73,7 +74,7 @@ def lambda_handler(event, context):
         item = response['Item']
         return {
             'statusCode': 200,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({
                 'streakCount': int(item.get('streakCount', 0)),
                 'streakFreezeAvailable': item.get('streakFreezeAvailable', True),
@@ -85,6 +86,6 @@ def lambda_handler(event, context):
         logger.error(f"Error in getStreak: {str(e)}", exc_info=True)
         return {
             'statusCode': 500,
-            'headers': {'Access-Control-Allow-Origin': '*'},
+            'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')},
             'body': json.dumps({'error': str(e)})
         }

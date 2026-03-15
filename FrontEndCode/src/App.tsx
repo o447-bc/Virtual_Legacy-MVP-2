@@ -1,10 +1,10 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
 import Home from "./pages/Home";
@@ -34,6 +34,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -41,14 +42,17 @@ const App = () => (
             <Route path="/legacy-create-choice" element={<LegacyCreateChoice />} />
             <Route path="/signup-create-legacy" element={<SignUpCreateLegacy />} />
             <Route path="/signup-start-their-legacy" element={<SignUpStartTheirLegacy />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/benefactor-dashboard" element={<BenefactorDashboard />} />
-            <Route path="/manage-benefactors" element={<ManageBenefactors />} />
-            <Route path="/response-viewer/:makerId" element={<ResponseViewer />} />
-            <Route path="/record" element={<RecordResponse />} />
-            <Route path="/record-conversation" element={<RecordConversation />} />
-            <Route path="/question-themes" element={<QuestionThemes />} />
-            <Route path="/test-s3" element={<TestS3 />} />
+
+            {/* Protected routes — require authentication */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/benefactor-dashboard" element={<ProtectedRoute requiredPersona="legacy_benefactor"><BenefactorDashboard /></ProtectedRoute>} />
+            <Route path="/manage-benefactors" element={<ProtectedRoute><ManageBenefactors /></ProtectedRoute>} />
+            <Route path="/response-viewer/:makerId" element={<ProtectedRoute><ResponseViewer /></ProtectedRoute>} />
+            <Route path="/record" element={<ProtectedRoute><RecordResponse /></ProtectedRoute>} />
+            <Route path="/record-conversation" element={<ProtectedRoute><RecordConversation /></ProtectedRoute>} />
+            <Route path="/question-themes" element={<ProtectedRoute><QuestionThemes /></ProtectedRoute>} />
+            <Route path="/test-s3" element={<ProtectedRoute><TestS3 /></ProtectedRoute>} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
