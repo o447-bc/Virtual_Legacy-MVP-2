@@ -33,7 +33,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Validate template
-        run: sam validate
+        run: sam validate --lint
         working-directory: SamLambda
 
       - name: Build
