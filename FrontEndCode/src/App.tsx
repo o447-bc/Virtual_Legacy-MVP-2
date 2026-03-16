@@ -56,13 +56,13 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected routes — require authentication */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute requiredPersona="legacy_maker"><Dashboard /></ProtectedRoute>} />
             <Route path="/benefactor-dashboard" element={<ProtectedRoute requiredPersona="legacy_benefactor"><BenefactorDashboard /></ProtectedRoute>} />
-            <Route path="/manage-benefactors" element={<ProtectedRoute><ManageBenefactors /></ProtectedRoute>} />
+            <Route path="/manage-benefactors" element={<ProtectedRoute requiredPersona="legacy_maker"><ManageBenefactors /></ProtectedRoute>} />
             <Route path="/response-viewer/:makerId" element={<ProtectedRoute><ResponseViewer /></ProtectedRoute>} />
-            <Route path="/record" element={<ProtectedRoute><RecordResponse /></ProtectedRoute>} />
-            <Route path="/record-conversation" element={<ProtectedRoute><RecordConversation /></ProtectedRoute>} />
-            <Route path="/question-themes" element={<ProtectedRoute><QuestionThemes /></ProtectedRoute>} />
+            <Route path="/record" element={<ProtectedRoute requiredPersona="legacy_maker"><RecordResponse /></ProtectedRoute>} />
+            <Route path="/record-conversation" element={<ProtectedRoute requiredPersona="legacy_maker"><RecordConversation /></ProtectedRoute>} />
+            <Route path="/question-themes" element={<ProtectedRoute requiredPersona="legacy_maker"><QuestionThemes /></ProtectedRoute>} />
             <Route path="/test-s3" element={<ProtectedRoute><TestS3 /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />

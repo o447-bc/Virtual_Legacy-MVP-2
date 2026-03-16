@@ -46,7 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let lastName: string | undefined;
       try {
         // Force fresh fetch of user attributes
-        const userAttributes = await fetchUserAttributes({ forceRefresh: true });
+        let userAttributes = await fetchUserAttributes({ forceRefresh: true });
+        
+        // If profile is missing, postConfirmation Lambda may still be running.
+        // Wait briefly and retry once to cover the race condition.
+        if (!userAttributes.profile) {
+          await new Promise(r => setTimeout(r, 2000));
+          userAttributes = await fetchUserAttributes({ forceRefresh: true });
+        }
         
         if (userAttributes.profile) {
           const profileJson = JSON.parse(userAttributes.profile);
@@ -209,7 +216,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               return false;
             };
 
-            await waitForPersona('legacy_benefactor');
+            const personaReady = await waitForPersona('legacy_benefactor');
+            if (!personaReady) {
+              toast.warning("Account setup is still processing. If something looks off, try refreshing the page.");
+            }
             await checkAuthState();
             toast.success("Account created! Welcome to SoulReel.");
             navigate('/benefactor-dashboard');

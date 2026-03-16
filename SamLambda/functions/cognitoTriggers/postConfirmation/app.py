@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+import time
 from datetime import datetime
 from typing import Optional, Dict, Any
 
@@ -155,17 +156,30 @@ def lambda_handler(event, context):
                 'Value': last_name
             })
         
-        cognito_client.admin_update_user_attributes(
-            UserPoolId=user_pool_id,
-            Username=username,
-            UserAttributes=user_attributes
-        )
-        print(f"Successfully set persona attributes for user: {username}")
+        # Retry loop — transient Cognito errors can cause permanent persona loss
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            try:
+                cognito_client.admin_update_user_attributes(
+                    UserPoolId=user_pool_id,
+                    Username=username,
+                    UserAttributes=user_attributes
+                )
+                print(f"Successfully set persona attributes for user: {username}")
+                break
+            except Exception as retry_error:
+                print(f"Attempt {attempt}/{max_retries} failed to update user attributes: {str(retry_error)}")
+                if attempt < max_retries:
+                    time.sleep(0.5 * attempt)  # 0.5s, 1s backoff
+                else:
+                    # CRITICAL: All retries exhausted — user has no persona set.
+                    # This will cause them to default to legacy_maker on next login.
+                    print(f"CRITICAL: Failed to set persona for user {username} after {max_retries} attempts. "
+                          f"Persona type was: {persona_type}. Error: {str(retry_error)}")
         
     except Exception as e:
-        print(f"Error updating user attributes: {str(e)}")
-        # Don't fail the signup process if this fails
-        pass
+        print(f"CRITICAL: Error preparing persona attributes for user {username}: {str(e)}")
+        # Don't fail the signup process
     
     return event
 
@@ -278,7 +292,7 @@ def send_assignment_notification_to_new_user(
                         {conditions_html}
                     </div>
                     <p>Click the button below to view and respond to your assignment:</p>
-                    <a href="http://localhost:8080/dashboard" class="button">View Assignment</a>
+                    <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard" class="button">View Assignment</a>
                 </div>
                 <div class="footer">
                     <p>Virtual Legacy - Preserving memories for future generations</p>
@@ -298,7 +312,7 @@ def send_assignment_notification_to_new_user(
         
         Please log in to your account to accept or decline this assignment.
         
-        Visit: http://localhost:8080/dashboard
+        Visit: {os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard
         
         Virtual Legacy - Preserving memories for future generations
         """
