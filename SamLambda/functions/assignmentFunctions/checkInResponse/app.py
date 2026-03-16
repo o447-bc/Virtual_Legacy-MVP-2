@@ -304,7 +304,7 @@ def build_success_response():
                     <p>Your legacy content will remain private until you choose to release it or the 
                     inactivity conditions are met.</p>
                 </div>
-                <a href="http://localhost:8080/dashboard" class="button">Go to Dashboard</a>
+                <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard" class="button">Go to Dashboard</a>
             </div>
             <div class="footer">
                 <p>Virtual Legacy - Preserving memories for future generations</p>
@@ -430,7 +430,7 @@ def build_error_response(status_code, message):
                     <p>If you believe this is an error, please contact support or try the link in your most recent check-in email.</p>
                     <p>Check-in links expire after 7 days.</p>
                 </div>
-                <a href="http://localhost:8080/dashboard" class="button">Go to Dashboard</a>
+                <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard" class="button">Go to Dashboard</a>
             </div>
             <div class="footer">
                 <p>Virtual Legacy - Preserving memories for future generations</p>

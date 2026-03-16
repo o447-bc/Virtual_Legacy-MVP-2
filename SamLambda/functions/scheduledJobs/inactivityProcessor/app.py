@@ -381,7 +381,7 @@ def send_access_granted_email(benefactor_email, initiator_id, activation_type, i
                     meeting the configured inactivity threshold of {inactivity_months} months.</p>
                     <p>You can now view their videos, audio recordings, and text responses.</p>
                     <p>Click the button below to access the content:</p>
-                    <a href="http://localhost:8080/dashboard" class="button">View Legacy Content</a>
+                    <a href="{os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard" class="button">View Legacy Content</a>
                 </div>
                 <div class="footer">
                     <p>Virtual Legacy - Preserving memories for future generations</p>
@@ -407,7 +407,7 @@ def send_access_granted_email(benefactor_email, initiator_id, activation_type, i
         
         You can now view their videos, audio recordings, and text responses.
         
-        Visit your dashboard to access the content: http://localhost:8080/dashboard
+        Visit your dashboard to access the content: {os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')}/dashboard
         
         Virtual Legacy - Preserving memories for future generations
         """

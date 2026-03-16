@@ -44,7 +44,7 @@ def create_assignment_record(
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaRelationshipsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         # Create relationship record with pending status
         current_time = datetime.now(timezone.utc).isoformat()
@@ -68,7 +68,8 @@ def create_assignment_record(
         error_msg = f"Failed to create assignment record: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error creating assignment record: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def create_access_conditions(
@@ -100,7 +101,7 @@ def create_access_conditions(
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('AccessConditionsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         
         # Create composite relationship key
         relationship_key = f"{initiator_id}#{related_user_id}"
@@ -146,7 +147,8 @@ def create_access_conditions(
         error_msg = f"Failed to create access conditions: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error creating access conditions: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def check_duplicate_assignment(
@@ -174,7 +176,7 @@ def check_duplicate_assignment(
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaRelationshipsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         # Check 1: Maker → Benefactor (current direction)
         try:
@@ -206,7 +208,8 @@ def check_duplicate_assignment(
         return False, None
         
     except Exception as e:
-        return False, {'error': f"Error checking for duplicate assignment: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def get_user_by_email(email: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
@@ -278,7 +281,8 @@ def get_user_by_email(email: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
         error_msg = f"Failed to lookup user in Cognito: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error looking up user: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def get_assignment(
@@ -302,7 +306,7 @@ def get_assignment(
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaRelationshipsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         response = table.get_item(
             Key={
@@ -320,7 +324,8 @@ def get_assignment(
         error_msg = f"Failed to get assignment: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error getting assignment: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def update_relationship_status(
@@ -345,7 +350,7 @@ def update_relationship_status(
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaRelationshipsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         current_time = datetime.now(timezone.utc).isoformat()
         
@@ -371,7 +376,8 @@ def update_relationship_status(
         error_msg = f"Failed to update relationship status: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error updating relationship status: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def delete_access_conditions(
@@ -394,7 +400,7 @@ def delete_access_conditions(
     """
     try:
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('AccessConditionsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         
         # Create composite relationship key
         relationship_key = f"{initiator_id}#{related_user_id}"
@@ -423,7 +429,8 @@ def delete_access_conditions(
         error_msg = f"Failed to delete access conditions: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error deleting access conditions: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def delete_assignment(
@@ -455,7 +462,7 @@ def delete_assignment(
         
         # Then delete relationship record
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaRelationshipsDB')
+        table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         table.delete_item(
             Key={
@@ -470,4 +477,5 @@ def delete_assignment(
         error_msg = f"Failed to delete assignment: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error deleting assignment: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}

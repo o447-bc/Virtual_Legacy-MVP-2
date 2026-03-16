@@ -82,3 +82,4 @@ Add the printed ARN as the `AWS_DEPLOY_ROLE_ARN` secret in GitHub, then push to 
 | `VITE_USER_POOL_CLIENT_ID` | Your Cognito app client ID (from AWS Console) |
 | `VITE_IDENTITY_POOL_ID` | Your Cognito identity pool ID (if used) |
 | `VITE_S3_BUCKET` | `virtual-legacy` |
+| `VITE_WS_URL` | `wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod` |

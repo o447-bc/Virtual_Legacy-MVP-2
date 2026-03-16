@@ -8,7 +8,6 @@ allowlist and echoes back the matching origin (required for credentialed request
 import os
 
 _ALLOWED_ORIGINS = [
-    'https://main.d33jt7rnrasyvj.amplifyapp.com',
     'https://www.soulreel.net',
     'https://soulreel.net',
     'http://localhost:5173',

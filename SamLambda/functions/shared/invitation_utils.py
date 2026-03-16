@@ -51,7 +51,7 @@ def create_invitation_token(
         
         # Connect to DynamoDB
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaSignupTempDB')
+        table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
         
         # Calculate expiration time (30 days from now as per Requirement 6.6)
         expiration_time = int(time.time()) + (30 * 24 * 60 * 60)  # 30 days in seconds
@@ -80,7 +80,8 @@ def create_invitation_token(
         error_msg = f"Failed to create invitation token: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error creating invitation token: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def validate_invitation_token(
@@ -115,7 +116,7 @@ def validate_invitation_token(
     try:
         # Connect to DynamoDB
         dynamodb = boto3.resource('dynamodb')
-        table = dynamodb.Table('PersonaSignupTempDB')
+        table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
         
         # Retrieve invitation data
         response = table.get_item(Key={'userName': invite_token})
@@ -153,7 +154,8 @@ def validate_invitation_token(
         error_msg = f"Failed to validate invitation token: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error validating invitation token: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}
 
 
 def link_registration_to_assignment(
@@ -207,7 +209,7 @@ def link_registration_to_assignment(
         
         # Step 2: Create relationship record in PersonaRelationshipsDB
         dynamodb = boto3.resource('dynamodb')
-        relationships_table = dynamodb.Table('PersonaRelationshipsDB')
+        relationships_table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
         
         current_time = datetime.now(timezone.utc).isoformat()
         
@@ -224,7 +226,7 @@ def link_registration_to_assignment(
         relationships_table.put_item(Item=relationship_item)
         
         # Step 3: Create access condition records in AccessConditionsDB
-        access_conditions_table = dynamodb.Table('AccessConditionsDB')
+        access_conditions_table = dynamodb.Table(os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB'))
         relationship_key = f"{initiator_id}#{new_user_id}"
         conditions_created = 0
         
@@ -256,7 +258,7 @@ def link_registration_to_assignment(
             conditions_created += 1
         
         # Step 4: Clean up invitation token
-        temp_table = dynamodb.Table('PersonaSignupTempDB')
+        temp_table = dynamodb.Table(os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB'))
         temp_table.delete_item(Key={'userName': invite_token})
         
         return True, {
@@ -271,4 +273,5 @@ def link_registration_to_assignment(
         error_msg = f"Failed to link registration to assignment: {e.response['Error']['Message']}"
         return False, {'error': error_msg}
     except Exception as e:
-        return False, {'error': f"Unexpected error linking registration: {str(e)}"}
+        print(f"[DAL ERROR] {type(e).__name__}: {e}")
+        return False, {'error': 'An internal error occurred. Please try again.'}

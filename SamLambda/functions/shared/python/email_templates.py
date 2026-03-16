@@ -19,7 +19,7 @@ def get_base_url() -> str:
     Returns:
         str: Base URL (defaults to localhost for development)
     """
-    return os.environ.get('APP_BASE_URL', 'http://localhost:8080')
+    return os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')
 
 
 def get_sender_email() -> str:

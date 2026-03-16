@@ -330,8 +330,8 @@ def send_check_in_email(email, token, check_in_interval_days):
         sender_email = os.environ.get('SENDER_EMAIL', 'noreply@virtuallegacy.com')
         
         # Build verification link
-        # TODO: Update with production domain
-        verification_link = f"http://localhost:8080/check-in?token={token}"
+        base_url = os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')
+        verification_link = f"{base_url}/check-in?token={token}"
         
         # Email subject
         subject = "Virtual Legacy - Activity Check-In Required"

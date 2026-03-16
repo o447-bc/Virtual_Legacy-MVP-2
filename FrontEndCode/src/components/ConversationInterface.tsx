@@ -5,7 +5,7 @@ import { Mic, Square, Volume2 } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { AudioVisualizer } from './AudioVisualizer';
 
-const WS_URL = 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod';
+const WS_URL = import.meta.env.VITE_WS_URL || 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod';
 
 interface ConversationInterfaceProps {
   questionId: string;
@@ -61,14 +61,12 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       const websocket = new WebSocket(`${WS_URL}?token=${token}`);
       
       websocket.onopen = () => {
-        console.log('WebSocket connected');
         setStatus('ready');
         setWs(websocket);
         startConversation(websocket);
       };
 
       websocket.onmessage = (event) => {
-        console.log('WebSocket message received:', event.data);
         try {
           const data = JSON.parse(event.data);
           handleMessage(data);
@@ -86,7 +84,6 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       };
 
       websocket.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
         setStatus('idle');
         if (event.code !== 1000) {
           setError(`Connection closed unexpectedly (${event.code})`);
@@ -107,8 +104,6 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   };
 
   const handleMessage = (data: any) => {
-    console.log('[WEBSOCKET] Message received:', data.type, data);
-    
     // Handle raw API Gateway error envelope (no 'type' field)
     if (!data.type && data.message) {
       console.error('[WEBSOCKET] Server error (no type):', data.message, data);
@@ -119,7 +114,6 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
     
     switch (data.type) {
       case 'upload_url':
-        console.log('Received upload URL');
         uploadUrlRef.current = data.uploadUrl;
         s3KeyRef.current = data.s3Key;
         break;
@@ -140,25 +134,11 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
         break;
       
       case 'conversation_complete':
-        console.log('[WEBSOCKET] Conversation complete:', {
-          finalScore: data.finalScore,
-          audioTranscriptUrl: data.audioTranscriptUrl,
-          audioDetailedSummary: data.audioDetailedSummary,
-          audioDetailedSummaryLength: data.audioDetailedSummary?.length,
-          hasAudioDetailedSummary: !!data.audioDetailedSummary
-        });
         setStatus('complete');
         onComplete(data.finalScore, data.audioTranscriptUrl, data.audioDetailedSummary || '');
         break;
       
       case 'conversation_ended':
-        console.log('[WEBSOCKET] Conversation ended:', {
-          finalScore: data.finalScore,
-          audioTranscriptUrl: data.audioTranscriptUrl,
-          audioDetailedSummary: data.audioDetailedSummary,
-          audioDetailedSummaryLength: data.audioDetailedSummary?.length,
-          hasAudioDetailedSummary: !!data.audioDetailedSummary
-        });
         setStatus('complete');
         onComplete(data.finalScore, data.audioTranscriptUrl, data.audioDetailedSummary || '');
         break;
@@ -172,7 +152,6 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
 
   const playAudioFromUrl = async (audioUrl: string) => {
     try {
-      console.log('Playing audio from URL:', audioUrl);
       setVisualizerAudioUrl(audioUrl);
       setIsVisualizerPlaying(true);
     } catch (err) {
@@ -190,7 +169,6 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       
       // Request upload URL first
       if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log('Requesting upload URL');
         ws.send(JSON.stringify({ action: 'get_upload_url' }));
       }
       
@@ -238,12 +216,9 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
     }
     
     try {
-      console.log('Audio blob size:', audioBlob.size, 'bytes');
-      
       // Wait for upload URL if not ready yet (up to 10 seconds)
       let attempts = 0;
       while (!uploadUrlRef.current && attempts < 50) {
-        console.log('Waiting for upload URL...');
         await new Promise(resolve => setTimeout(resolve, 200));
         attempts++;
       }
@@ -254,8 +229,6 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
         setStatus('ready');
         return;
       }
-      
-      console.log('Uploading to S3:', s3KeyRef.current);
       
       // Upload directly to S3
       const uploadResponse = await fetch(uploadUrlRef.current, {
@@ -270,15 +243,11 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
         throw new Error(`S3 upload failed: ${uploadResponse.status}`);
       }
       
-      console.log('S3 upload successful');
-      
       // Send S3 key to backend for processing
       ws.send(JSON.stringify({
         action: 'audio_response',
         s3Key: s3KeyRef.current
       }));
-      
-      console.log('Audio response sent with S3 key');
       
       // Clear refs for next recording
       uploadUrlRef.current = null;

@@ -1,51 +1,18 @@
-# Technical Debt & Quality Audit — Re-Assessment
+# Technical Debt & Quality Audit — Third Assessment
 ## SoulReel / Virtual Legacy — Full-Stack AWS Application
-**Audit Date:** March 15, 2026
-**Previous Audit:** March 14, 2026 (Grade: C-)
-**Current Grade: B-**
+**Audit Date:** March 15, 2026 (evening)
+**Previous Audits:** March 14, 2026 (Grade: C-) → March 15, 2026 (Grade: B-)
+**Current Grade: B**
 
 ---
 
 ## Table of Contents
 
-1. [Executive Summary](#executive-summary)
-2. [Architecture Overview](#architecture-overview)
-3. [What Was Fixed Since Last Audit](#what-was-fixed-since-last-audit)
-4. [Prioritized Improvement Areas](#prioritized-improvement-areas)
-5. [Detailed Remediation Plans](#detailed-remediation-plans)
-6. [Quick Wins Summary](#quick-wins-summary)
-7. [Open Questions](#open-questions)
-
----
-
-## Executive Summary
-
-One day later, this codebase has made real, measurable progress. The previous audit
-identified 17 prioritized issues graded at C-. The developer has addressed the most
-dangerous ones: conversation state moved to DynamoDB with TTL, CORS wildcard replaced
-with the production domain, CI/CD pipelines created for both frontend and backend,
-SSM batch loading implemented with caching, text-path parallelism fixed, dead variant
-files cleaned up, route-level auth guards added, SSH keys removed, frontend environment
-variables externalized, a SharedUtilsLayer created, N+1 Cognito queries parallelized,
-IAM wildcard ARNs mostly scoped, and frontend error handling improved.
-
-That's genuine progress — roughly 12 of the original 17 items addressed in some form.
-The grade moves from C- to B-. The remaining gap to B+ is mostly about finishing what
-was started: adopting the shared helpers that already exist, removing hardcoded resource
-names, plugging the error-leak pattern across ~15 Lambda functions, and wiring up React
-Query which is already installed and wrapped around the app.
-
-**Top 5 Remaining Time Bombs:**
-
-1. `.env` file still committed with live Cognito credentials — git history exposure
-2. ~15 Lambda functions leak `str(e)` in HTTP responses — information disclosure
-3. ~30+ Lambda functions use hardcoded DynamoDB table names — fragile, blocks multi-env
-4. Shared CORS/response helpers exist but aren't adopted — same bugs will recur
-5. Hardcoded test emails in BenefactorDashboard block real users from sending invites
-
-**Highest-ROI Next Steps:** Adopt shared helpers across all Lambdas (#4), fix error
-leaks (#2), remove `.env` from git history (#1), remove test email gate (#5). These
-are all low-risk, high-impact changes that finish work already in progress.
+1. [Prioritized Improvement Areas](#prioritized-improvement-areas)
+2. [Detailed Remediation Plans](#detailed-remediation-plans)
+3. [Executive Summary](#executive-summary)
+4. [Quick Wins Summary](#quick-wins-summary)
+5. [Open Questions](#open-questions)
 
 ---
 
@@ -53,17 +20,17 @@ are all low-risk, high-impact changes that finish work already in progress.
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18 + Vite + TypeScript + Tailwind + shadcn/ui |
+| Frontend | React 18 + Vite + TypeScript + Tailwind + shadcn/ui + React Query (partially adopted) |
 | Auth | AWS Cognito (User Pool `us-east-1_KsG65yYlo`, managed outside CloudFormation) |
-| API | API Gateway REST + WebSocket API (SAM-managed) |
-| Backend | Python 3.12 Lambda functions (SAM), SharedUtilsLayer |
-| AI/ML | Bedrock (Claude 3.5 Sonnet conversation, Claude 3 Haiku scoring), Polly (TTS), Deepgram + AWS Transcribe |
-| Database | DynamoDB (9 tables incl. ConversationStateDB) |
-| Storage | S3 (`virtual-legacy` bucket), KMS CMK encryption |
+| API | API Gateway REST (Cognito-authorized) + WebSocket API (SAM-managed) |
+| Backend | ~40 Python 3.12 Lambda functions via SAM, SharedUtilsLayer |
+| AI/ML | Bedrock (Claude 3.5 Sonnet conversation, Claude 3 Haiku scoring), Polly (TTS), Deepgram + AWS Transcribe (3-tier fallback) |
+| Database | DynamoDB (9+ tables) with KMS CMK encryption, TTL, PITR |
+| Storage | S3 (`virtual-legacy` bucket), KMS-encrypted |
 | Email | SES |
 | Monitoring | CloudTrail, GuardDuty, CloudWatch |
 | Hosting | AWS Amplify (`d33jt7rnrasyvj`, branch `main`), custom domain `www.soulreel.net` |
-| CI/CD | GitHub Actions — `backend.yml` (SAM) + `frontend.yml` (Amplify), triggers on push to `master` |
+| CI/CD | GitHub Actions — `backend.yml` (SAM + OIDC) + `frontend.yml` (Amplify + OIDC), triggers on push to `master` |
 
 **Persona Model:** Two types — `legacy_maker` (records answers) and `legacy_benefactor`
 (views content). Relationship stored in `PersonaRelationshipsDB` with access conditions
@@ -71,26 +38,22 @@ are all low-risk, high-impact changes that finish work already in progress.
 
 ---
 
-## What Was Fixed Since Last Audit
+## What Changed Since the B- Audit (March 15 morning → evening)
 
-Credit where it's due. These items from the March 14 audit have been addressed:
+| Item | Status | Evidence |
+|---|---|---|
+| Test email gate in BenefactorDashboard | ✅ Fixed | No `testEmails` or `o447` references remain in `BenefactorDashboard.tsx` |
+| ProtectedRoute benefactor redirect | ✅ Fixed | Now routes to `/benefactor-dashboard` for benefactors (`ProtectedRoute.tsx`) |
+| ForgotPassword/ResetPassword routes | ✅ Fixed | Both imported and routed in `App.tsx` lines 27-28, 55-56 |
+| QueryClient zero configuration | ✅ Fixed | `staleTime: 60_000`, `retry: 2`, `refetchOnWindowFocus: false` in `App.tsx` line 30 |
+| `useStatistics` manual caching | ✅ Fixed | Now uses `useQuery` with proper key, staleTime, placeholderData (`useStatistics.ts`) |
+| CI/CD OIDC migration | ✅ Fixed | Both `backend.yml` and `frontend.yml` use `role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}` with `id-token: write` |
+| Backend smoke tests in CI | ✅ Fixed | `backend.yml` installs `requirements-dev.txt` and runs `pytest tests/test_imports.py` |
+| `speech.py` S3 bucket env var | ✅ Fixed | Now uses `os.environ.get('S3_BUCKET', 'virtual-legacy')` |
+| Error response `str(e)` leaks in handlers | ✅ Mostly fixed | Lambda handlers now return safe messages; `str(e)` remains in internal DAL/utility functions (not HTTP-facing) |
+| `str(e)` in shared DAL layer | ⚠️ Partial | `assignment_dal.py`, `invitation_utils.py` still return `str(e)` in error dicts — these bubble up through handlers that may expose them |
 
-| # | Item | Status | Notes |
-|---|---|---|---|
-| 1 | Conversation state in Lambda memory | ✅ Fixed | Moved to DynamoDB (`ConversationStateDB`) with TTL, Decimal handling, `from_dict` |
-| 2 | CORS wildcard `*` | ✅ Fixed | Replaced with `https://www.soulreel.net` in template Globals + GatewayResponses |
-| 3 | SSH keys in repo | ✅ Fixed | Deleted, added to `.gitignore` |
-| 4 | Text-path sequential blocking | ✅ Fixed | `handle_user_response` now uses `process_user_response_parallel()` |
-| 5 | Shared code duplication | 🟡 Partial | `SharedUtilsLayer` created, used by ~15 functions, but not all |
-| 6 | N+1 Cognito queries | ✅ Fixed | `getRelationships` uses `ThreadPoolExecutor` + `_query_all_pages` |
-| 7 | Dead code / variant files | ✅ Fixed | All `App-*.tsx`, `Home-*.tsx`, `Login-simple.tsx`, `AuthContext-simple.tsx`, `toDelete/` removed |
-| 8 | No route-level auth guards | ✅ Fixed | `ProtectedRoute` component with `requiredPersona` prop |
-| 9 | SSM individual loading | ✅ Fixed | `config.py` uses `ssm.get_parameters()` batch call with cache |
-| 10 | No CI/CD | ✅ Fixed | `backend.yml` + `frontend.yml` in `.github/workflows/` |
-| 11 | Frontend env vars hardcoded | ✅ Fixed | `import.meta.env.VITE_*` pattern, `.env.example` created |
-| 12 | IAM wildcard ARNs | 🟡 Mostly fixed | Most scoped with `!Sub`, a few `Resource: '*'` remain |
-| 13 | Frontend error handling | ✅ Fixed | ProfileDialog, PasswordDialog, useStatistics, logout have try-catch |
-| 14 | Secrets in `.env` | ❌ Still committed | `.gitignore` lists it but file exists in tree + git history |
+That's meaningful progress — roughly 10 items addressed since the B- audit. The grade moves to B.
 
 ---
 
@@ -98,28 +61,26 @@ Credit where it's due. These items from the March 14 audit have been addressed:
 
 Ordered by **severity × ease** (highest combined impact first).
 
-| # | Title | Severity | Ease | Effort | Status |
-|---|---|---|---|---|---|
-| 1 | `.env` committed with live credentials | Critical | Easy | S | New finding — was partially addressed |
-| 2 | Error responses leak `str(e)` to clients | High | Easy | S | ~15 Lambda functions affected |
-| 3 | Hardcoded DynamoDB table names across ~30 functions | High | Easy | M | Not addressed |
-| 4 | Shared CORS/response helpers exist but unadopted | High | Easy | M | Helpers created, adoption stalled |
-| 5 | Hardcoded test emails block real invite flow | High | Easy | S | Production blocker |
-| 6 | CORS fallback defaults use old Amplify URL | Medium | Easy | S | ~20 Lambda functions affected |
-| 7 | Hardcoded S3 bucket `virtual-legacy` in 6+ files | Medium | Easy | S | Not addressed |
-| 8 | `ForgotPassword` page references missing auth function | Medium | Easy | S | Broken page |
-| 9 | `ForgotPassword` / `ResetPassword` not in routes | Medium | Easy | S | Unreachable pages |
-| 10 | React Query installed but unused — manual caching | Medium | Medium | M | Not addressed |
-| 11 | TTS has no caching — Polly called for identical text | Medium | Medium | M | Not addressed |
-| 12 | Persona race condition on benefactor signup | Medium | Hard | M | Not addressed |
-| 13 | `ProtectedRoute` redirects benefactors to wrong dashboard | Medium | Easy | S | Bug in guard logic |
-| 14 | Remaining IAM `Resource: '*'` on Transcribe/CloudWatch | Medium | Easy | S | Partially addressed |
-| 15 | No backend tests in CI pipeline | Medium | Medium | M | `backend.yml` skips tests |
-| 16 | CI/CD uses long-lived IAM keys instead of OIDC | Medium | Medium | M | Security best practice gap |
-| 17 | N+1 sequential calls in BenefactorDashboard | Medium | Medium | S | Frontend performance |
-| 18 | Dead file: `app old.py` in getNumValidQuestionsForQType | Low | Easy | S | Cleanup |
-| 19 | `console.log` debug statements in AuthContext | Low | Easy | S | Cleanup |
-| 20 | `QueryClient` has zero configuration | Low | Easy | S | Missing defaults |
+| # | Title | Severity | Ease | Effort |
+|---|---|---|---|---|
+| 1 | Localhost URLs in all production email templates | Critical | Easy | S |
+| 2 | `.env` still committed with live Cognito credentials | Critical | Easy | S |
+| 3 | Hardcoded WebSocket URL in ConversationInterface | High | Easy | S |
+| 4 | Shared CORS/response helpers adopted by ~30 functions but not by shared DAL layer | High | Easy | M |
+| 5 | `extract_user_id_from_jwt` duplicated across 7 assignment functions | High | Easy | M |
+| 6 | Hardcoded DynamoDB table names in shared DAL layer (~20 occurrences) | High | Medium | M |
+| 7 | No TTS caching — Polly called fresh for every conversation turn | Medium | Medium | M |
+| 8 | Dashboard ProgressSection: 200+ lines of manual fetch/state in a single useEffect | Medium | Medium | M |
+| 9 | Persona race condition on benefactor signup | Medium | Medium | M |
+| 10 | Duplicate code between processVideo and uploadVideoResponse (~700 LOC each) | Medium | Hard | L |
+| 11 | WebSocket Lambda 30s timeout vs multi-tier transcription fallback path | Medium | Easy | S |
+| 12 | Global Lambda timeout of 3s — dangerous default | Medium | Easy | S |
+| 13 | Conversation state grows unbounded per DynamoDB item | Medium | Medium | M |
+| 14 | Old Amplify URL in CORS allowlist | Low | Easy | S |
+| 15 | `console.log` debug statements in AuthContext and ConversationInterface | Low | Easy | S |
+| 16 | `createAssignment` manually parses JWT instead of using Cognito authorizer claims | Low | Easy | S |
+| 17 | Remaining `Resource: '*'` on `transcribe:StartStreamTranscription` | Low | Easy | S |
+| 18 | `ForgotPassword` page may still reference missing `forgotPassword` auth function | Low | Easy | S |
 
 ---
 
@@ -127,32 +88,116 @@ Ordered by **severity × ease** (highest combined impact first).
 
 ---
 
-### Area #1: `.env` Committed with Live Credentials
+### Area #1: Localhost URLs in All Production Email Templates
 
-**Why it matters:** `FrontEndCode/.env` is in the repository with live Cognito User Pool
-Client ID (`465mg8nd442ku9vpd8ni723oo4`), Identity Pool ID, API Gateway URL, and S3
-bucket name. `.gitignore` lists `.env` but the file was committed before the ignore rule
-was added, so git continues tracking it. Anyone with repo access — or anyone who ever
-had access — can see these credentials in git history. Additionally,
-`SamLambda/template.yml` Parameters section still has live User Pool ID/ARN as defaults.
+**Severity: Critical | Ease: Easy | Effort: S**
 
-**Evidence:**
-- `FrontEndCode/.env` — contains `VITE_USER_POOL_CLIENT_ID=465mg8nd442ku9vpd8ni723oo4`,
-  `VITE_IDENTITY_POOL_ID=us-east-1:4f912954-ea9f-4d5c-b30f-563a45107715`,
-  `VITE_API_BASE_URL=https://qu5zn6mns1.execute-api.us-east-1.amazonaws.com/Prod`
-- File says `# DO NOT COMMIT THIS FILE TO GIT` at the top — but it is committed
+**Why it matters:** Every email sent to benefactors — invitations, access granted notifications,
+check-in requests, accept/decline confirmations — contains `http://localhost:8080` links instead
+of `https://www.soulreel.net`. Users clicking "View Assignment", "Create Your Account", or
+"Confirm I'm Active" land on a broken localhost URL. This silently breaks the entire benefactor
+onboarding and access-grant flow for every real user.
+
+The root cause: `email_templates.py` line 22 defaults to `http://localhost:8080` via
+`os.environ.get('APP_BASE_URL', 'http://localhost:8080')`, and `APP_BASE_URL` is **never set**
+in `template.yml` Globals or any function's environment variables. The env var doesn't exist
+at runtime, so the fallback always wins.
+
+Additionally, ~10 Lambda functions have their own inline email templates that hardcode
+`http://localhost:8080` directly, bypassing `email_templates.py` entirely.
+
+**Evidence (inline hardcoded localhost — not using email_templates.py):**
+- `acceptDeclineAssignment/app.py` lines 434, 454, 533, 553 — `http://localhost:8080/manage-benefactors`
+- `resendInvitation/app.py` lines 363, 385 — `http://localhost:8080/signup?invite={invitation_token}`
+- `manualRelease/app.py` lines 467, 486 — `http://localhost:8080/dashboard`
+- `checkInResponse/app.py` lines 307, 433 — `http://localhost:8080/dashboard`
+- `timeDelayProcessor/app.py` lines 327, 349 — `http://localhost:8080/dashboard`
+- `inactivityProcessor/app.py` lines 384, 410 — `http://localhost:8080/dashboard`
+- `postConfirmation/app.py` lines 281, 301 — `http://localhost:8080/dashboard`
+- `checkInSender/app.py` line 334 — has `# TODO: Update with production domain` comment
+
+**Evidence (email_templates.py fallback):**
+- `SamLambda/functions/shared/email_templates.py` line 22: `return os.environ.get('APP_BASE_URL', 'http://localhost:8080')`
+- `SamLambda/functions/shared/python/email_templates.py` — identical copy
+- `APP_BASE_URL` does not appear anywhere in `SamLambda/template.yml`
 
 **Remediation Steps:**
 
-1. Remove the file from git tracking (keeps local copy):
-```bash
-git rm --cached FrontEndCode/.env
-git commit -m "Stop tracking .env file"
+1. Add `APP_BASE_URL` to SAM Globals so every Lambda gets it:
+```yaml
+Globals:
+  Function:
+    Environment:
+      Variables:
+        ALLOWED_ORIGIN: 'https://www.soulreel.net'
+        APP_BASE_URL: 'https://www.soulreel.net'
+        S3_BUCKET: 'virtual-legacy'
+        # ... existing vars
 ```
 
-2. Verify `.gitignore` already has the entry (it does — `FrontEndCode/.gitignore` lists `.env`).
+2. Update the fallback default in `email_templates.py` (both copies):
+```python
+def get_base_url() -> str:
+    return os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')
+```
 
-3. Purge from git history using BFG Repo-Cleaner:
+3. Migrate the 10 Lambda functions with inline email templates to use `email_templates.py`
+   instead. If that's too much work right now, at minimum find-and-replace all
+   `http://localhost:8080` with `os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')`
+   in each file. The affected functions are listed above.
+
+4. For `checkInSender/app.py` line 334, replace:
+```python
+# TODO: Update with production domain
+verification_link = f"http://localhost:8080/check-in?token={token}"
+```
+with:
+```python
+base_url = os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')
+verification_link = f"{base_url}/check-in?token={token}"
+```
+
+5. Deploy backend: `sam build && sam deploy --no-confirm-changeset` from `SamLambda/`.
+
+**Verification:** After deploying, trigger a test email (e.g., create a test assignment)
+and verify the email body contains `https://www.soulreel.net` links, not localhost.
+
+**This is the single highest-impact fix in this audit.** Every benefactor-facing email
+is currently broken.
+
+
+---
+
+### Area #2: `.env` Still Committed with Live Cognito Credentials
+
+**Severity: Critical | Ease: Easy | Effort: S**
+
+**Why it matters:** `FrontEndCode/.env` is tracked by git and contains live Cognito User Pool
+Client ID (`465mg8nd442ku9vpd8ni723oo4`), Identity Pool ID
+(`us-east-1:4f912954-ea9f-4d5c-b30f-563a45107715`), API Gateway URL, and S3 bucket name.
+The file header says `# DO NOT COMMIT THIS FILE TO GIT` — but it is committed. Anyone with
+repo access (current or historical) can see these values. Additionally, `SamLambda/template.yml`
+Parameters section has the live User Pool ID and ARN as defaults (lines 9-15).
+
+The frontend CI/CD pipeline correctly injects these values from GitHub secrets during build
+(`frontend.yml` env block), so the `.env` file is only needed for local development. It should
+not be in the repository.
+
+**Evidence:**
+- `FrontEndCode/.env` — contains `VITE_USER_POOL_CLIENT_ID=465mg8nd442ku9vpd8ni723oo4`
+- `FrontEndCode/.gitignore` lists `.env` — but the file was committed before the rule was added
+- `SamLambda/template.yml` line 10: `Default: us-east-1_KsG65yYlo`
+- `SamLambda/template.yml` line 14: `Default: arn:aws:cognito-idp:us-east-1:962214556635:userpool/us-east-1_KsG65yYlo`
+
+**Remediation Steps:**
+
+1. Remove from git tracking (keeps local copy):
+```bash
+git rm --cached FrontEndCode/.env
+git commit -m "chore: stop tracking .env file"
+```
+
+2. Purge from git history:
 ```bash
 # Install BFG if needed: brew install bfg
 bfg --delete-files .env --no-blob-protection
@@ -161,630 +206,246 @@ git gc --prune=now --aggressive
 git push --force
 ```
 
-4. After purging history, rotate the Cognito User Pool Client ID:
+3. After purging, rotate the Cognito User Pool Client:
    - Cognito Console → User Pool → App clients → Delete `465mg8nd442ku9vpd8ni723oo4`
-   - Create a new app client with the same settings
-   - Update the GitHub Actions secret `VITE_USER_POOL_CLIENT_ID` with the new value
-   - Update your local `.env` with the new value
+   - Create new app client with same settings
+   - Update GitHub secret `VITE_USER_POOL_CLIENT_ID` with new value
+   - Update local `.env` with new value
 
-5. Move SAM template parameter defaults to `samconfig.toml` so they're not in source:
+4. Move SAM template parameter defaults to `samconfig.toml`:
 ```toml
-# SamLambda/samconfig.toml
 [default.deploy.parameters]
-parameter_overrides = "CognitoUserPoolId=us-east-1_KsG65yYlo CognitoUserPoolArn=arn:aws:cognito-idp:..."
+parameter_overrides = "ExistingUserPoolId=us-east-1_KsG65yYlo ExistingUserPoolArn=arn:aws:cognito-idp:..."
 ```
+Then change template defaults to empty strings.
 
-Then change the template defaults to empty strings:
-```yaml
-Parameters:
-  CognitoUserPoolId:
-    Type: String
-    Default: ''
-  CognitoUserPoolArn:
-    Type: String
-    Default: ''
-```
-
-**Risk:** Force-pushing rewrites history for all collaborators. Since this is a solo
-project, the risk is minimal. Do it before adding any collaborators.
-
+**Risk:** Force-push rewrites history. As a solo project, this is safe. Do it before
+adding collaborators.
 
 ---
 
-### Area #2: Error Responses Leak `str(e)` to Clients
+### Area #3: Hardcoded WebSocket URL in ConversationInterface
 
-**Why it matters:** At least 15 Lambda functions return `str(e)` directly in HTTP
-response bodies. This exposes internal details — DynamoDB table names, Cognito pool
-IDs, S3 bucket names, Python tracebacks, and AWS SDK error messages — to anyone who
-can trigger an error. This is an information disclosure vulnerability that makes
-targeted attacks easier.
+**Severity: High | Ease: Easy | Effort: S**
 
-**Evidence (sample of affected functions):**
-- `getUploadUrl/app.py` — `'body': json.dumps({'error': str(e)})`
-- `uploadVideoResponse/app.py` — `'body': json.dumps({'error': str(e)})`
-- `getMakerVideos/app.py` — `'body': json.dumps({'error': str(e)})`
-- `createRelationship/app.py` — `'body': json.dumps({'error': str(e)})`
-- `validateAccess/app.py` — `'body': json.dumps({'error': str(e)})`
-- `getStreak/app.py` — `'body': json.dumps({'error': str(e)})`
-- `checkStreak/app.py` — `'body': json.dumps({'error': str(e)})`
-- `processVideo/app.py` — `'body': json.dumps({'error': str(e)})`
-- `sendInviteEmail/app.py` — `'body': json.dumps({'error': str(e)})`
-- `acceptDeclineAssignment/app.py` — `'body': json.dumps({'error': f'Internal server error: {str(e)}'})` (still leaks)
-- `createAssignment/app.py` — same pattern
-- `updateAssignment/app.py` — same pattern
-- `resendInvitation/app.py` — same pattern
-- `manualRelease/app.py` — same pattern
-- `initializeUserProgress/app.py` — `'body': json.dumps({'error': f'Internal error: {str(e)}'})`
+**Why it matters:** `ConversationInterface.tsx` line 8 hardcodes the WebSocket API URL:
+```typescript
+const WS_URL = 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod';
+```
+This means the frontend can never point to a different WebSocket endpoint (staging, local dev)
+without editing source code. If the WebSocket API is ever redeployed with a new ID, this
+breaks conversations for all users until a frontend deploy catches up.
+
+**Evidence:**
+- `FrontEndCode/src/components/ConversationInterface.tsx` line 8
 
 **Remediation Steps:**
 
-A shared `error_response()` helper already exists at `SamLambda/functions/shared/responses.py`.
-It logs the full exception to CloudWatch and returns only a safe public message. Use it.
+1. Add to `.env` and `.env.example`:
+```
+VITE_WS_URL=wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod
+```
 
-1. For every affected function, replace the catch block:
+2. Add to `frontend.yml` build env:
+```yaml
+VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
+```
+
+3. Update `ConversationInterface.tsx`:
+```typescript
+const WS_URL = import.meta.env.VITE_WS_URL || 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod';
+```
+
+4. Add `VITE_WS_URL` to GitHub secrets.
+
+**5-minute fix.**
+
+---
+
+### Area #4: Shared CORS/Response Helpers Adopted by ~30 Functions but Not by Shared DAL Layer
+
+**Severity: High | Ease: Easy | Effort: M**
+
+**Why it matters:** The SharedUtilsLayer is now referenced by ~30+ functions in `template.yml` —
+that's great progress. But the shared DAL modules (`assignment_dal.py`, `invitation_utils.py`)
+that live *inside* the layer still return `str(e)` in error dictionaries. These error dicts
+bubble up through Lambda handlers like `createAssignment`, `acceptDeclineAssignment`, etc.
+While the top-level handlers now return safe messages for their own exceptions, errors from
+the DAL layer can still leak internal details if the handler passes the DAL error message
+through to the response.
+
+Additionally, `assignment_dal.py` and `invitation_utils.py` hardcode DynamoDB table names
+(see Area #6) and don't use the shared `cors.py` or `responses.py` helpers.
+
+**Evidence:**
+- `SamLambda/functions/shared/assignment_dal.py` — 10 occurrences of `f"Unexpected error...: {str(e)}"`
+  at lines 71, 149, 209, 281, 323, 374, 426, 473
+- `SamLambda/functions/shared/invitation_utils.py` — 3 occurrences at lines 83, 156, 274
+- `SamLambda/functions/shared/python/assignment_dal.py` — identical copy with same issues
+- `SamLambda/functions/shared/python/invitation_utils.py` — identical copy
+
+**Remediation Steps:**
+
+1. In `assignment_dal.py` and `invitation_utils.py`, replace error returns:
 
 **Before:**
 ```python
 except Exception as e:
-    return {
-        'statusCode': 500,
-        'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', '...')},
-        'body': json.dumps({'error': str(e)})
-    }
+    return False, {'error': f"Unexpected error creating assignment record: {str(e)}"}
 ```
 
-**After (using shared helper):**
-```python
-from responses import error_response
-
-except Exception as e:
-    return error_response(500, 'A server error occurred. Please try again.', exception=e, event=event)
-```
-
-2. If a function doesn't yet use the SharedUtilsLayer, add it to the function's
-   `Layers` property in `template.yml` first (see Area #4).
-
-3. For functions that can't use the layer yet, apply the minimal inline fix:
+**After:**
 ```python
 except Exception as e:
-    print(f"[ERROR] {type(e).__name__}: {e}")  # Log full details to CloudWatch
+    print(f"[DAL ERROR] {type(e).__name__}: {e}")
     import traceback
     print(traceback.format_exc())
-    return {
-        'statusCode': 500,
-        'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
-        'body': json.dumps({'error': 'A server error occurred. Please try again.'})
-    }
+    return False, {'error': 'An internal error occurred. Please try again.'}
 ```
 
-**Verification:** After deploying, trigger an error (e.g., pass invalid input) and
-confirm the response body says "A server error occurred" — not a Python traceback.
-Check CloudWatch to confirm the full error is still logged there.
+2. Apply the same pattern to all 13 occurrences across both files.
+
+3. Ensure both copies (`functions/shared/` and `functions/shared/python/`) are updated
+   identically. Better yet — consolidate to one copy (see Open Questions).
+
+**Gotcha:** The handlers that call these DAL functions sometimes include the DAL error
+message in their response body (e.g., `json.dumps({'error': conditions_result.get('error', ...)})`).
+After this fix, those responses will show the safe generic message instead.
+
+---
+
+### Area #5: `extract_user_id_from_jwt` Duplicated Across 7 Assignment Functions
+
+**Severity: High | Ease: Easy | Effort: M**
+
+**Why it matters:** Seven Lambda functions each contain their own copy of
+`extract_user_id_from_jwt()` — a ~50-line function that manually decodes JWT tokens by
+base64-decoding the payload segment. This is fragile (no signature verification), duplicated
+(any fix must be applied 7 times), and unnecessary — the Cognito authorizer already validates
+the JWT and puts the claims in `event.requestContext.authorizer.claims`.
+
+**Evidence (each file has its own copy):**
+- `createAssignment/app.py` line 269
+- `getAssignments/app.py` line 103
+- `acceptDeclineAssignment/app.py` line 291
+- `manualRelease/app.py` line 516
+- `updateAssignment/app.py` line 398
+- `resendInvitation/app.py` line 259
+- `sendInviteEmail/app.py` line 180
+
+Other functions in the codebase correctly use the authorizer claims pattern:
+```python
+user_id = event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('sub')
+```
+
+**Remediation Steps:**
+
+1. For functions behind the Cognito authorizer (all assignment functions are), replace
+   the manual JWT parsing with the authorizer claims:
+
+**Before:**
+```python
+legacy_maker_id = extract_user_id_from_jwt(event)
+```
+
+**After:**
+```python
+legacy_maker_id = event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('sub')
+```
+
+2. Delete the `extract_user_id_from_jwt` function from each file.
+
+3. If you want a shared helper for this pattern, add it to the SharedUtilsLayer:
+```python
+# functions/shared/python/auth_utils.py
+def get_user_id(event: dict) -> str | None:
+    """Extract user ID from Cognito authorizer claims."""
+    return event.get('requestContext', {}).get('authorizer', {}).get('claims', {}).get('sub')
+```
+
+**Why the authorizer approach is better:**
+- The JWT is already validated by API Gateway — no need to decode it again
+- No risk of accepting an expired or tampered token
+- No base64 decoding edge cases
+- One line instead of 50
 
 
 ---
 
-### Area #3: Hardcoded DynamoDB Table Names Across ~30 Functions
+### Area #6: Hardcoded DynamoDB Table Names in Shared DAL Layer (~20 Occurrences)
 
-**Why it matters:** At least 30 Lambda functions construct DynamoDB table references
-with hardcoded strings like `dynamodb.Table('allQuestionDB')`. This means you cannot
-run a staging environment with different table names, cannot rename tables without a
-codebase-wide find-and-replace, and any typo in a table name silently creates a
-reference to a nonexistent table that fails at runtime.
+**Severity: High | Ease: Medium | Effort: M**
 
-**Evidence (sample):**
-- `getNumQuestionTypes/app.py` — `table = dynamodb.Table('allQuestionDB')`
-- `getQuestionById/app.py` — `table = dynamodb.Table('allQuestionDB')`
-- `getQuestionTypeData/app.py` — `table = dynamodb.Table('allQuestionDB')`
-- `getQuestionTypes/app.py` — `table = dynamodb.Table('allQuestionDB')`
-- `getNumValidQuestionsForQType/app.py` — `table = dynamodb.Table('allQuestionDB')`
-- `getUnansweredQuestionsWithText/app.py` — `dynamodb.Table('allQuestionDB')` + `dynamodb.Table('userQuestionStatusDB')`
-- `getUnansweredQuestionsFromUser/app.py` — same two tables
-- `initializeUserProgress/app.py` — `Table('userQuestionLevelProgressDB')` + `Table('allQuestionDB')` + `Table('userStatusDB')`
-- `incrementUserLevel2/app.py` — three hardcoded table names
-- `getProgressSummary2/app.py` — `Table('allQuestionDB')`
+**Why it matters:** While the SAM Globals now define `TABLE_*` environment variables for all
+9 DynamoDB tables, the shared DAL modules (`assignment_dal.py`, `invitation_utils.py`,
+`timezone_utils.py`) still hardcode table names as string literals. These modules are used
+by many Lambda functions, so the hardcoded names are effectively baked into every function
+that imports them. This blocks multi-environment deployments and means a table rename requires
+editing the shared layer code.
+
+The Lambda function `app.py` files themselves have mostly migrated to `os.environ.get('TABLE_*')`
+— the remaining hardcoded names are concentrated in the shared layer.
+
+**Evidence:**
+- `assignment_dal.py` — `Table('PersonaRelationshipsDB')` at lines 47, 177, 305, 348, 458;
+  `Table('AccessConditionsDB')` at lines 103, 397
+- `invitation_utils.py` — `Table('PersonaSignupTempDB')` at lines 54, 118, 259;
+  `Table('PersonaRelationshipsDB')` at line 210; `Table('AccessConditionsDB')` at line 227
+- `timezone_utils.py` — `Table('userStatusDB')` at line 16 (3 copies: shared/, shared/python/, streakFunctions/)
+- All duplicated in `functions/shared/python/` copies
 
 **Remediation Steps:**
 
-1. Add environment variables for each table in `template.yml` Globals:
-```yaml
-Globals:
-  Function:
-    Environment:
-      Variables:
-        ALL_QUESTIONS_TABLE: !Ref AllQuestionsTable
-        USER_QUESTION_STATUS_TABLE: !Ref UserQuestionStatusTable
-        USER_STATUS_TABLE: !Ref UserStatusTable
-        USER_QUESTION_LEVEL_PROGRESS_TABLE: !Ref UserQuestionLevelProgressTable
-        ENGAGEMENT_TABLE: !Ref EngagementTable
-        PERSONA_RELATIONSHIPS_TABLE: !Ref PersonaRelationshipsTable
-```
+1. Update each shared module to read from env vars:
 
-If the tables are not created by SAM (i.e., they pre-exist), use hardcoded names in
-the template only — not in Lambda code:
-```yaml
-Globals:
-  Function:
-    Environment:
-      Variables:
-        ALL_QUESTIONS_TABLE: allQuestionDB
-        USER_QUESTION_STATUS_TABLE: userQuestionStatusDB
-        USER_STATUS_TABLE: userStatusDB
-```
-
-2. Update each Lambda function to read from env vars:
-
-**Before:**
+**Before (`assignment_dal.py`):**
 ```python
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('allQuestionDB')
+table = dynamodb.Table('PersonaRelationshipsDB')
 ```
 
 **After:**
 ```python
 import os
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(os.environ['ALL_QUESTIONS_TABLE'])
+table = dynamodb.Table(os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB'))
 ```
 
-3. Do this incrementally — one function group at a time. Start with the `questionDbFunctions/`
-   directory since it has the most hardcoded references.
+2. Apply the same pattern to all table references:
+   - `PersonaRelationshipsDB` → `os.environ.get('TABLE_RELATIONSHIPS', 'PersonaRelationshipsDB')`
+   - `AccessConditionsDB` → `os.environ.get('TABLE_ACCESS_CONDITIONS', 'AccessConditionsDB')`
+   - `PersonaSignupTempDB` → `os.environ.get('TABLE_SIGNUP_TEMP', 'PersonaSignupTempDB')`
+   - `userStatusDB` → `os.environ.get('TABLE_USER_STATUS', 'userStatusDB')`
 
-**Gotchas:**
-- The `ALLOWED_ORIGIN` env var is already set via Globals, so adding more env vars to
-  Globals is the established pattern.
-- Some functions reference 3+ tables — make sure all are covered.
-- The `LoadJSONToDynamoDB/` and `UtilityFunctions/` directories also have hardcoded
-  table names, but those are utility scripts, not deployed Lambda functions. Lower priority.
+3. These env vars are already defined in SAM Globals, so no template changes needed.
 
+4. Update both copies (`functions/shared/` and `functions/shared/python/`) identically.
+
+**Gotcha:** The `timezone_utils.py` file exists in three places — `shared/`, `shared/python/`,
+and `streakFunctions/checkStreak/`. All three need updating.
 
 ---
 
-### Area #4: Shared CORS/Response Helpers Exist but Unadopted
+### Area #7: No TTS Caching — Polly Called Fresh for Every Conversation Turn
 
-**Why it matters:** `SamLambda/functions/shared/cors.py` and `responses.py` were created
-to solve the CORS consistency and error-leak problems. They work. But the vast majority
-of Lambda functions still inline their own CORS headers and error responses. This means
-the next time the CORS origin changes or an error format needs updating, you'll be
-editing 20+ files instead of one. The shared layer was the right architectural decision
-— it just needs to be finished.
+**Severity: Medium | Ease: Medium | Effort: M**
+
+**Why it matters:** Every conversation turn calls Polly to synthesize the AI response text,
+uploads the audio to S3 with a unique timestamp-based key, and generates a presigned URL.
+There is no cache check. Common phrases like "Thank you for sharing that" or "Let's explore
+that further" are re-synthesized every time. Each Polly call adds 200-500ms latency and
+costs $4/million characters (standard) or $16/million (neural).
 
 **Evidence:**
-- `SamLambda/functions/shared/cors.py` — has `cors_headers()`, `get_cors_origin()`,
-  allowlist with `www.soulreel.net`, localhost origins
-- `SamLambda/functions/shared/responses.py` — has `error_response()` that logs to
-  CloudWatch and returns safe public message
-- ~20 Lambda functions still inline:
-  ```python
-  'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')
-  ```
-- The `SharedUtilsLayer` exists in `template.yml` and is used by ~15 functions, but
-  the remaining functions don't reference it
+- `speech.py` line 37: `s3_key = f"conversations/{user_id}/{question_id}/ai-audio/turn-{turn_number}-{timestamp}.mp3"`
+  — unique key per call, no cache lookup
+- No `head_object` check, no hash-based key, no deduplication
+- `speech.py` is called from `handle_audio_response` in `app.py` on every turn
 
 **Remediation Steps:**
 
-1. Identify all functions NOT yet using the SharedUtilsLayer. Check `template.yml` for
-   functions missing `Layers: [!Ref SharedUtilsLayer]`.
+1. Add a content-hash cache layer in `speech.py`:
 
-2. Add the layer to each remaining function in `template.yml`:
-```yaml
-GetStreakFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    Layers:
-      - !Ref SharedUtilsLayer
-    # ... rest of properties
-```
-
-3. Update each function's imports and response patterns:
-
-**Before:**
-```python
-import os
-import json
-
-CORS_HEADERS = {
-    'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com'),
-    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-}
-
-def lambda_handler(event, context):
-    try:
-        # ... business logic ...
-        return {
-            'statusCode': 200,
-            'headers': CORS_HEADERS,
-            'body': json.dumps(result)
-        }
-    except Exception as e:
-        return {
-            'statusCode': 500,
-            'headers': CORS_HEADERS,
-            'body': json.dumps({'error': str(e)})
-        }
-```
-
-**After:**
-```python
-import json
-from cors import cors_headers
-from responses import error_response
-
-def lambda_handler(event, context):
-    try:
-        # ... business logic ...
-        return {
-            'statusCode': 200,
-            'headers': cors_headers(event),
-            'body': json.dumps(result)
-        }
-    except Exception as e:
-        return error_response(500, 'A server error occurred. Please try again.', exception=e, event=event)
-```
-
-4. This also fixes Area #2 (error leaks) and Area #6 (old Amplify URL fallback) in
-   one pass. Three birds, one stone.
-
-**Approach:** Do this in batches of 3-5 functions per commit. Test each batch with
-`sam build` to catch import errors before deploying.
-
-**Gotchas:**
-- Lambda Layers mount at `/opt/python/`. The `SharedUtilsLayer` ContentUri is
-  `functions/shared/` which should contain a `python/` subdirectory. Verify the
-  directory structure is `functions/shared/python/cors.py` (not `functions/shared/cors.py`
-  directly) — otherwise imports will fail.
-- Actually, looking at the current structure: `cors.py` and `responses.py` are at
-  `functions/shared/` level, and there's also a `functions/shared/python/` directory.
-  Verify which path the layer actually uses. If `cors.py` is at the top level and not
-  inside `python/`, the import `from cors import cors_headers` won't work from the
-  layer — it needs to be at `/opt/python/cors.py`.
-
-
----
-
-### Area #5: Hardcoded Test Emails Block Real Invite Flow
-
-**Why it matters:** `BenefactorDashboard.tsx` has a hardcoded email validation that
-only allows `legacymaker1@o447.net` and `legacymaker2@o447.net`. Any real user trying
-to send an invite to a real email address gets the error "For testing, please use
-legacyMaker1@o447.net or legacyMaker2@o447.net". This is a production blocker for the
-core benefactor invite feature.
-
-**Evidence:**
-- `FrontEndCode/src/pages/BenefactorDashboard.tsx` line 56:
-```typescript
-const testEmails = ['legacymaker1@o447.net', 'legacymaker2@o447.net'];
-if (!testEmails.includes(email.toLowerCase().trim())) {
-    setEmailError('For testing, please use legacyMaker1@o447.net or legacyMaker2@o447.net');
-    return false;
-}
-```
-- The placeholder text and help text also reference these test emails
-
-**Remediation Steps:**
-
-1. Remove the test email validation entirely:
-
-**Before:**
-```typescript
-const testEmails = ['legacymaker1@o447.net', 'legacymaker2@o447.net'];
-if (!testEmails.includes(email.toLowerCase().trim())) {
-    setEmailError('For testing, please use legacyMaker1@o447.net or legacyMaker2@o447.net');
-    return false;
-}
-```
-
-**After:**
-```typescript
-// Standard email format validation only
-if (!/\S+@\S+\.\S+/.test(email.trim())) {
-    setEmailError('Please enter a valid email address');
-    return false;
-}
-```
-
-2. Update the placeholder and help text:
-```tsx
-placeholder="Enter their email address"
-```
-
-3. Remove the "For testing" help text paragraph.
-
-**This is a 5-minute fix with immediate user impact.**
-
----
-
-### Area #6: CORS Fallback Defaults Use Old Amplify URL
-
-**Why it matters:** ~20 Lambda functions use
-`os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')` as
-their CORS fallback. The env var is set correctly to `https://www.soulreel.net` in
-`template.yml`, so this works today. But if the env var is ever missing (misconfigured
-deploy, new function without Globals, local testing), the fallback kicks in with the
-old Amplify URL and CORS breaks silently.
-
-**Evidence:** Search for `amplifyapp.com` in `SamLambda/` returns 20+ matches across:
-- `getUnansweredQuestionsFromUser/app.py` (6 occurrences)
-- `getUnansweredQuestionsWithText/app.py` (4 occurrences)
-- `incrementUserLevel2/app.py` (8 occurrences)
-- `getTotalValidAllQuestions/app.py`
-- `invalidateTotalValidQuestionsCache/app.py`
-- `getAudioQuestionSummaryForVideoRecording/app.py` (4 occurrences)
-- `persona_validator.py`
-- Plus all the functions listed in Area #2
-
-**Remediation Steps:**
-
-If adopting the shared `cors.py` helper (Area #4), this is fixed automatically — the
-helper's fallback is already `https://www.soulreel.net` via the `ALLOWED_ORIGIN` env var.
-
-For functions not yet using the shared helper, do a find-and-replace:
-
-**Before:**
-```python
-os.environ.get('ALLOWED_ORIGIN', 'https://main.d33jt7rnrasyvj.amplifyapp.com')
-```
-
-**After:**
-```python
-os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')
-```
-
-This is a safe, mechanical change. The env var value doesn't change — only the fallback
-default that's used when the env var is missing.
-
-**Note per project steering rules:** The CORS fallback default should always match the
-production domain `https://www.soulreel.net`. The `ALLOWED_ORIGIN` env var is set via
-SAM Globals and should be the primary source of truth.
-
-
----
-
-### Area #7: Hardcoded S3 Bucket `virtual-legacy` in 6+ Files
-
-**Why it matters:** The S3 bucket name `virtual-legacy` is hardcoded as a module-level
-constant in multiple Lambda files. The `template.yml` already sets an `S3_BUCKET` env
-var for some functions, but the code ignores it and uses the hardcoded string. This
-blocks multi-environment deployments and means a bucket rename requires editing 6+ files.
-
-**Evidence:**
-- `speech.py` line 15: `S3_BUCKET = 'virtual-legacy'` (ignores `os.environ.get('S3_BUCKET')`)
-- `transcribe.py` line 15: `S3_BUCKET = 'virtual-legacy'`
-- `transcribe_streaming.py` line 18: `S3_BUCKET = 'virtual-legacy'`
-- `uploadVideoResponse/app.py` lines 280, 478: `bucket_name = 'virtual-legacy'`
-- `processVideo/app.py` line 540: `bucket_name = 'virtual-legacy'`
-- `UtilityFunctions/purge_user.py` line 42: `self.s3_bucket = 'virtual-legacy'`
-
-**Remediation Steps:**
-
-1. In each affected file, replace the hardcoded bucket with the env var:
-
-**Before (`speech.py`):**
-```python
-S3_BUCKET = 'virtual-legacy'
-```
-
-**After:**
-```python
-import os
-S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
-```
-
-2. Verify `S3_BUCKET` is set in `template.yml` for each affected function. If not,
-   add it to the function's environment variables or to Globals:
-```yaml
-Globals:
-  Function:
-    Environment:
-      Variables:
-        S3_BUCKET: virtual-legacy
-```
-
-3. For `uploadVideoResponse/app.py` and `processVideo/app.py`, the bucket name is
-   assigned inline inside functions — refactor to a module-level constant:
-```python
-import os
-BUCKET_NAME = os.environ.get('S3_BUCKET', 'virtual-legacy')
-```
-
-Then replace all `bucket_name = 'virtual-legacy'` references with `BUCKET_NAME`.
-
----
-
-### Area #8: `ForgotPassword` Page References Missing Auth Function
-
-**Why it matters:** `ForgotPassword.tsx` destructures `forgotPassword` from `useAuth()`,
-but `AuthContext.tsx` does not export a `forgotPassword` function. This page will crash
-with a runtime error when any user tries to reset their password. The page exists, is
-importable, but is fundamentally broken.
-
-**Evidence:**
-- `FrontEndCode/src/pages/ForgotPassword.tsx` line 15:
-  `const { forgotPassword, isLoading } = useAuth();`
-- `FrontEndCode/src/contexts/AuthContext.tsx` — no `forgotPassword` in the context value
-
-**Remediation Steps:**
-
-1. Add `forgotPassword` to `AuthContext.tsx`:
-```typescript
-// In the AuthContext value type
-forgotPassword: (email: string) => Promise<void>;
-
-// In the provider implementation
-const forgotPassword = async (email: string) => {
-  setIsLoading(true);
-  try {
-    await resetPassword({ username: email });
-    toast.success('Password reset code sent to your email.');
-    navigate('/reset-password', { state: { email } });
-  } catch (error: any) {
-    console.error('Forgot password error:', error);
-    toast.error('Failed to send reset code. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
-```
-
-2. Import `resetPassword` from `aws-amplify/auth` at the top of `AuthContext.tsx`.
-
-3. Add the function to the context value object.
-
-**Alternatively**, if password reset is not a priority feature right now, remove
-`ForgotPassword.tsx` and `ResetPassword.tsx` entirely to avoid dead code confusion.
-
----
-
-### Area #9: `ForgotPassword` / `ResetPassword` Not in Routes
-
-**Why it matters:** Both `ForgotPassword.tsx` and `ResetPassword.tsx` exist as page
-components but are not registered in `App.tsx` routes. Even if the `forgotPassword`
-function is implemented (Area #8), users cannot navigate to these pages.
-
-**Evidence:**
-- `FrontEndCode/src/App.tsx` — no `/forgot-password` or `/reset-password` routes
-- `FrontEndCode/src/pages/ForgotPassword.tsx` — exists, has a `Link to="/login"`
-- `FrontEndCode/src/pages/ResetPassword.tsx` — exists
-
-**Remediation Steps:**
-
-1. Add routes to `App.tsx` in the public routes section:
-```tsx
-{/* Public routes */}
-<Route path="/forgot-password" element={<ForgotPassword />} />
-<Route path="/reset-password" element={<ResetPassword />} />
-```
-
-2. Add imports at the top of `App.tsx`:
-```tsx
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-```
-
-3. Add a "Forgot password?" link on the Login page pointing to `/forgot-password`.
-
-**Do this together with Area #8** — there's no point adding routes to a broken page.
-
-
----
-
-### Area #10: React Query Installed but Unused — Manual Caching
-
-**Why it matters:** `@tanstack/react-query` is installed, `QueryClientProvider` wraps
-the app, but zero queries use it. All data fetching uses raw `useEffect` + `useState` +
-`fetch`. The `useStatistics` hook is 150 lines of manual stale-while-revalidate logic
-with localStorage — reimplementing what React Query does out of the box. This means no
-query deduplication, no automatic background refetching, no cache invalidation on
-mutations, and no devtools visibility.
-
-**Evidence:**
-- `FrontEndCode/src/App.tsx` — `const queryClient = new QueryClient()` with zero config
-- `FrontEndCode/src/hooks/useStatistics.ts` — 150 lines: `getCachedStatistics()`,
-  `setCachedStatistics()`, `CACHE_DURATION = 300000`, localStorage read/write, manual
-  `isMounted` tracking, background refresh logic
-- `FrontEndCode/src/pages/Dashboard.tsx` — multiple `useEffect` hooks for data fetching
-
-**Remediation Steps:**
-
-1. Configure the `QueryClient` with sensible defaults in `App.tsx`:
-```typescript
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,          // 1 minute before refetch
-      retry: 2,
-      refetchOnWindowFocus: false, // avoid surprise refetches
-    },
-  },
-});
-```
-
-2. Create query key constants:
-```typescript
-// src/lib/queryKeys.ts
-export const queryKeys = {
-  progress: (userId: string) => ['progress', userId] as const,
-  streak: (userId: string) => ['streak', userId] as const,
-  relationships: (userId: string) => ['relationships', userId] as const,
-  assignments: (userId: string) => ['assignments', userId] as const,
-  statistics: (userId: string) => ['statistics', userId] as const,
-};
-```
-
-3. Replace `useStatistics` (150 lines → ~15 lines):
-
-**Before (abbreviated):**
-```typescript
-export function useStatistics(userId: string | undefined) {
-  const [data, setData] = useState<StatisticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    async function loadStatistics() {
-      const cached = getCachedStatistics(userId);
-      if (cached) { setData(cached); setLoading(false); }
-      const fresh = await fetchStatistics(userId);
-      if (isMounted) { setData(fresh); setCachedStatistics(userId, fresh); }
-      // ... 80 more lines of error handling, fallbacks, cleanup
-    }
-    loadStatistics();
-    return () => { isMounted = false; };
-  }, [userId]);
-
-  return { data, loading, error };
-}
-```
-
-**After:**
-```typescript
-import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryKeys';
-
-export function useStatistics(userId: string | undefined) {
-  const { data, isLoading: loading, error } = useQuery({
-    queryKey: queryKeys.statistics(userId ?? ''),
-    queryFn: () => fetchStatistics(userId!),
-    enabled: !!userId,
-    staleTime: 5 * 60_000,
-    placeholderData: { longestStreak: 0, totalQuestionsAnswered: 0, currentLevel: 1, overallProgress: 0 },
-  });
-
-  return { data: data ?? null, loading, error: error?.message ?? null };
-}
-```
-
-4. Delete the `getCachedStatistics`, `setCachedStatistics`, `CACHE_KEY_PREFIX`,
-   `CACHE_DURATION`, and `CachedStatistics` interface — React Query handles all of this.
-
-5. Migrate Dashboard data fetching similarly — replace each `useEffect` + `useState`
-   pair with a `useQuery` call.
-
-**Migrate incrementally.** Start with `useStatistics` (biggest win), then Dashboard,
-then BenefactorDashboard. Each can be a separate commit.
-
----
-
-### Area #11: TTS Has No Caching — Polly Called for Identical Text
-
-**Why it matters:** Every conversation turn calls Polly to synthesize the AI response,
-even if the exact same text was synthesized before (e.g., greetings, transition phrases,
-repeated prompts). Each Polly call adds 200-500ms latency and costs money. There's no
-cache check — the audio is generated fresh every time and uploaded to a unique S3 key
-with a timestamp.
-
-**Evidence:**
-- `SamLambda/functions/conversationFunctions/wsDefault/speech.py`:
-  - `S3_BUCKET = 'virtual-legacy'` (hardcoded, see Area #7)
-  - `s3_key = f"conversations/{user_id}/{question_id}/ai-audio/turn-{turn_number}-{timestamp}.mp3"`
-    — unique key per call, no cache lookup
-  - No `head_object` check, no hash-based key, no cache prefix
-
-**Remediation Steps:**
-
-1. Add a cache layer using a deterministic S3 key based on text + voice hash:
 ```python
 import hashlib
 
@@ -792,521 +453,662 @@ def _cache_key(text: str, voice_id: str, engine: str) -> str:
     content_hash = hashlib.sha256(f"{text}|{voice_id}|{engine}".encode()).hexdigest()[:16]
     return f"tts-cache/{content_hash}.mp3"
 
-def text_to_speech(text: str, user_id: str, question_id: str,
-                   turn_number: int, voice_id: str, engine: str) -> str:
+def text_to_speech(text, user_id, question_id, turn_number, voice_id, engine):
+    bucket = os.environ.get('S3_BUCKET', 'virtual-legacy')
     cache_key = _cache_key(text, voice_id, engine)
 
-    # Check cache first
+    # Check cache
     try:
-        s3_client.head_object(Bucket=S3_BUCKET, Key=cache_key)
+        s3_client.head_object(Bucket=bucket, Key=cache_key)
         print(f"[POLLY] Cache hit: {cache_key}")
         return s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': S3_BUCKET, 'Key': cache_key},
-            ExpiresIn=3600
+            'get_object', Params={'Bucket': bucket, 'Key': cache_key}, ExpiresIn=3600
         )
     except s3_client.exceptions.ClientError:
-        pass  # Cache miss — synthesize
+        pass  # Cache miss
 
-    # Synthesize and upload to cache key
+    # Synthesize
     response = polly.synthesize_speech(Text=text, OutputFormat='mp3',
                                         VoiceId=voice_id, Engine=engine)
     audio_data = response['AudioStream'].read()
 
+    # Upload to cache key (with KMS encryption)
+    kms_key_arn = os.environ.get('KMS_KEY_ARN')
     s3_client.put_object(
-        Bucket=S3_BUCKET, Key=cache_key, Body=audio_data,
+        Bucket=bucket, Key=cache_key, Body=audio_data,
         ContentType='audio/mpeg',
         ServerSideEncryption='aws:kms', SSEKMSKeyId=kms_key_arn
     )
 
-    # Also store at the conversation-specific path for audit trail
-    conversation_key = f"conversations/{user_id}/{question_id}/ai-audio/turn-{turn_number}.mp3"
-    s3_client.copy_object(
-        Bucket=S3_BUCKET,
-        CopySource={'Bucket': S3_BUCKET, 'Key': cache_key},
-        Key=conversation_key,
-        ServerSideEncryption='aws:kms', SSEKMSKeyId=kms_key_arn
-    )
-
     return s3_client.generate_presigned_url(
-        'get_object', Params={'Bucket': S3_BUCKET, 'Key': cache_key}, ExpiresIn=3600
+        'get_object', Params={'Bucket': bucket, 'Key': cache_key}, ExpiresIn=3600
     )
 ```
 
-2. Also fix the hardcoded `S3_BUCKET` while you're in this file (Area #7):
-```python
-import os
-S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
+2. IAM policy for WebSocketDefaultFunction already grants `s3:GetObject` and `s3:PutObject`
+   on `arn:aws:s3:::virtual-legacy/conversations/*`. The `tts-cache/` prefix is outside this
+   scope — add it:
+```yaml
+Resource:
+  - arn:aws:s3:::virtual-legacy/conversations/*
+  - arn:aws:s3:::virtual-legacy/test-audio/*
+  - arn:aws:s3:::virtual-legacy/tts-cache/*
 ```
 
-**Expected impact:** Common phrases like "Thank you for sharing that" or "Let's move
-on to the next question" will be served from cache in ~50ms instead of ~300ms from Polly.
-Over many conversations, this adds up to meaningful latency reduction and cost savings.
+3. The `head_object` call adds ~20-50ms overhead on cache misses. For short unique responses
+   this is a net loss. Consider only caching responses shorter than 200 characters (where
+   cache hit rate is highest — greetings, transitions, follow-up prompts).
 
+**Expected impact:** Common phrases served from S3 in ~50ms instead of ~300ms from Polly.
+Over a 10-turn conversation, this could save 1-2 seconds total latency.
 
 ---
 
-### Area #12: Persona Race Condition on Benefactor Signup
+### Area #8: Dashboard ProgressSection — 200+ Lines of Manual Fetch/State in a Single useEffect
 
-**Why it matters:** When a benefactor signs up via invite link, the frontend calls
-`signupWithPersona` which triggers the Cognito `postConfirmation` Lambda to write the
-persona type. But the Lambda runs asynchronously — the frontend doesn't wait for it to
-complete. Instead, it calls `checkAuthState()` and then forcibly overrides the user's
-`personaType` to `'legacy_benefactor'` on the client side. If the Lambda hasn't finished
-writing the Cognito attribute, the user's server-side persona is wrong until the next
-login. If the client-side override fails (component unmount, navigation), the user lands
-on the wrong dashboard.
+**Severity: Medium | Ease: Medium | Effort: M**
+
+**Why it matters:** `Dashboard.tsx` `ProgressSection` component (lines 186-500+) contains a
+single massive `useEffect` that fetches progress data, processes it, checks for level
+completion, calls the increment API, reprocesses the response, shows toasts, and manages
+6 separate `useState` variables. This is ~200 lines of imperative data fetching that
+duplicates what React Query handles declaratively. The `useStatistics` hook was successfully
+migrated to React Query — this is the next candidate.
+
+The component also has a subtle bug: the `useEffect` depends on `[user, navigationState]`,
+but `navigationState` comes from React Router's `location.state`, which is a new object
+reference on every navigation — causing unnecessary refetches.
 
 **Evidence:**
-- `FrontEndCode/src/contexts/AuthContext.tsx` line 210:
-```typescript
-await checkAuthState();
-setUser(prev => prev ? { ...prev, personaType: 'legacy_benefactor' } : prev);
-```
-- Comment above it explicitly acknowledges the race condition
+- `FrontEndCode/src/pages/Dashboard.tsx` lines 186-500+
+- 6 `useState` calls: `questionTypeData`, `progressData`, `unansweredQuestionsData`,
+  `unansweredQuestionTextsData`, `progressItems`, `loading`, `error`
+- Manual auth token fetching inside the effect
+- Level progression check embedded in the data fetch effect
+- Dynamic `import('@/hooks/use-toast')` inside the effect (code splitting a 2KB module)
 
 **Remediation Steps:**
 
-1. Replace the client-side override with a polling retry that waits for the server to
-   confirm the persona attribute:
+1. Extract the data fetching into a React Query hook:
+
+```typescript
+// src/hooks/useProgress.ts
+import { useQuery } from '@tanstack/react-query';
+
+async function fetchProgress(userId: string, idToken: string) {
+  const response = await fetch(
+    buildApiUrl(API_CONFIG.ENDPOINTS.PROGRESS_SUMMARY_2, { userId }),
+    { headers: { Authorization: `Bearer ${idToken}` } }
+  );
+  if (!response.ok) throw new Error('Failed to fetch progress data');
+  return response.json();
+}
+
+export function useProgress(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['progress', userId],
+    queryFn: () => fetchProgress(userId!, /* get token */),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+}
+```
+
+2. Extract the level progression check into a separate `useMutation`:
+
+```typescript
+export function useIncrementLevel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { questionType: string }) => incrementLevel(params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+    },
+  });
+}
+```
+
+3. Separate the data processing logic from the fetch logic — the `forEach` that builds
+   `questionTypes`, `friendlyNames`, `numValidQuestions` arrays should be a pure function
+   or `useMemo`, not embedded in a `useEffect`.
+
+4. Remove the dynamic `import('@/hooks/use-toast')` — just import it statically at the top.
+
+**This reduces ProgressSection from ~300 lines to ~80 lines** and gets proper caching,
+deduplication, and background refetching for free.
+
+---
+
+### Area #9: Persona Race Condition on Benefactor Signup
+
+**Severity: Medium | Ease: Medium | Effort: M**
+
+**Why it matters:** When a benefactor signs up via invite link, the frontend calls
+`signupWithPersona` which triggers the Cognito `postConfirmation` Lambda to write the
+persona type. But the Lambda runs asynchronously — the frontend doesn't wait for it.
+Instead, it calls `checkAuthState()` and then forcibly overrides the user's `personaType`
+to `'legacy_benefactor'` on the client side. If the Lambda hasn't finished writing the
+Cognito attribute, the user's server-side persona is wrong until the next login.
+
+**Evidence:**
+- `FrontEndCode/src/contexts/AuthContext.tsx` — `signupWithPersona` function:
+  ```typescript
+  await checkAuthState();
+  setUser(prev => prev ? { ...prev, personaType: 'legacy_benefactor' } : prev);
+  ```
+- Comment in the code explicitly acknowledges the race condition
+
+**Remediation Steps:**
+
+1. Add a polling helper that waits for the server to confirm the persona:
 ```typescript
 const waitForPersona = async (expected: string, maxAttempts = 5): Promise<boolean> => {
   for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const attributes = await fetchUserAttributes();
-      if (attributes.profile) {
-        const profile = JSON.parse(attributes.profile);
-        if (profile.persona_type === expected) return true;
-      }
-    } catch { /* retry */ }
-    await new Promise(r => setTimeout(r, 1000 * (i + 1))); // exponential backoff
+    const attributes = await fetchUserAttributes();
+    if (attributes.profile) {
+      const profile = JSON.parse(attributes.profile);
+      if (profile.persona_type === expected) return true;
+    }
+    await new Promise(r => setTimeout(r, 1000 * (i + 1)));
   }
   return false;
 };
 ```
 
-2. In `signupWithPersona`, replace the override:
+2. Replace the client-side override:
 ```typescript
-// BEFORE
-await checkAuthState();
-setUser(prev => prev ? { ...prev, personaType: 'legacy_benefactor' } : prev);
-
-// AFTER
 const confirmed = await waitForPersona('legacy_benefactor');
-await checkAuthState(); // refresh user state from server
+await checkAuthState();
 if (!confirmed) {
-  console.warn('Persona attribute not confirmed after retries — proceeding with client state');
+  console.warn('Persona not confirmed after retries — proceeding with client state');
 }
 ```
 
 3. In `postConfirmation/app.py`, ensure the Lambda raises on failure so Cognito retries:
 ```python
-try:
-    cognito.admin_update_user_attributes(...)
 except ClientError as e:
     print(f"CRITICAL: Failed to set persona for {username}: {e}")
-    raise  # Fail the trigger — Cognito will retry
+    raise  # Cognito will retry the trigger
 ```
 
-**Risk:** The polling adds 1-5 seconds to the signup flow. This is acceptable because
-it only happens once per user, and the alternative is a broken persona assignment.
+**Risk:** Adds 1-5 seconds to signup flow. Acceptable since it happens once per user.
+
 
 ---
 
-### Area #13: `ProtectedRoute` Redirects Benefactors to Wrong Dashboard
+### Area #10: Duplicate Code Between processVideo and uploadVideoResponse (~700 LOC Each)
 
-**Why it matters:** When a benefactor navigates to a maker-only route (e.g., `/dashboard`
-without `requiredPersona` set, or a route with `requiredPersona="legacy_maker"`), the
-`ProtectedRoute` component redirects them to `/dashboard` — which is the maker dashboard.
-Benefactors should be redirected to `/benefactor-dashboard`.
+**Severity: Medium | Ease: Hard | Effort: L**
+
+**Why it matters:** `processVideo/app.py` and `uploadVideoResponse/app.py` are both ~700+
+lines and share nearly identical implementations of: `update_user_streak()`,
+`generate_thumbnail()`, `DecimalEncoder`, S3 download/upload logic, video metadata extraction,
+and similar `lambda_handler` patterns. Any bug fix or improvement must be applied to both
+files. The thumbnail generation code alone is ~100 lines duplicated verbatim.
 
 **Evidence:**
-- `FrontEndCode/src/components/ProtectedRoute.tsx` lines 19-20:
-```typescript
-if (requiredPersona && user.personaType !== requiredPersona) {
-    return <Navigate to="/dashboard" replace />;
-}
-```
+- `SamLambda/functions/videoFunctions/processVideo/app.py` — ~700 lines
+- `SamLambda/functions/videoFunctions/uploadVideoResponse/app.py` — ~700 lines
+- Both contain identical `generate_thumbnail()` with S3 download → ffmpeg → S3 upload
+- Both contain identical `update_user_streak()` with DynamoDB update logic
+- Both contain identical `DecimalEncoder` class
+- Both contain identical S3 error handling patterns (lines 513-521 in uploadVideoResponse,
+  lines 575-583 in processVideo)
 
 **Remediation Steps:**
 
-Update the redirect logic to route based on the user's actual persona:
-```typescript
-if (requiredPersona && user.personaType !== requiredPersona) {
-    const fallback = user.personaType === 'legacy_benefactor'
-        ? '/benefactor-dashboard'
-        : '/dashboard';
-    return <Navigate to={fallback} replace />;
-}
-```
+1. Extract shared utilities into the SharedUtilsLayer:
 
-**This is a 2-line fix.**
-
----
-
-### Area #14: Remaining IAM `Resource: '*'` on Transcribe/CloudWatch
-
-**Why it matters:** Three IAM policy statements still use `Resource: '*'` without
-conditions, granting broader permissions than necessary.
-
-**Evidence (in `template.yml`):**
-- `UploadVideoResponseFunction` — `cloudwatch:PutMetricData` with `Resource: '*'`
-- `StartTranscriptionFunction` — `transcribe:StartTranscriptionJob` with `Resource: '*'`
-- `ProcessTranscriptFunction` — `transcribe:GetTranscriptionJob` with `Resource: '*'`
-
-**Remediation Steps:**
-
-1. For CloudWatch `PutMetricData`, `Resource: '*'` is actually required — CloudWatch
-   metrics don't support resource-level permissions. Add a `Condition` to limit the
-   namespace instead:
-```yaml
-- Effect: Allow
-  Action: cloudwatch:PutMetricData
-  Resource: '*'
-  Condition:
-    StringEquals:
-      cloudwatch:namespace: 'SoulReel/VideoUpload'
-```
-
-2. For Transcribe, scope to the account:
-```yaml
-- Effect: Allow
-  Action: transcribe:StartTranscriptionJob
-  Resource: !Sub 'arn:aws:transcribe:${AWS::Region}:${AWS::AccountId}:*'
-```
-
-3. Same for `GetTranscriptionJob`:
-```yaml
-- Effect: Allow
-  Action: transcribe:GetTranscriptionJob
-  Resource: !Sub 'arn:aws:transcribe:${AWS::Region}:${AWS::AccountId}:*'
-```
-
-
----
-
-### Area #15: No Backend Tests in CI Pipeline
-
-**Why it matters:** `backend.yml` runs `sam validate --lint`, `sam build`, and
-`sam deploy` — but no tests. Any Python syntax error, logic bug, or import failure
-in a Lambda function won't be caught until it's deployed and invoked in production.
-The frontend pipeline runs `tsc --noEmit` and `npm run lint` before building, which
-is a good pattern — the backend should match.
-
-**Evidence:**
-- `.github/workflows/backend.yml` — no test step between build and deploy
-- No `pytest` or `unittest` configuration visible in `SamLambda/`
-
-**Remediation Steps:**
-
-1. Add a `requirements-dev.txt` to `SamLambda/`:
-```
-pytest>=7.0
-moto>=5.0
-boto3-stubs
-```
-
-2. Add a test step to `backend.yml` between build and deploy:
-```yaml
-- name: Install test dependencies
-  run: pip install -r requirements-dev.txt
-  working-directory: SamLambda
-
-- name: Run tests
-  run: python -m pytest tests/ -v --tb=short
-  working-directory: SamLambda
-```
-
-3. Start with smoke tests — verify each Lambda handler can be imported without errors:
 ```python
-# SamLambda/tests/test_imports.py
-import importlib
-import pytest
+# functions/shared/python/video_utils.py
+import json
+from decimal import Decimal
 
-HANDLERS = [
-    'functions.streakFunctions.getStreak.app',
-    'functions.streakFunctions.checkStreak.app',
-    'functions.questionDbFunctions.getQuestionTypes.app',
-    # ... add all handlers
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return str(obj)
+        return super().default(obj)
+
+def generate_thumbnail(s3_key: str, bucket: str, kms_key_arn: str) -> str:
+    """Download video from S3, extract thumbnail with ffmpeg, upload back."""
+    # ... extracted from both files
+    pass
+
+def update_user_streak(user_id: str, table_name: str) -> dict:
+    """Update user's recording streak in DynamoDB."""
+    # ... extracted from both files
+    pass
+```
+
+2. Update both Lambda functions to import from the shared module:
+```python
+from video_utils import DecimalEncoder, generate_thumbnail, update_user_streak
+```
+
+3. Both functions already use the SharedUtilsLayer (`template.yml` confirms this), so
+   no template changes needed — just add the new file to the layer.
+
+4. Start with `DecimalEncoder` (trivial, zero risk), then `update_user_streak`, then
+   `generate_thumbnail` (most complex, test carefully).
+
+**Gotcha:** Both functions also use the `ffmpeg-layer` for thumbnail generation. The
+shared `generate_thumbnail` function needs to work with the ffmpeg binary path from
+that layer (`/opt/bin/ffmpeg`).
+
+---
+
+### Area #11: WebSocket Lambda 30s Timeout vs Multi-Tier Transcription Fallback
+
+**Severity: Medium | Ease: Easy | Effort: S**
+
+**Why it matters:** `WebSocketDefaultFunction` has a 30-second timeout (`template.yml` line 695).
+The `handle_audio_response` function executes: transcription (3-tier fallback) → parallel
+LLM scoring + response generation → Polly TTS → S3 upload → WebSocket message send.
+
+The worst-case path: Deepgram fails (~2s) → AWS Streaming fails (~5s) → AWS Batch transcription
+(~15s average) → Bedrock LLM calls (~3-5s) → Polly (~0.3-0.5s) → S3 + presigned URL (~0.2s).
+That's ~25-27 seconds in the worst case, leaving only 3-5 seconds of headroom.
+
+If Bedrock is slow (cold model, high traffic), or if the audio file is large, this can
+exceed 30 seconds and the Lambda times out. The user sees a WebSocket disconnect with no
+error message.
+
+**Evidence:**
+- `template.yml` line 695: `Timeout: 30`
+- `app.py` `handle_audio_response` lines 208-398: full pipeline
+- Batch transcription comment: "15s average, most reliable"
+- No timeout handling or partial-result fallback in the handler
+
+**Remediation Steps:**
+
+1. Increase timeout to 60 seconds:
+```yaml
+WebSocketDefaultFunction:
+  Properties:
+    Timeout: 60
+```
+
+2. API Gateway WebSocket has a 29-second integration timeout by default. For Lambda
+   proxy integrations, this is the *response* timeout — but WebSocket `$default` route
+   doesn't need to return a response (it sends messages via the Management API). Verify
+   that the WebSocket API stage doesn't have a restrictive timeout override.
+
+3. Add a timeout guard in the handler that sends a user-friendly message before Lambda
+   kills the process:
+```python
+import signal
+
+def timeout_handler(signum, frame):
+    send_message(connection_id, {
+        'type': 'error',
+        'message': 'Processing is taking longer than expected. Please try again.'
+    })
+    raise TimeoutError("Lambda approaching timeout")
+
+signal.signal(signal.SIGALRM, timeout_handler)
+signal.alarm(25)  # Fire 5 seconds before Lambda timeout
+```
+
+**Note per project steering rules:** Changing the timeout doesn't require IAM policy
+changes — it's a function configuration property, not an API call change.
+
+---
+
+### Area #12: Global Lambda Timeout of 3s — Dangerous Default
+
+**Severity: Medium | Ease: Easy | Effort: S**
+
+**Why it matters:** SAM Globals set `Timeout: 3` (line 29 of `template.yml`). Any Lambda
+function that doesn't explicitly override this gets a 3-second timeout. For functions that
+call DynamoDB + Cognito + SES, 3 seconds is dangerously tight — especially on cold starts
+where the Python runtime + boto3 initialization alone can take 1-2 seconds.
+
+Most functions do override this (the assignment functions set 30-60s, video functions set
+120-300s), but any new function added without an explicit timeout inherits the 3s default
+and will fail intermittently.
+
+**Evidence:**
+- `template.yml` line 29: `Timeout: 3` in Globals
+- Functions that override: WebSocketDefault (30s), assignment functions (30s), video functions (120-300s)
+- Risk: any new function without explicit timeout gets 3s
+
+**Remediation Steps:**
+
+Change the global default to a safer value:
+```yaml
+Globals:
+  Function:
+    Timeout: 10  # Safe default for DynamoDB + auth operations
+```
+
+Functions that need more (video processing, conversations) already override this.
+Functions that need less (simple reads) won't be harmed by a 10s ceiling — Lambda
+billing is per-100ms, so unused timeout doesn't cost anything.
+
+**This is a 1-line change.**
+
+---
+
+### Area #13: Conversation State Grows Unbounded per DynamoDB Item
+
+**Severity: Medium | Ease: Medium | Effort: M**
+
+**Why it matters:** `ConversationState` persists the full conversation history (all turns
+with user text, AI response, scores, reasoning, audio URLs) to DynamoDB on every turn via
+`set_conversation()`. A 20-turn conversation with detailed AI responses can produce a
+DynamoDB item approaching the 400KB limit. The `config.py` `score_goal` is 12 and `max_turns`
+is 20, so conversations can be long.
+
+DynamoDB silently rejects items over 400KB with a `ValidationException`. If a conversation
+hits this limit mid-flow, the state save fails and the user loses their conversation with
+no recovery path.
+
+**Evidence:**
+- `conversation_state.py` — `to_dict()` serializes full `turns` list with all fields
+- `app.py` — `set_conversation(connection_id, state)` called after every turn
+- Each turn stores: `user_text`, `ai_response`, `score`, `reasoning`, `audio_url`
+- No size check, no truncation, no pagination
+
+**Remediation Steps:**
+
+1. Add a size guard before writing to DynamoDB:
+```python
+import sys
+
+def set_conversation(connection_id: str, state: ConversationState):
+    state_dict = state.to_dict()
+    estimated_size = sys.getsizeof(json.dumps(state_dict, cls=DecimalEncoder))
+    if estimated_size > 350_000:  # 350KB safety margin
+        # Truncate older turn reasoning to save space
+        for turn in state_dict.get('turns', [])[:-3]:  # Keep last 3 turns full
+            turn.pop('reasoning', None)
+    # ... write to DynamoDB
+```
+
+2. Alternatively, store only the last N turns in the DynamoDB item and archive older
+   turns to S3. The LLM context window doesn't need all 20 turns anyway — `llm.py`
+   already passes the full history but Bedrock has its own context limits.
+
+3. Long-term: consider storing turns as separate DynamoDB items with a GSI on
+   `connection_id`, enabling pagination and eliminating the 400KB risk entirely.
+
+---
+
+### Area #14: Old Amplify URL in CORS Allowlist
+
+**Severity: Low | Ease: Easy | Effort: S**
+
+**Why it matters:** `cors.py` line 11 still includes `https://main.d33jt7rnrasyvj.amplifyapp.com`
+in `_ALLOWED_ORIGINS`. This isn't actively harmful — the old URL just gets echoed back if
+someone sends a request with that Origin header. But it's unnecessary attack surface and
+confusing for anyone reading the code.
+
+**Evidence:**
+- `SamLambda/functions/shared/cors.py` line 11
+- `SamLambda/functions/shared/python/cors.py` — identical copy
+
+**Remediation:** Remove the old Amplify URL from both copies:
+```python
+_ALLOWED_ORIGINS = [
+    'https://www.soulreel.net',
+    'https://soulreel.net',
+    'http://localhost:5173',
+    'http://localhost:8080',
 ]
-
-@pytest.mark.parametrize('module_path', HANDLERS)
-def test_handler_imports(module_path):
-    """Verify each Lambda handler can be imported without errors."""
-    importlib.import_module(module_path)
-```
-
-4. Add unit tests for the shared helpers (`cors.py`, `responses.py`) since they're
-   used by many functions.
-
-**Start small.** Import tests catch the most common deployment failures (missing
-imports, syntax errors) with minimal effort. Add logic tests incrementally.
-
----
-
-### Area #16: CI/CD Uses Long-Lived IAM Keys Instead of OIDC
-
-**Why it matters:** The GitHub Actions workflows authenticate to AWS using long-lived
-IAM access keys stored as GitHub secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
-If these keys are leaked (GitHub breach, accidental exposure), an attacker has persistent
-access to the AWS account. OIDC federation eliminates long-lived credentials entirely.
-
-**Evidence:**
-- `.github/workflows/backend.yml` and `frontend.yml` both use:
-```yaml
-aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-```
-
-**Remediation Steps:**
-
-1. Create an OIDC identity provider in IAM:
-```bash
-aws iam create-open-id-connect-provider \
-  --url https://token.actions.githubusercontent.com \
-  --client-id-list sts.amazonaws.com \
-  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
-```
-
-2. Create an IAM role with a trust policy scoped to your repo:
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {"Federated": "arn:aws:iam::962214556635:oidc-provider/token.actions.githubusercontent.com"},
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-      },
-      "StringLike": {
-        "token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/master"
-      }
-    }
-  }]
-}
-```
-
-3. Update the workflows:
-```yaml
-permissions:
-  id-token: write
-  contents: read
-
-- uses: aws-actions/configure-aws-credentials@v4
-  with:
-    role-to-assume: arn:aws:iam::962214556635:role/github-actions-deploy
-    aws-region: us-east-1
-```
-
-4. After verifying OIDC works, delete the long-lived access keys for the
-   `soulreel-github-actions` IAM user and remove the GitHub secrets.
-
-**Note per project steering rules:** The IAM user is `soulreel-github-actions`. Don't
-create a new user — migrate to OIDC and retire the user entirely.
-
----
-
-### Area #17: N+1 Sequential Calls in BenefactorDashboard
-
-**Why it matters:** `BenefactorDashboard.tsx` has two sequential loops that make API
-calls one at a time: `for (const assignment of assignments)` calling `validateAccess()`
-individually, and `for (const rel of relationships)` calling `getUserProgress()`
-individually. With 5 relationships and 5 assignments, that's 10 sequential API calls
-on page load.
-
-**Evidence:**
-- `FrontEndCode/src/pages/BenefactorDashboard.tsx` — sequential `for...of` loops
-  with `await` inside
-
-**Remediation Steps:**
-
-Replace sequential loops with `Promise.all`:
-
-**Before:**
-```typescript
-for (const assignment of assignments) {
-    const access = await validateAccess(assignment.id);
-    // ...
-}
-```
-
-**After:**
-```typescript
-const accessResults = await Promise.all(
-    assignments.map(a => validateAccess(a.id).catch(() => null))
-);
-```
-
-Same pattern for the relationships loop. This turns 10 sequential calls into 2 parallel
-batches.
-
-
----
-
-### Area #18: Dead File — `app old.py` in getNumValidQuestionsForQType
-
-**Why it matters:** `SamLambda/functions/questionDbFunctions/getNumValidQuestionsForQType/app old.py`
-is a dead file sitting next to the active `app.py`. It's also present in the SAM build
-output (`.aws-sam/build/`). It adds confusion about which file is canonical and inflates
-the deployment package.
-
-**Evidence:**
-- `SamLambda/functions/questionDbFunctions/getNumValidQuestionsForQType/app old.py` — exists
-- `SamLambda/.aws-sam/build/GetNumValidQuestionsForQTypeFunction/app old.py` — copied to build
-
-**Remediation:** Delete the file:
-```bash
-rm "SamLambda/functions/questionDbFunctions/getNumValidQuestionsForQType/app old.py"
 ```
 
 ---
 
-### Area #19: `console.log` Debug Statements in AuthContext
+### Area #15: `console.log` Debug Statements in AuthContext and ConversationInterface
 
-**Why it matters:** `AuthContext.tsx` contains multiple `console.log` statements that
-output auth state, user attributes, and persona information to the browser console in
-production. This is information leakage — any user can open DevTools and see internal
-auth flow details.
+**Severity: Low | Ease: Easy | Effort: S**
 
-**Evidence:**
-- `FrontEndCode/src/contexts/AuthContext.tsx` — multiple `console.log` calls throughout
-  `checkAuthState`, `login`, `signupWithPersona`
-
-**Remediation:** Replace `console.log` with conditional logging:
-```typescript
-const isDev = import.meta.env.DEV;
-const log = isDev ? console.log : () => {};
-```
-
-Or simply remove them. Auth flow debugging should use breakpoints, not console output
-in production.
-
----
-
-### Area #20: `QueryClient` Has Zero Configuration
-
-**Why it matters:** `const queryClient = new QueryClient()` in `App.tsx` uses all
-defaults: `staleTime: 0` (every render triggers a refetch), `retry: 3` (failed queries
-retry 3 times with exponential backoff), `refetchOnWindowFocus: true` (switching tabs
-triggers refetches). These defaults are aggressive for a production app and will cause
-unnecessary API calls.
+**Why it matters:** `AuthContext.tsx` contains multiple `console.log` calls that output auth
+state, user attributes, and persona information to the browser console in production.
+`ConversationInterface.tsx` logs WebSocket messages, audio blob sizes, S3 keys, and upload
+URLs. Any user opening DevTools sees internal implementation details.
 
 **Evidence:**
-- `FrontEndCode/src/App.tsx` line 28: `const queryClient = new QueryClient();`
+- `AuthContext.tsx` — `console.log` calls throughout `checkAuthState`, `login`, `signupWithPersona`
+- `ConversationInterface.tsx` — `console.log` calls for WebSocket messages, audio processing,
+  S3 upload details (lines 65, 67, 72, 80, 87, 113, 127, 155, 170, 178, 185, 192, 199)
 
 **Remediation:**
 ```typescript
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+// Option A: Conditional logging
+const log = import.meta.env.DEV ? console.log : () => {};
+
+// Option B: Remove them entirely — use breakpoints for debugging
 ```
 
-This is a 5-line change that improves behavior for all future React Query adoption.
-Do it now even before migrating any data fetching to React Query.
+---
 
+### Area #16: `createAssignment` Manually Parses JWT Instead of Using Cognito Authorizer Claims
+
+**Severity: Low | Ease: Easy | Effort: S**
+
+This is a subset of Area #5 but worth calling out specifically for `createAssignment/app.py`
+because it's the most complex assignment function (~250 lines of handler logic) and the
+manual JWT parsing adds unnecessary attack surface. The Cognito authorizer already validates
+the token — the handler just needs to read the claims.
+
+See Area #5 for the full remediation plan.
+
+---
+
+### Area #17: Remaining `Resource: '*'` on `transcribe:StartStreamTranscription`
+
+**Severity: Low | Ease: Easy | Effort: S**
+
+**Why it matters:** The WebSocketDefaultFunction IAM policy has `Resource: '*'` for
+`transcribe:StartStreamTranscription` (line 735 of `template.yml`). The batch transcription
+actions are properly scoped to `arn:aws:transcribe:${AWS::Region}:${AWS::AccountId}:transcription-job/*`,
+but the streaming action uses a wildcard.
+
+**Evidence:**
+- `template.yml` lines 733-735:
+```yaml
+- Effect: Allow
+  Action: transcribe:StartStreamTranscription
+  Resource: '*'
+```
+
+**Remediation:**
+AWS Transcribe Streaming doesn't support resource-level permissions — `Resource: '*'` is
+actually required for `StartStreamTranscription`. Add a comment explaining this:
+```yaml
+- Effect: Allow
+  Action: transcribe:StartStreamTranscription
+  Resource: '*'  # Streaming Transcribe does not support resource-level permissions
+```
+
+No actual change needed — just documentation.
+
+---
+
+### Area #18: `ForgotPassword` Page May Still Reference Missing Auth Function
+
+**Severity: Low | Ease: Easy | Effort: S**
+
+**Why it matters:** The routes for `/forgot-password` and `/reset-password` were added to
+`App.tsx` (confirmed in this audit). However, the previous audit noted that `ForgotPassword.tsx`
+destructures `forgotPassword` from `useAuth()`, which may not exist in `AuthContext.tsx`.
+If the function wasn't added to the context, the page will crash when accessed.
+
+**Evidence:**
+- `App.tsx` lines 55-56: routes exist ✅
+- `ForgotPassword.tsx` — needs `forgotPassword` from `useAuth()`
+- `AuthContext.tsx` — needs verification that `forgotPassword` was added
+
+**Remediation:** Verify `AuthContext.tsx` exports `forgotPassword`. If not, add it:
+```typescript
+const forgotPassword = async (email: string) => {
+  setIsLoading(true);
+  try {
+    await resetPassword({ username: email });
+    navigate('/reset-password', { state: { email } });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+Import `resetPassword` from `aws-amplify/auth` and add `forgotPassword` to the context value.
+
+
+---
+
+## Executive Summary
+
+**Overall Grade: B**
+
+This codebase has made remarkable progress across three audits in 48 hours. The trajectory
+is C- → B- → B, driven by systematic fixes rather than cosmetic changes. The developer has
+addressed the most dangerous issues from each audit cycle: conversation state moved to DynamoDB,
+CORS locked to production domain, CI/CD pipelines created with OIDC auth, SSM batch loading
+with caching, text-path parallelism, dead code cleanup, route-level auth guards, shared utils
+layer created and adopted by 30+ functions, React Query adopted for statistics, backend smoke
+tests added to CI, ProtectedRoute redirect fixed, test email gate removed, and QueryClient
+properly configured.
+
+**What's genuinely solid:**
+- 3-tier transcription fallback (Deepgram → AWS Streaming → AWS Batch) with timing logs
+- Parallel LLM calls via ThreadPoolExecutor for scoring + response generation
+- Proper rollback logic in `createAssignment` — if email fails, DB writes are cleaned up
+- N+1 Cognito queries parallelized in `getRelationships`
+- CI/CD with OIDC (no more long-lived IAM keys), lint, type-check, and smoke tests
+- KMS encryption on S3 and DynamoDB, GuardDuty enabled, CloudTrail active
+- SharedUtilsLayer adopted by 30+ functions — the architecture is right
+- `useStatistics` properly migrated to React Query with staleTime and placeholderData
+- Error responses in Lambda handlers mostly return safe generic messages now
+
+**Top 4 Time Bombs (fix before anything else):**
+
+1. **Localhost URLs in every benefactor email** — Every email sent to benefactors contains
+   `http://localhost:8080` links. Invitations, access grants, check-ins — all broken for
+   real users. Root cause: `APP_BASE_URL` env var never set in `template.yml`. This is the
+   single most impactful bug in the codebase right now.
+
+2. **`.env` committed with live credentials** — Cognito User Pool Client ID, Identity Pool ID,
+   and API Gateway URL are in git history. The `.gitignore` rule was added after the commit.
+   Needs `git rm --cached` + history purge + credential rotation.
+
+3. **Hardcoded WebSocket URL** — `ConversationInterface.tsx` hardcodes the WebSocket API
+   endpoint. If the API is redeployed with a new ID, conversations break for all users
+   until a frontend deploy catches up.
+
+4. **Shared DAL layer leaks `str(e)` and hardcodes table names** — `assignment_dal.py` and
+   `invitation_utils.py` return exception details in error dicts and use hardcoded DynamoDB
+   table names. These modules are imported by every assignment function, so the issues
+   propagate widely.
+
+**Highest-ROI Starting Points:**
+1. Add `APP_BASE_URL: 'https://www.soulreel.net'` to SAM Globals + find-replace localhost
+   in 10 Lambda files (30 minutes, fixes all benefactor emails)
+2. `git rm --cached FrontEndCode/.env` (5 minutes, stops tracking secrets)
+3. Move WebSocket URL to env var (5 minutes, eliminates fragile hardcoding)
+4. Clean up shared DAL error messages and table names (1 hour, fixes the last layer of
+   inconsistency)
+
+**The path from B to B+ is clear:** Fix the localhost email URLs (critical user-facing bug),
+clean up the shared DAL layer (last pocket of technical debt), and migrate Dashboard's
+ProgressSection to React Query (last major manual-fetch holdout). No architectural changes
+needed — the architecture is sound. It's about finishing the last 20% of adoption.
+
+---
+
+## Grade Progression
+
+| Dimension | Mar 14 (C-) | Mar 15 AM (B-) | Mar 15 PM (B) | Notes |
+|---|---|---|---|---|
+| Reliability | D | B | B | DynamoDB state, parallel text path, SSM batch — all solid |
+| Security | D | C+ | B- | OIDC, safe error messages, but `.env` still committed, localhost emails |
+| Maintainability | D+ | C+ | B- | SharedUtilsLayer at 30+ functions, but DAL layer still inconsistent |
+| Performance | C- | C | C+ | TTS uncached, but parallelism good, React Query adopted for stats |
+| Observability | C | C | C+ | Smoke tests in CI, structured logging in conversation flow |
+| CI/CD | F | B- | B+ | OIDC, lint, type-check, smoke tests, stuck-job handling |
+| Frontend Architecture | C- | C+ | B | React Query configured + adopted, routes fixed, ProtectedRoute fixed |
+| Persona/Relationships | C | C | C+ | Race condition remains, but DAL layer exists, access conditions work |
+| **Overall** | **C-** | **B-** | **B** | Consistent upward trajectory. Localhost emails are the last critical bug. |
 
 ---
 
 ## Quick Wins Summary
 
-Items that can be completed in under 30 minutes each, with immediate impact.
+Items completable in under 30 minutes each, with immediate impact.
 
 | # | Fix | Effort | Impact | Files |
 |---|---|---|---|---|
-| 1 | Remove test email gate in BenefactorDashboard | 10 min | Unblocks real invite flow | `BenefactorDashboard.tsx` |
-| 2 | Fix ProtectedRoute benefactor redirect | 5 min | Correct persona routing | `ProtectedRoute.tsx` |
-| 3 | Delete `app old.py` dead file | 2 min | Cleanup | `getNumValidQuestionsForQType/app old.py` |
-| 4 | Configure QueryClient defaults | 5 min | Better caching behavior | `App.tsx` |
-| 5 | `git rm --cached FrontEndCode/.env` | 5 min | Stop tracking secrets | `.env` |
-| 6 | Update CORS fallback defaults to `soulreel.net` | 20 min | Eliminate latent CORS risk | ~20 Lambda `app.py` files |
-| 7 | Fix `speech.py` to use `S3_BUCKET` env var | 5 min | Env-var consistency | `speech.py`, `transcribe.py`, `transcribe_streaming.py` |
-| 8 | Remove `console.log` from AuthContext | 10 min | Stop leaking auth details | `AuthContext.tsx` |
-| 9 | Add ForgotPassword/ResetPassword routes | 10 min | Enable password reset flow | `App.tsx` |
-| 10 | Scope Transcribe IAM to account ARN | 10 min | Tighter IAM | `template.yml` |
-| 11 | Add CloudWatch PutMetricData namespace condition | 5 min | Tighter IAM | `template.yml` |
-| 12 | Parallelize BenefactorDashboard API calls | 15 min | Faster page load | `BenefactorDashboard.tsx` |
+| 1 | Add `APP_BASE_URL` to SAM Globals | 5 min | Fixes email_templates.py fallback | `template.yml` |
+| 2 | Find-replace `localhost:8080` in 10 Lambda files | 25 min | Fixes all benefactor emails | See Area #1 file list |
+| 3 | `git rm --cached FrontEndCode/.env` | 5 min | Stop tracking secrets | `.env` |
+| 4 | Move WebSocket URL to env var | 5 min | Eliminates hardcoded endpoint | `ConversationInterface.tsx`, `.env` |
+| 5 | Remove old Amplify URL from CORS allowlist | 5 min | Cleanup | `cors.py` (both copies) |
+| 6 | Remove `console.log` from AuthContext + ConversationInterface | 15 min | Stop leaking debug info | `AuthContext.tsx`, `ConversationInterface.tsx` |
+| 7 | Bump global Lambda timeout from 3s to 10s | 1 min | Safer default for new functions | `template.yml` line 29 |
+| 8 | Add comment on `transcribe:StartStreamTranscription` wildcard | 2 min | Documentation | `template.yml` |
+| 9 | Update `email_templates.py` fallback default | 5 min | Defense in depth for emails | `email_templates.py` (both copies) |
+| 10 | Replace `extract_user_id_from_jwt` with authorizer claims in 1 function | 10 min | Prove the pattern, then repeat | `createAssignment/app.py` |
+| 11 | Increase WebSocket Lambda timeout to 60s | 1 min | Prevent timeout on batch transcription fallback | `template.yml` |
+| 12 | Verify `forgotPassword` exists in AuthContext | 5 min | Prevent crash on password reset page | `AuthContext.tsx` |
 
-**Recommended order:** 1 → 5 → 2 → 3 → 4 → 6 → 7 → 8 → 9 → 10 → 11 → 12
+**Recommended order:** 1 → 2 → 9 (email fix batch) → 3 → 4 → 7 → 11 → 5 → 6 → 10 → 12 → 8
 
-Items 1-5 can be done in a single commit. Items 6-7 are a natural batch (CORS + S3
-consistency). Items 10-11 are a template.yml batch.
+Items 1 + 2 + 9 should be a single commit + deploy — they fix the critical email bug.
+Items 3 + 4 are a natural frontend commit. Items 7 + 11 are a template.yml batch.
 
 ---
 
 ## Open Questions
 
-These are architectural decisions that need your input — they don't have a single
-"correct" answer.
+**1. SharedUtilsLayer directory structure — `shared/` vs `shared/python/`?**
+Both `functions/shared/cors.py` and `functions/shared/python/cors.py` exist with identical
+content. The layer's `ContentUri` determines which path is used at runtime. If both are
+maintained separately, they will drift. Consolidate to one canonical location and delete
+the other, or use a build step that copies files.
 
-**1. SharedUtilsLayer directory structure — is it correct?**
-The layer's `ContentUri` is `functions/shared/`. For Python Lambda Layers, the code
-must be at `python/` inside the content directory (i.e., `functions/shared/python/cors.py`).
-But `cors.py` and `responses.py` appear to be at `functions/shared/cors.py` directly.
-If the `python/` subdirectory has different copies, there may be version drift. Verify
-which path is actually used at runtime and consolidate.
+**2. Should the 10 inline email templates be migrated to `email_templates.py`?**
+The centralized `email_templates.py` module exists and has well-structured templates for
+7 email types. But 10 Lambda functions still have their own inline HTML email templates
+(the ones with hardcoded localhost). The quick fix is find-replace localhost → env var.
+The proper fix is migrating all inline templates to use the centralized module. The latter
+is more work but eliminates future drift.
 
-**2. Should `getProgressSummary2` and `incrementUserLevel2` be renamed?**
-The "2" suffix suggests these replaced earlier versions. If the originals are gone from
-the template, rename to drop the suffix for clarity. If both versions are still
-referenced in `template.yml`, determine which is active and remove the other.
+**3. Conversation state size — what's the actual p99 item size?**
+The 400KB DynamoDB limit concern (Area #13) is theoretical. Check CloudWatch for
+`ConversationStateDB` consumed write capacity and item sizes. If conversations typically
+end at 8-12 turns with short AI responses, the 400KB limit may never be a practical risk.
+If conversations regularly hit 20 turns with detailed responses, it's worth addressing.
 
-**3. Password reset flow — implement or remove?**
-`ForgotPassword.tsx` and `ResetPassword.tsx` exist but are broken (missing auth function,
-missing routes). Either implement the full flow (add `forgotPassword` to AuthContext,
-add routes, wire up Cognito `resetPassword`) or delete both files to avoid dead code.
+**4. TTS caching ROI — what's the cache hit rate?**
+The Polly caching proposal (Area #7) adds an S3 `head_object` call on every turn. If AI
+responses are mostly unique (personalized follow-ups), the cache hit rate will be low and
+the overhead not worth it. If there are common phrases (greetings, transitions, closing
+remarks), caching is a clear win. Analyze a sample of conversation transcripts to estimate
+the hit rate before implementing.
 
-**4. React Query migration scope — how far to go?**
-The minimal path is: configure QueryClient defaults, migrate `useStatistics`, and stop.
-The full path is: migrate all Dashboard/BenefactorDashboard data fetching, add mutation
-hooks for video upload and invite sending, add cache invalidation. The minimal path
-takes ~1 hour; the full path takes ~1 day. Both are valid — depends on your priorities.
+**5. Password reset flow — is it tested end-to-end?**
+Routes were added and the page components exist, but the `forgotPassword` function in
+AuthContext needs verification. If it's not wired up, the pages will crash. If it is wired
+up, test the full flow: forgot password → email with code → reset password → login.
 
-**5. `CheckInResponseFunction` and `InitializeUserProgressFunction` — intentionally public?**
-These endpoints have no Cognito authorizer. If they're meant to be called by
-unauthenticated users (e.g., during signup flow before auth is established), that's
-fine. If they should be protected, add the authorizer in `template.yml`.
+**6. `processVideo` vs `uploadVideoResponse` — are both still needed?**
+Both are ~700 lines with significant overlap. If one is a newer version of the other,
+remove the old one. If they serve different purposes (e.g., one for direct upload, one for
+S3-triggered processing), document the distinction and extract shared code.
 
-**6. Denormalize user attributes into PersonaRelationshipsDB?**
-The N+1 Cognito query fix (ThreadPoolExecutor) is a good quick fix, but the proper
-solution is storing `email`, `first_name`, `last_name` in the relationship record at
-write time. This eliminates the Cognito dependency on the read path entirely. Worth
-doing if the relationship count per user is expected to grow.
+**7. Scale targets for TTS and conversation volume?**
+Current architecture handles single-digit concurrent conversations fine. At 50+ concurrent
+conversations, Polly rate limits (default 8 concurrent `SynthesizeSpeech` calls) become a
+bottleneck. If scaling is planned, consider Polly provisioned concurrency or pre-generating
+common audio clips.
 
-**7. TTS caching — worth the S3 `head_object` overhead?**
-Each cache check adds an S3 `head_object` call (~20-50ms). For short, unique AI
-responses, the cache hit rate may be low and the overhead not worth it. For repeated
-phrases (greetings, transitions), it's a clear win. Consider caching only responses
-shorter than N characters, or pre-warming the cache with known phrases.
-
-**8. Git history purge — ready to force-push?**
-Purging `.env` from git history requires `git push --force`, which rewrites history for
-all collaborators. As a solo developer, this is safe. But if you've shared the repo
-with anyone or have any CI integrations that cache commit SHAs, coordinate first.
-
----
-
-## Summary of Grade Change
-
-| Dimension | March 14 | March 15 | Notes |
-|---|---|---|---|
-| Reliability | D | B | DynamoDB state, parallel text path, SSM batch |
-| Security | D | C+ | CORS fixed, SSH removed, but `.env` still committed, error leaks remain |
-| Maintainability | D+ | C+ | Dead code removed, shared layer created but unadopted, hardcoded names persist |
-| Performance | C- | C | Text parallelism fixed, but TTS uncached, N+1 on frontend |
-| Observability | C | C | No new monitoring, no backend tests in CI |
-| CI/CD | F | B- | Pipelines created and working, but no tests, long-lived keys |
-| Frontend Architecture | C- | C+ | ProtectedRoute added, React Query still unused |
-| **Overall** | **C-** | **B-** | Solid progress in 24 hours. Finish the shared helper adoption and error leak fixes to reach B. |
-
-The path from B- to B+ is clear and mostly mechanical: adopt shared helpers across all
-Lambdas (fixes errors, CORS, and consistency in one pass), remove the test email gate,
-fix the ProtectedRoute redirect, and configure React Query. No architectural changes
-needed — just finishing what's already been started.
+**8. Denormalize user attributes into PersonaRelationshipsDB?**
+The N+1 Cognito query fix (ThreadPoolExecutor) works but adds latency proportional to
+relationship count. Storing `email`, `first_name`, `last_name` in the relationship record
+at write time eliminates the Cognito dependency on reads entirely. Worth doing if
+relationship count per user is expected to grow beyond 5-10.

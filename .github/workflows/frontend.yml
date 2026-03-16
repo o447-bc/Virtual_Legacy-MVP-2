@@ -46,6 +46,7 @@ jobs:
           VITE_IDENTITY_POOL_ID: ${{ secrets.VITE_IDENTITY_POOL_ID }}
           VITE_AWS_REGION: us-east-1
           VITE_S3_BUCKET: ${{ secrets.VITE_S3_BUCKET }}
+          VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
