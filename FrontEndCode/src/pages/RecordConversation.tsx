@@ -148,9 +148,10 @@ const RecordResponse = () => {
     await handleRecordingSubmitted();
   };
 
-  const handleVideoMemoryDashboard = () => {
+  const handleVideoMemoryDashboard = async () => {
     setShowVideoMemory(false);
     setAudioDetailedSummary('');
+    await handleRecordingSubmitted();
     const navigationState = buildNavigationState();
     navigate("/dashboard", navigationState ? { state: navigationState } : undefined);
   };

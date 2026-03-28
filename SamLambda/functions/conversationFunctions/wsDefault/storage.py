@@ -74,10 +74,17 @@ def update_user_progress(user_id: str, question_id: str, question_type: str):
         item = response['Item']
         item['numQuestComplete'] = int(item.get('numQuestComplete', 0)) + 1
         
-        remain_ids = [q for q in item.get('remainQuestAtCurrLevel', []) if q != question_id]
-        remain_texts = item.get('remainQuestTextAtCurrLevel', [])
-        if len(remain_texts) > len(remain_ids):
-            remain_texts = remain_texts[:len(remain_ids)]
+        old_ids = item.get('remainQuestAtCurrLevel', [])
+        old_texts = item.get('remainQuestTextAtCurrLevel', [])
+        try:
+            idx = old_ids.index(question_id)
+            remain_ids = old_ids[:idx] + old_ids[idx+1:]
+            remain_texts = old_texts[:idx] + old_texts[idx+1:] if idx < len(old_texts) else old_texts[:]
+        except ValueError:
+            # question_id not in list — already removed or never present
+            remain_ids = old_ids[:]
+            remain_texts = old_texts[:]
+            print(f"[PROGRESS] Warning: question_id {question_id} not found in remainQuestAtCurrLevel")
         
         item['remainQuestAtCurrLevel'] = remain_ids
         item['remainQuestTextAtCurrLevel'] = remain_texts

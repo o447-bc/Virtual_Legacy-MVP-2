@@ -484,6 +484,18 @@ def handle_end_conversation(connection_id: str, user_id: str):
                 state.to_dict()
             )
             
+            # Update question status and progress — same as natural completion path
+            update_question_status(
+                user_id,
+                state.question_id,
+                transcript_url,
+                state.cumulative_score,
+                state.turn_number
+            )
+            question_type = state.question_id.rsplit('-', 1)[0]
+            update_user_progress(user_id, state.question_id, question_type)
+            invalidate_cache(user_id)
+            
             summary_data = trigger_summarization(user_id, state.question_id, state.to_dict())
             detailed_summary = summary_data.get('detailedSummary', '')
             print(f"[VIDEO MEMORY] End conversation - summary length: {len(detailed_summary)}")
