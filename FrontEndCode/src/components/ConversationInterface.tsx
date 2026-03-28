@@ -5,7 +5,7 @@ import { Mic, Square, Volume2 } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { AudioVisualizer } from './AudioVisualizer';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod';
+const WS_URL = (import.meta.env.VITE_WS_URL || 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod').trim();
 
 interface ConversationInterfaceProps {
   questionId: string;
