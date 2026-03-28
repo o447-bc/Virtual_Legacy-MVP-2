@@ -18,7 +18,8 @@ const Login = () => {
 
   useEffect(() => {
     if (!isLoading && user) {
-      navigate('/dashboard', { replace: true });
+      const dest = user.personaType === 'legacy_benefactor' ? '/benefactor-dashboard' : '/dashboard';
+      navigate(dest, { replace: true });
     }
   }, [user, isLoading, navigate]);
 

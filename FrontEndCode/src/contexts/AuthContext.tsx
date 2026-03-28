@@ -119,7 +119,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         toast.success("Logged in successfully");
-        navigate("/dashboard");
+        const dest = userAttributes.profile && JSON.parse(userAttributes.profile).persona_type === 'legacy_benefactor'
+          ? '/benefactor-dashboard'
+          : '/dashboard';
+        navigate(dest);
       }
     } catch (error: any) {
       // Handle "already signed in" scenario
@@ -129,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         await checkAuthState();
         toast.info("You are already signed in");
-        navigate("/dashboard");
+        // checkAuthState has updated user state; ProtectedRoute + Login.tsx useEffect will handle routing
         return;
       }
       
