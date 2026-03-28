@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Mic, Square, Volume2 } from 'lucide-react';
@@ -35,6 +35,8 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   const audioChunksRef = useRef<Blob[]>([]);
   const uploadUrlRef = useRef<string | null>(null);
   const s3KeyRef = useRef<string | null>(null);
+
+  const handleAudioEnd = useCallback(() => setIsVisualizerPlaying(false), []);
 
   useEffect(() => {
     connectWebSocket();
@@ -286,7 +288,7 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
           <AudioVisualizer
             audioUrl={visualizerAudioUrl}
             isPlaying={isVisualizerPlaying}
-            onAudioEnd={() => setIsVisualizerPlaying(false)}
+            onAudioEnd={handleAudioEnd}
           />
           
           {aiText && (

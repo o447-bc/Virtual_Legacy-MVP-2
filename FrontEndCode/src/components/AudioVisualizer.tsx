@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 const getBarCount = () => (window.innerWidth < 400 ? 20 : 30);
 
@@ -22,9 +22,16 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationRef = useRef<number | null>(null);
+  const onAudioEndRef = useRef(onAudioEnd);
   const barHeightsRef = useRef<number[]>([]);
   const [, forceUpdate] = useState({});
   const [barCount, setBarCount] = useState(getBarCount());
+  const [isAnalyserReady, setIsAnalyserReady] = useState(false);
+
+  // Keep onAudioEnd ref current without triggering effect re-runs
+  useEffect(() => {
+    onAudioEndRef.current = onAudioEnd;
+  }, [onAudioEnd]);
 
   useEffect(() => {
     barHeightsRef.current = Array(barCount).fill(2);
@@ -36,87 +43,100 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Merged effect: audio element creation + audio context wiring + playback
   useEffect(() => {
     if (!audioUrl || !isPlaying) {
+      // Tear down cleanly without setting src = ''
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.src = '';
         audioRef.current = null;
       }
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+        sourceRef.current = null;
+      }
+      analyserRef.current = null;
+      setIsAnalyserReady(false);
       return;
     }
 
+    // Create audio element
     const audio = new Audio(audioUrl);
     audio.crossOrigin = 'anonymous';
     audioRef.current = audio;
 
     audio.onended = () => {
       console.log('[AudioVisualizer] Audio ended');
-      onAudioEnd?.();
+      onAudioEndRef.current?.();
     };
 
     audio.onerror = (e) => {
       console.error('[AudioVisualizer] Audio error:', e);
-      console.error('[AudioVisualizer] Audio URL:', audioUrl);
-      console.error('[AudioVisualizer] Audio element:', audio);
       console.error('[AudioVisualizer] Error details:', audio.error);
-      onAudioEnd?.();
+      onAudioEndRef.current?.();
     };
+
+    // Wire up audio context and analyser on the same element, atomically
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      try {
+        // Reuse existing context or create one
+        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+          audioContextRef.current = new AudioContextClass();
+        }
+        const audioContext = audioContextRef.current;
+
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.8;
+        analyserRef.current = analyser;
+
+        const source = audioContext.createMediaElementSource(audio);
+        sourceRef.current = source;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        setIsAnalyserReady(true);
+      } catch (err) {
+        console.error('[AudioVisualizer] Audio context error:', err);
+      }
+    }
 
     audio.play().catch(err => {
       console.error('[AudioVisualizer] Play failed:', err);
     });
 
-    console.log('[AudioVisualizer] Audio element created and playing');
-
     return () => {
       audio.pause();
-      audio.src = '';
-    };
-  }, [audioUrl, isPlaying, onAudioEnd]);
-
-  useEffect(() => {
-    if (!audioUrl || !isPlaying || !audioRef.current) return;
-
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) {
-      console.warn('[AudioVisualizer] Web Audio API not supported');
-      return;
-    }
-
-    try {
-      const audioContext = new AudioContextClass();
-      audioContextRef.current = audioContext;
-
-      if (audioContext.state === 'suspended') {
-        audioContext.resume();
+      audio.onended = null;
+      audio.onerror = null;
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+        sourceRef.current = null;
       }
-
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.8;
-      analyserRef.current = analyser;
-
-      const source = audioContext.createMediaElementSource(audioRef.current);
-      sourceRef.current = source;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-
-      console.log('[AudioVisualizer] Audio context created, state:', audioContext.state);
-
-    } catch (err) {
-      console.error('[AudioVisualizer] Audio context error:', err);
-    }
-
-    return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      analyserRef.current = null;
+      audioRef.current = null;
+      setIsAnalyserReady(false);
     };
   }, [audioUrl, isPlaying]);
 
+  // Close audio context only on unmount
   useEffect(() => {
-    if (!analyserRef.current || !isPlaying) return;
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+    };
+  }, []);
+
+  // Animation loop — triggered by isAnalyserReady state, not a ref in deps
+  useEffect(() => {
+    if (!isAnalyserReady || !analyserRef.current || !isPlaying) return;
 
     const analyser = analyserRef.current;
     const dataArray = new Uint8Array(barCount);
@@ -130,7 +150,6 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       }
 
       forceUpdate({});
-
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -141,7 +160,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [analyserRef.current, isPlaying, barCount]);
+  }, [isAnalyserReady, isPlaying, barCount]);
 
   return (
     <div 
@@ -166,7 +185,6 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
       {isPlaying && (
         <svg className="w-full h-full" preserveAspectRatio="xMidYMid meet">
           <g transform="translate(0, 40)">
-            {/* Top bars */}
             {Array.from({ length: barCount }).map((_, i) => {
               const x = (i / barCount) * 100;
               const height = barHeightsRef.current[i];
@@ -183,8 +201,6 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
                 />
               );
             })}
-            
-            {/* Bottom bars (mirrored) */}
             {Array.from({ length: barCount }).map((_, i) => {
               const x = (i / barCount) * 100;
               const height = barHeightsRef.current[i];
