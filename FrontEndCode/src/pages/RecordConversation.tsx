@@ -112,24 +112,12 @@ const RecordResponse = () => {
   
   // Handle conversation completion
   const handleConversationComplete = async (finalScore: number, audioTranscriptUrl: string, audioDetailedSummary: string) => {
-    console.log('[VIDEO MEMORY FLOW] Conversation completed:', { 
-      finalScore, 
-      audioTranscriptUrl, 
-      audioDetailedSummary,
-      audioDetailedSummaryLength: audioDetailedSummary?.length,
-      audioDetailedSummaryType: typeof audioDetailedSummary,
-      hasAudioDetailedSummary: !!audioDetailedSummary
-    });
-    
     // Use summary from WebSocket message
     if (audioDetailedSummary) {
-      console.log('[VIDEO MEMORY FLOW] Setting video memory state - summary available');
       setAudioDetailedSummary(audioDetailedSummary);
       setShowVideoMemory(true);
       setConversationStarted(false);
-      console.log('[VIDEO MEMORY FLOW] State updated:', { showVideoMemory: true, conversationStarted: false });
     } else {
-      console.log('[VIDEO MEMORY FLOW] No summary available, skipping video memory');
       // No summary available, skip to next question
       await handleRecordingSubmitted();
     }
@@ -168,13 +156,6 @@ const RecordResponse = () => {
       
       setCategoryQuestionIds(newQuestionIds);
       setCategoryQuestions(newQuestionTexts);
-      
-      console.log('RecordResponse: Question answered, arrays updated:', {
-        originalLength: progressData.totalQuestAtCurrLevel,
-        newQuestionIdsLength: newQuestionIds.length,
-        newQuestionTextsLength: newQuestionTexts.length,
-        questionsAnswered: progressData.totalQuestAtCurrLevel - newQuestionIds.length
-      });
       
       // Check if question type completed
       if (newQuestionIds.length === 0) {
@@ -283,15 +264,6 @@ const RecordResponse = () => {
           </CardContent>
         </Card>
 
-        {(() => {
-          console.log('[VIDEO MEMORY FLOW] Render check:', { 
-            showVideoMemory, 
-            levelCompleted, 
-            conversationStarted,
-            audioDetailedSummaryLength: audioDetailedSummary?.length 
-          });
-          return null;
-        })()}
         {showVideoMemory ? (
           <VideoMemoryRecorder
             audioDetailedSummary={audioDetailedSummary}

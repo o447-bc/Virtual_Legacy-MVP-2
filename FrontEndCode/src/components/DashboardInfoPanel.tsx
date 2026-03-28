@@ -56,7 +56,7 @@ export const DashboardInfoPanel = () => {
 
         {/* Content */}
         <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-4">
+          <div className="px-4 pb-4 space-y-4 max-w-prose">
             {/* Understanding Progress */}
             <div className="flex gap-3">
               <Target className="h-5 w-5 text-legacy-purple flex-shrink-0 mt-0.5" />

@@ -256,6 +256,17 @@ const BenefactorDashboard: React.FC = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-8">
+        {/* Welcome Section */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 p-6 mb-8">
+          <h2 className="text-xl font-semibold text-legacy-navy mb-2">
+            Welcome back{user?.firstName ? `, ${user.firstName}` : ''}
+          </h2>
+          <p className="text-gray-600">
+            This is where you can view and cherish the memories shared by your Legacy Makers. 
+            Each recording is a gift — take your time and enjoy.
+          </p>
+        </div>
+
         {/* Assignments from Legacy Makers Section */}
         {assignments.length > 0 && (
           <div className="bg-white rounded-lg shadow p-6 mb-8">
@@ -469,9 +480,13 @@ const BenefactorDashboard: React.FC = () => {
               })}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-2">No legacy makers connected yet</p>
-              <p className="text-sm text-gray-500">Send an invitation below to get started</p>
+            <div className="text-center py-12">
+              <div className="text-5xl mb-4">💌</div>
+              <p className="text-gray-700 font-medium mb-2">No Legacy Makers connected yet</p>
+              <p className="text-sm text-gray-500 max-w-md mx-auto">
+                Invite someone you care about to start preserving their memories. 
+                Their stories will appear here once they begin recording.
+              </p>
             </div>
           )}
         </div>
@@ -480,7 +495,7 @@ const BenefactorDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h2 className="text-2xl font-semibold mb-4">Invite a Legacy Maker</h2>
           <p className="text-gray-600 mb-6">
-            Help someone preserve their memories by inviting them to create their Virtual Legacy
+            Help someone preserve their memories by inviting them to create their legacy
           </p>
           
           <div className="space-y-6">

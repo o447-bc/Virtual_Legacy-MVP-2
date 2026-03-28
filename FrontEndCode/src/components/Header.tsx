@@ -24,7 +24,7 @@ export const Header: React.FC = () => {
       <div className="container mx-auto py-3 px-4 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
         {/* Application Title */}
         <h1 className="text-lg sm:text-xl font-semibold text-legacy-navy text-center sm:text-left">
-          Virtual Legacy Dashboard
+          SoulReel
         </h1>
         
         {/* User Menu */}

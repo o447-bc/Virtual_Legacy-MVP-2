@@ -133,13 +133,6 @@ const RecordResponse = () => {
       setCategoryQuestionIds(newQuestionIds);
       setCategoryQuestions(newQuestionTexts);
       
-      console.log('RecordResponse: Question answered, arrays updated:', {
-        originalLength: progressData.totalQuestAtCurrLevel,
-        newQuestionIdsLength: newQuestionIds.length,
-        newQuestionTextsLength: newQuestionTexts.length,
-        questionsAnswered: progressData.totalQuestAtCurrLevel - newQuestionIds.length
-      });
-      
       // Check if question type completed
       if (newQuestionIds.length === 0) {
         const { toast } = await import('@/hooks/use-toast');

@@ -16,6 +16,7 @@ import { streakService, StreakData } from "@/services/streakService";
 import { DashboardInfoPanel } from "@/components/DashboardInfoPanel";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { Play, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/Header";
 import { useProgress, useIncrementLevel, ProgressItem } from "@/hooks/useProgress";
 
@@ -227,8 +228,24 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-semibold mb-4">Your Progress</h3>
-        <p className="text-gray-600">Loading your progress...</p>
+        <div className="flex items-center gap-2 mb-6">
+          <Skeleton className="h-6 w-40" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-x-8">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <div className="flex items-center space-x-3">
+                <Skeleton className="flex-1 h-3 rounded-full" />
+                <Skeleton className="h-4 w-10" />
+              </div>
+              <Skeleton className="h-3 w-24" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -340,9 +357,18 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
                 </div>
                 <div 
                   className={`flex items-center space-x-3 transition-all ${
-                    percentage === 100 ? 'cursor-default opacity-75' : 'cursor-pointer hover:opacity-80'
+                    percentage === 100 ? 'cursor-default opacity-75' : 'cursor-pointer hover:opacity-80 focus-visible:ring-2 focus-visible:ring-legacy-purple focus-visible:ring-offset-2 focus-visible:rounded-md'
                   }`}
                   onClick={handleProgressBarClick}
+                  role={percentage < 100 ? "button" : undefined}
+                  tabIndex={percentage < 100 ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && percentage < 100) {
+                      e.preventDefault();
+                      handleProgressBarClick();
+                    }
+                  }}
+                  aria-label={percentage === 100 ? `${friendlyName} — level completed` : `Record responses for ${friendlyName}, ${percentage}% complete`}
                   title={percentage === 100 ? 'Level completed!' : `Click to record responses for ${friendlyName}`}
                 >
                   <Progress value={percentage} className="flex-1 h-3" />

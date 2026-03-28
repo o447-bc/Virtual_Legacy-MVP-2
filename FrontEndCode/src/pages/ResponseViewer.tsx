@@ -75,8 +75,6 @@ const ResponseViewer: React.FC = () => {
     if (video.responseType === 'audio') {
       if (video.audioUrl) {
         setSelectedAudio(video.audioUrl);
-      } else {
-        console.log('No audio URL available for this response');
       }
       return;
     }

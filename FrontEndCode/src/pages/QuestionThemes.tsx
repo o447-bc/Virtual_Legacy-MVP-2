@@ -115,7 +115,7 @@ const QuestionThemes = () => {
             </div>
           )}
           
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center bg-gradient-to-r from-legacy-navy to-legacy-purple bg-clip-text text-transparent">
+          <h1 className="text-2xl md:text-3xl font-bold mb-4 text-center bg-gradient-to-r from-legacy-navy to-legacy-purple bg-clip-text text-transparent">
             Question Themes & Levels
           </h1>
           <p className="text-lg text-gray-600 text-center mb-10 max-w-3xl mx-auto">
@@ -123,7 +123,23 @@ const QuestionThemes = () => {
             Each theme appears across multiple levels, gradually increasing in emotional depth.
           </p>
 
-          <div className="overflow-x-auto shadow-lg rounded-lg">
+          {/* Mobile: card layout */}
+          <div className="sm:hidden space-y-4">
+            {themes.map((theme, index) => (
+              <div key={index} className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-gray-900">{theme.category}</h3>
+                  <span className="text-sm text-legacy-purple font-medium whitespace-nowrap ml-3">
+                    Levels {theme.levels}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600">{theme.explanation}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table layout */}
+          <div className="hidden sm:block overflow-x-auto shadow-lg rounded-lg">
             <table className="w-full border-collapse bg-white">
               <thead>
                 <tr className="bg-legacy-purple text-white">
@@ -204,7 +220,7 @@ const QuestionThemes = () => {
           </div>
           
           <div className="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} Virtual Legacy. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} SoulReel. All rights reserved.</p>
           </div>
         </div>
       </footer>

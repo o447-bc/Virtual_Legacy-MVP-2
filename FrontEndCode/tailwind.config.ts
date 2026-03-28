@@ -19,6 +19,9 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['"DM Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -65,7 +68,7 @@ export default {
 				},
 				legacy: {
 					navy: '#1A1F2C',
-					purple: '#9b87f5',
+					purple: '#7c6bc4',
 					lightPurple: '#E5DEFF',
 					white: '#FFFFFF'
 				}

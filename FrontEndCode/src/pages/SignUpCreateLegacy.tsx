@@ -26,7 +26,6 @@ const SignUpCreateLegacy = () => {
     if (inviteParam) {
       setInviteToken(inviteParam);
       setIsInvited(true);
-      console.log('Invite token found in URL:', inviteParam);
     }
   }, [searchParams]);
 
@@ -88,7 +87,6 @@ const SignUpCreateLegacy = () => {
       const normalizedEmail = email.toLowerCase();
       // If user came from an invite, include the invite token in clientMetadata
       if (isInvited && inviteToken) {
-        console.log('Signing up with invite token:', inviteToken);
         // Pass invite token as additional clientMetadata for postConfirmation trigger
         await signupWithPersona(normalizedEmail, password, "create_legacy_invited", "legacy_maker", firstName, lastName, inviteToken);
       } else {
@@ -112,7 +110,7 @@ const SignUpCreateLegacy = () => {
           </CardTitle>
           <CardDescription className="text-center">
             {isInvited 
-              ? "You've been invited to create your Virtual Legacy. Create an account to get started."
+              ? "You've been invited to create your legacy on SoulReel. Create an account to get started."
               : "Create an account to start recording your memories and experiences"
             }
           </CardDescription>
