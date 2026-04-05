@@ -3,9 +3,14 @@ import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
-import { fetchQuestions, type QuestionRecord } from "@/services/adminService";
-import { Search, ChevronUp, ChevronDown } from "lucide-react";
+import { fetchQuestions, updateQuestion, type QuestionRecord } from "@/services/adminService";
+import { Search, ChevronUp, ChevronDown, X } from "lucide-react";
+import LifeEventTagEditor from "@/components/admin/LifeEventTagEditor";
+import QuestionValidationWarnings from "@/components/admin/QuestionValidationWarnings";
+import { VALID_PLACEHOLDERS } from "@/constants/lifeEventRegistry";
 
 type SortField = "questionType" | "difficulty" | "active" | "lastModifiedAt";
 type SortDir = "asc" | "desc";
@@ -22,6 +27,9 @@ const QuestionBrowse = () => {
   const [sortField, setSortField] = useState<SortField>("questionType");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [page, setPage] = useState(0);
+  const [selectedQuestion, setSelectedQuestion] = useState<QuestionRecord | null>(null);
+  const [editData, setEditData] = useState<Partial<QuestionRecord>>({});
+  const [saving, setSaving] = useState(false);
   const pageSize = 25;
 
   useEffect(() => {
@@ -95,6 +103,48 @@ const QuestionBrowse = () => {
     sortField === field ? (
       sortDir === "asc" ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />
     ) : null;
+
+  const existingTypes = useMemo(
+    () => [...new Set(questions.map((q) => q.questionType))],
+    [questions]
+  );
+
+  const openEdit = (q: QuestionRecord) => {
+    setSelectedQuestion(q);
+    setEditData({ ...q });
+  };
+
+  const closeEdit = () => {
+    setSelectedQuestion(null);
+    setEditData({});
+  };
+
+  const handleSave = async () => {
+    if (!selectedQuestion) return;
+    try {
+      setSaving(true);
+      await updateQuestion(selectedQuestion.questionId, editData);
+      toast.success("Question updated");
+      closeEdit();
+      loadQuestions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Update failed";
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleValid = async (q: QuestionRecord) => {
+    try {
+      await updateQuestion(q.questionId, { active: !q.active } as Partial<QuestionRecord>);
+      toast.success(q.active ? "Marked as invalid" : "Marked as valid");
+      loadQuestions();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Update failed";
+      toast.error(msg);
+    }
+  };
 
   if (loading) {
     return (
@@ -199,6 +249,7 @@ const QuestionBrowse = () => {
               <tr
                 key={q.questionId}
                 className={`border-b hover:bg-gray-50 cursor-pointer ${idx % 2 === 0 ? "" : "bg-gray-50/50"}`}
+                onClick={() => openEdit(q)}
               >
                 <td className="px-3 py-2 text-xs text-gray-500 font-mono">{q.questionId}</td>
                 <td className="px-3 py-2">{q.questionType}</td>
@@ -256,6 +307,146 @@ const QuestionBrowse = () => {
             >
               Next
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Panel (slide-over) */}
+      {selectedQuestion && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/30" onClick={closeEdit} />
+          <div className="relative w-full max-w-lg bg-white shadow-xl overflow-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-bold text-legacy-navy">Edit Question</h2>
+              <button onClick={closeEdit} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Read-only ID */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Question ID</label>
+                <p className="text-sm font-mono text-gray-700">{selectedQuestion.questionId}</p>
+              </div>
+
+              {/* Question Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Type</label>
+                <Input
+                  value={editData.questionType || ""}
+                  onChange={(e) => setEditData({ ...editData, questionType: e.target.value })}
+                />
+              </div>
+
+              {/* Theme Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Theme Name</label>
+                <Input
+                  value={editData.themeName || ""}
+                  onChange={(e) => setEditData({ ...editData, themeName: e.target.value })}
+                />
+              </div>
+
+              {/* Difficulty */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty (1–10)</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={editData.difficulty || 1}
+                  onChange={(e) => setEditData({ ...editData, difficulty: Number(e.target.value) })}
+                />
+              </div>
+
+              {/* Active toggle */}
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={editData.active ?? true}
+                  onCheckedChange={(v) => setEditData({ ...editData, active: v })}
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  {editData.active ? "Valid (active)" : "Invalid (inactive)"}
+                </label>
+              </div>
+
+              {/* Question Text */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Text</label>
+                <Textarea
+                  value={editData.questionText || ""}
+                  onChange={(e) => setEditData({ ...editData, questionText: e.target.value })}
+                  rows={4}
+                />
+              </div>
+
+              {/* Life Event Tags */}
+              <LifeEventTagEditor
+                value={editData.requiredLifeEvents || []}
+                onChange={(keys) => setEditData({ ...editData, requiredLifeEvents: keys })}
+              />
+
+              {/* Instanceable */}
+              <div className="flex items-center gap-3">
+                <Switch
+                  checked={editData.isInstanceable ?? false}
+                  onCheckedChange={(v) => setEditData({ ...editData, isInstanceable: v })}
+                />
+                <label className="text-sm font-medium text-gray-700">Instanceable</label>
+              </div>
+
+              {editData.isInstanceable && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Placeholder</label>
+                  <select
+                    value={editData.instancePlaceholder || ""}
+                    onChange={(e) => setEditData({ ...editData, instancePlaceholder: e.target.value })}
+                    className="border rounded-md px-3 py-2 text-sm bg-white w-full"
+                  >
+                    <option value="">Select...</option>
+                    {VALID_PLACEHOLDERS.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Validation Warnings */}
+              <QuestionValidationWarnings
+                question={{
+                  questionText: editData.questionText || "",
+                  requiredLifeEvents: editData.requiredLifeEvents || [],
+                  isInstanceable: editData.isInstanceable ?? false,
+                  instancePlaceholder: editData.instancePlaceholder || "",
+                  questionType: editData.questionType || "",
+                }}
+                existingTypes={existingTypes}
+                currentQuestionId={selectedQuestion.questionId}
+              />
+
+              {/* Audit info */}
+              {selectedQuestion.lastModifiedBy && (
+                <div className="text-xs text-gray-400 pt-2 border-t">
+                  Last modified by {selectedQuestion.lastModifiedBy} on{" "}
+                  {selectedQuestion.lastModifiedAt ? new Date(selectedQuestion.lastModifiedAt).toLocaleString() : "—"}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-legacy-purple hover:bg-legacy-navy"
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+                <Button variant="outline" onClick={closeEdit}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
