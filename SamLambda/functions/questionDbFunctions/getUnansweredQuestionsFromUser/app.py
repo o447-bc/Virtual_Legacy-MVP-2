@@ -175,6 +175,27 @@ def get_unanswered_questions(thisQuestionType, thisUserId):
             if 'questionId' in item:
                 validQuestionIds.append(item['questionId'])
     
+    # 1b. Filter by assignedQuestions if the user has completed the life-events survey
+    user_profile_table = dynamodb.Table(os.environ.get('TABLE_USER_STATUS', 'userStatusDB'))
+    try:
+        profile_resp = user_profile_table.get_item(Key={'userId': thisUserId})
+        assigned = profile_resp.get('Item', {}).get('assignedQuestions')
+        if assigned:
+            # Handle legacy flat-list format
+            if isinstance(assigned, list):
+                assigned = {'standard': assigned, 'instanced': []}
+            # Build set of all assigned questionIds
+            assigned_ids = set(assigned.get('standard', []))
+            for group in assigned.get('instanced', []):
+                assigned_ids.update(group.get('questionIds', []))
+            # Filter to only assigned questions
+            if assigned_ids:
+                validQuestionIds = [qid for qid in validQuestionIds if qid in assigned_ids]
+                print(f"[FILTER] Filtered to {len(validQuestionIds)} assigned questions (from {len(assigned_ids)} total assigned)")
+    except Exception as e:
+        # If we can't read assignedQuestions, fall back to all valid questions
+        print(f"[WARN] Could not read assignedQuestions, using all valid: {e}")
+
     # 2. Get all answered questions for this user from userQuestionStatusDB with the specified question type
     currAnsweredQuestions = []
     user_response = user_status_table.query(

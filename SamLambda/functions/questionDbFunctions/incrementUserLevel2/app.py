@@ -179,12 +179,25 @@ def lambda_handler(event, context):
         )
         print(f"Found {len(next_level_questions['Items'])} questions at level {new_global_level}")
         
+        # Filter by assignedQuestions if user has completed the life-events survey
+        assigned_questions = user_status_response.get('Item', {}).get('assignedQuestions')
+        assigned_ids = None
+        if assigned_questions:
+            if isinstance(assigned_questions, list):
+                assigned_questions = {'standard': assigned_questions, 'instanced': []}
+            assigned_ids = set(assigned_questions.get('standard', []))
+            for group in assigned_questions.get('instanced', []):
+                assigned_ids.update(group.get('questionIds', []))
+        
         # Extract unique question types
         question_types = set()
         questions_by_type = {}
         for item in next_level_questions['Items']:
             q_type = item.get('questionType')
             if q_type:
+                # Skip questions not in assignedQuestions if user has survey data
+                if assigned_ids is not None and item['questionId'] not in assigned_ids:
+                    continue
                 question_types.add(q_type)
                 if q_type not in questions_by_type:
                     questions_by_type[q_type] = []

@@ -144,6 +144,23 @@ def lambda_handler(event, context):
         })
         print("[DB] User status initialized with currLevel = 1, allowTranscription = True")
         
+        # Check if user has assignedQuestions from the life-events survey
+        assigned_questions = None
+        try:
+            user_status_resp = user_status_table.get_item(Key={'userId': user_id})
+            assigned_questions = user_status_resp.get('Item', {}).get('assignedQuestions')
+        except Exception:
+            pass  # Fall back to all questions if we can't read assignedQuestions
+        
+        assigned_ids = None
+        if assigned_questions:
+            if isinstance(assigned_questions, list):
+                assigned_questions = {'standard': assigned_questions, 'instanced': []}
+            assigned_ids = set(assigned_questions.get('standard', []))
+            for group in assigned_questions.get('instanced', []):
+                assigned_ids.update(group.get('questionIds', []))
+            print(f"[DB] User has {len(assigned_ids)} assigned questions from survey")
+        
         # Scan allQuestionDB to collect question types and valid difficulty-1 questions
         # This single scan is more efficient than multiple queries
         print("[DB] Scanning allQuestionDB for question types and difficulty=1 questions")
@@ -178,6 +195,9 @@ def lambda_handler(event, context):
                 # Only include questions that are both difficulty=1 AND valid AND have question text
                 # These will be the initial questions available to users
                 if difficulty == 1 and is_valid and question_text:
+                    # If user has assignedQuestions, only include assigned ones
+                    if assigned_ids is not None and item['questionId'] not in assigned_ids:
+                        continue
                     if q_type not in difficulty_one_by_type:
                         difficulty_one_by_type[q_type] = {'ids': [], 'texts': []}
                     difficulty_one_by_type[q_type]['ids'].append(item['questionId'])

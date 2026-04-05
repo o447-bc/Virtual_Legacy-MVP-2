@@ -197,6 +197,7 @@ def lambda_handler(event, context):
         question_type = body.get('questionType')
         video_data = body.get('videoData')  # Base64 encoded video
         question_text = body.get('questionText', '')
+        instance_key = body.get('instanceKey')  # Optional: for instanced questions (e.g., "got_married:1")
         
         if not all([question_id, question_type, video_data]):
             return {
@@ -229,10 +230,12 @@ def lambda_handler(event, context):
             # This ensures users can always upload videos, thumbnails are a nice-to-have feature
         
         # Update DynamoDB
-        update_user_question_status(user_id, question_id, question_type, filename, s3_key, question_text)
+        update_user_question_status(user_id, question_id, question_type, filename, s3_key, question_text, instance_key)
         
         # Update progress in userQuestionLevelProgressDB
-        update_user_progress(user_id, question_id, question_type)
+        # For instanced questions, use composite key to match progress records
+        progress_question_id = f"{question_id}#{instance_key}" if instance_key else question_id
+        update_user_progress(user_id, progress_question_id, question_type)
         
         # INVALIDATE USER COMPLETED COUNT CACHE
         try:
@@ -296,18 +299,20 @@ def upload_to_s3(video_data_base64, s3_key):
     except Exception as e:
         raise Exception(f"Failed to upload to S3: {str(e)}")
 
-def update_user_question_status(user_id, question_id, question_type, filename, s3_key, question_text):
+def update_user_question_status(user_id, question_id, question_type, filename, s3_key, question_text, instance_key=None):
     """Update userQuestionStatusDB with the video response."""
     try:
         # Initialize DynamoDB client
         dynamodb = boto3.resource('dynamodb')
         table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
         
+        # Use composite sort key for instanced questions
+        sort_key = f"{question_id}#{instance_key}" if instance_key else question_id
+        
         # Add entry to database
-        table.put_item(
-            Item={
+        item = {
                 'userId': user_id,
-                'questionId': question_id,
+                'questionId': sort_key,
                 'questionType': question_type,
                 'filename': filename,
                 'videoS3Location': f's3://virtual-legacy/{s3_key}',
@@ -322,8 +327,14 @@ def update_user_question_status(user_id, question_id, question_type, filename, s
                 'videoTranscriptTextS3Location': None,
                 'enableTranscript': True,
                 'videoSummarizationStatus': 'NOT_STARTED'
-            }
-        )
+        }
+        
+        # Store instanceKey as separate attribute for querying
+        if instance_key:
+            item['instanceKey'] = instance_key
+            item['templateQuestionId'] = question_id  # Original questionId without instance suffix
+        
+        table.put_item(Item=item)
         
     except Exception as e:
         raise Exception(f"Failed to update database: {str(e)}")

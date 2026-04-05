@@ -79,6 +79,20 @@ def lambda_handler(event, context):
         if not response['Items']:
             print(f"[INIT] No progress data found for user {authenticated_user_id}, initializing...")
             
+            # Check if user has assignedQuestions from the life-events survey
+            user_status_resp = user_status_table.get_item(Key={'userId': authenticated_user_id})
+            assigned_questions = user_status_resp.get('Item', {}).get('assignedQuestions')
+            
+            # Build set of assigned questionIds if available
+            assigned_ids = None
+            if assigned_questions:
+                if isinstance(assigned_questions, list):
+                    assigned_questions = {'standard': assigned_questions, 'instanced': []}
+                assigned_ids = set(assigned_questions.get('standard', []))
+                for group in assigned_questions.get('instanced', []):
+                    assigned_ids.update(group.get('questionIds', []))
+                print(f"[INIT] User has {len(assigned_ids)} assigned questions from survey")
+            
             # Initialize progress data
             all_questions_table = dynamodb.Table(os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB'))
             
@@ -115,6 +129,9 @@ def lambda_handler(event, context):
                     question_text = item.get('questionText') or item.get('Question', '')
                     
                     if difficulty == 1 and is_active and question_text:
+                        # If user has assignedQuestions, only include assigned ones
+                        if assigned_ids is not None and item['questionId'] not in assigned_ids:
+                            continue
                         if q_type not in difficulty_one_by_type:
                             difficulty_one_by_type[q_type] = {'ids': [], 'texts': []}
                         difficulty_one_by_type[q_type]['ids'].append(item['questionId'])
