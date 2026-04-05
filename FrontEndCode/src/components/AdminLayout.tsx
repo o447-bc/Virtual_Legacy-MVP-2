@@ -11,6 +11,7 @@ import {
   BarChart3,
   Tags,
   Download,
+  LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -25,7 +26,7 @@ const navItems = [
 ];
 
 const AdminLayout: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -56,8 +57,15 @@ const AdminLayout: React.FC = () => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10 text-xs text-gray-400">
-          {user?.email}
+        <div className="p-4 border-t border-white/10">
+          <p className="text-xs text-gray-400 mb-3">{user?.email}</p>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors w-full"
+          >
+            <LogOut className="h-4 w-4" />
+            Log out
+          </button>
         </div>
       </aside>
 
