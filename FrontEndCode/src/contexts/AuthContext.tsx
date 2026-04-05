@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
 import { signIn, signUp, signOut, getCurrentUser, confirmSignUp, resendSignUpCode, fetchUserAttributes, resetPassword as amplifyResetPassword, confirmResetPassword } from 'aws-amplify/auth';
+import { getSurveyStatus } from '@/services/surveyService';
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +16,8 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   isLoading: boolean;
+  hasCompletedSurvey: boolean | null;
+  refreshSurveyStatus: () => Promise<void>;
 }
 
 interface User {
@@ -30,6 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasCompletedSurvey, setHasCompletedSurvey] = useState<boolean | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -78,14 +82,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         firstName,
         lastName
       });
+      
+      // Fetch survey status for legacy makers
+      if (personaType === 'legacy_maker') {
+        try {
+          const surveyStatus = await getSurveyStatus();
+          setHasCompletedSurvey(surveyStatus.hasCompletedSurvey);
+        } catch (surveyErr) {
+          console.error('Failed to fetch survey status:', surveyErr);
+          setHasCompletedSurvey(null);
+        }
+      } else {
+        // Non-legacy-makers don't need the survey
+        setHasCompletedSurvey(true);
+      }
     } catch (error) {
       setUser(null);
+      setHasCompletedSurvey(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-
+  const refreshSurveyStatus = async () => {
+    try {
+      const surveyStatus = await getSurveyStatus();
+      setHasCompletedSurvey(surveyStatus.hasCompletedSurvey);
+    } catch (err) {
+      console.error('Failed to refresh survey status:', err);
+    }
+  };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -319,6 +345,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setUser(null);
+      setHasCompletedSurvey(null);
       toast.info("Logged out successfully");
       navigate("/");
     } catch (error: any) {
@@ -337,7 +364,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, signupWithPersona, confirmSignup, resendConfirmationCode, logout, refreshUser: checkAuthState, forgotPassword, resetPassword, isLoading }}>
+    <AuthContext.Provider value={{ user, login, signup, signupWithPersona, confirmSignup, resendConfirmationCode, logout, refreshUser: checkAuthState, forgotPassword, resetPassword, isLoading, hasCompletedSurvey, refreshSurveyStatus }}>
       {children}
     </AuthContext.Provider>
   );

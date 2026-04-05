@@ -19,6 +19,7 @@ import { Play, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/Header";
 import { useProgress, useIncrementLevel, ProgressItem } from "@/hooks/useProgress";
+import LifeEventsSurvey from "@/components/LifeEventsSurvey";
 
 /**
  * MAIN DASHBOARD COMPONENT
@@ -39,7 +40,7 @@ import { useProgress, useIncrementLevel, ProgressItem } from "@/hooks/useProgres
  */
 const Dashboard = () => {
   // HOOKS AND STATE
-  const { user, logout } = useAuth();    // Get current user and logout function from context
+  const { user, logout, hasCompletedSurvey, refreshSurveyStatus } = useAuth();    // Get current user and logout function from context
   const navigate = useNavigate();         // React Router navigation function
   const location = useLocation();         // Access navigation state
   const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null); // Overall progress state
@@ -389,6 +390,15 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
           })}
         </div>
       </div>
+
+      {/* Life-Events Survey Overlay — shown when user hasn't completed the survey */}
+      {hasCompletedSurvey === false && (
+        <LifeEventsSurvey
+          onComplete={() => {
+            refreshSurveyStatus();
+          }}
+        />
+      )}
     </>
   );
 };

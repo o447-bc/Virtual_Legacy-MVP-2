@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProtectedRouteProps {
@@ -8,7 +8,8 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPersona }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasCompletedSurvey } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return null; // or a spinner — avoids flash-redirect while auth state loads
@@ -23,6 +24,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPerso
       ? '/benefactor-dashboard'
       : '/dashboard';
     return <Navigate to={fallback} replace />;
+  }
+
+  // Redirect legacy makers to dashboard (which shows survey overlay) if survey not completed
+  // Skip for the dashboard itself and admin routes
+  if (
+    user.personaType === 'legacy_maker' &&
+    hasCompletedSurvey === false &&
+    location.pathname !== '/dashboard' &&
+    !location.pathname.startsWith('/admin')
+  ) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
