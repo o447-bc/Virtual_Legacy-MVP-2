@@ -90,6 +90,19 @@ const BatchImport = () => {
     <div className="p-6 max-w-3xl">
       <h1 className="text-2xl font-bold text-legacy-navy mb-6">Batch Import</h1>
 
+      {/* Help section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
+        <p className="font-medium mb-2">How batch import works</p>
+        <ul className="space-y-1 list-disc list-inside text-blue-700">
+          <li>Paste AI-generated questions into the text box — one question per line, or a JSON array</li>
+          <li>Set the shared question type, difficulty, and life event tags — these apply to all questions in the batch</li>
+          <li>Click Preview to see a table of parsed questions before importing</li>
+          <li>Questions flagged as "Duplicate" already exist in the database — you can still import them or remove them from the batch</li>
+          <li>Click Import to write all questions to the database with auto-generated IDs</li>
+          <li>If any question fails validation, the entire batch is rejected — fix the issue and retry</li>
+        </ul>
+      </div>
+
       <div className="space-y-5">
         {/* Shared settings */}
         <div className="grid grid-cols-2 gap-4">
