@@ -158,6 +158,15 @@ const Dashboard = () => {
         {/* Separate component that handles progress display and category-specific navigation */}
         <ProgressSection user={user} navigationState={location.state} overallProgress={overallProgress} />
       </main>
+
+      {/* Life-Events Survey Overlay — shown when user hasn't completed the survey */}
+      {hasCompletedSurvey === false && (
+        <LifeEventsSurvey
+          onComplete={() => {
+            refreshSurveyStatus();
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -390,15 +399,6 @@ const ProgressSection = ({ user, navigationState, overallProgress }) => {
           })}
         </div>
       </div>
-
-      {/* Life-Events Survey Overlay — shown when user hasn't completed the survey */}
-      {hasCompletedSurvey === false && (
-        <LifeEventsSurvey
-          onComplete={() => {
-            refreshSurveyStatus();
-          }}
-        />
-      )}
     </>
   );
 };
