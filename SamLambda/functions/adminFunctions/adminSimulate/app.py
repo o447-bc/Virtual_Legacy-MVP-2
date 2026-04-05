@@ -66,7 +66,7 @@ def lambda_handler(event, context):
         # Filter: same logic as Question_Assignment_Service
         assigned = []
         for q in all_questions:
-            if q.get('Valid') != 1:
+            if not (q.get('Valid') == 1 if 'Valid' in q else q.get('active', False)):
                 continue
             required = q.get('requiredLifeEvents', [])
             if not required:

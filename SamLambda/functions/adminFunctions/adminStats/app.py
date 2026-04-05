@@ -69,7 +69,8 @@ def lambda_handler(event, context):
         covered_keys = set()
 
         for q in all_questions:
-            is_valid = q.get('Valid') == 1
+            # Support both Valid (number, preferred) and active (boolean, legacy)
+            is_valid = q.get('Valid') == 1 if 'Valid' in q else q.get('active', False)
             qtype = q.get('questionType', 'Unknown')
             diff = int(q.get('difficulty', 0))
 
@@ -80,7 +81,7 @@ def lambda_handler(event, context):
                 difficulty_levels.add(diff)
 
             # Track questions missing new attributes (need migration)
-            if 'requiredLifeEvents' not in q:
+            if 'requiredLifeEvents' not in q or 'Valid' not in q:
                 needs_migration_count += 1
 
             if is_valid:

@@ -106,6 +106,9 @@ def handle_list_questions(event):
         item.setdefault('lastModifiedBy', '')
         item.setdefault('lastModifiedAt', '')
         item.setdefault('themeName', '')
+        # Normalize active (bool) to Valid (number) for transition period
+        if 'Valid' not in item:
+            item['Valid'] = 1 if item.get('active', True) else 0
 
     return {
         'statusCode': 200,

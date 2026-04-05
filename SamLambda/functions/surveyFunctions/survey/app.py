@@ -296,7 +296,7 @@ def assign_questions(effective_events, life_event_instances, all_questions):
     instanced = {}
 
     for q in all_questions:
-        if q.get('Valid') != 1:
+        if not (q.get('Valid') == 1 if 'Valid' in q else q.get('active', False)):
             continue
 
         required = q.get('requiredLifeEvents', [])
