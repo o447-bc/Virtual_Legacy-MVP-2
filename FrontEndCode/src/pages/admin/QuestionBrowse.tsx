@@ -55,6 +55,17 @@ const QuestionBrowse = () => {
     [questions]
   );
 
+  // Map questionType -> themeName for friendly display
+  const typeToTheme = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const q of questions) {
+      if (q.questionType && q.themeName && !map[q.questionType]) {
+        map[q.questionType] = q.themeName;
+      }
+    }
+    return map;
+  }, [questions]);
+
   // Filter + sort
   const filtered = useMemo(() => {
     let result = [...questions];
@@ -180,7 +191,7 @@ const QuestionBrowse = () => {
         >
           <option value="">All Types</option>
           {questionTypes.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>{typeToTheme[t] || t}</option>
           ))}
         </select>
 
@@ -252,7 +263,7 @@ const QuestionBrowse = () => {
                 onClick={() => openEdit(q)}
               >
                 <td className="px-3 py-2 text-xs text-gray-500 font-mono">{q.questionId}</td>
-                <td className="px-3 py-2">{q.questionType}</td>
+                <td className="px-3 py-2">{typeToTheme[q.questionType] || q.questionType}</td>
                 <td className="px-3 py-2 text-center">{q.difficulty}</td>
                 <td className="px-3 py-2 text-center">
                   {q.active ? (

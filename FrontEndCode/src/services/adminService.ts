@@ -40,6 +40,7 @@ export interface StatsData {
   zeroCoverageKeys: number;
   instanceableQuestions: number;
   needsMigration: number;
+  typeToTheme: Record<string, string>;
   grid: Record<string, Record<string, number>>;
   difficultyTotals: Record<string, number>;
   grandTotal: number;

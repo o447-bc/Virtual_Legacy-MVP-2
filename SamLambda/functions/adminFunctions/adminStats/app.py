@@ -62,6 +62,9 @@ def lambda_handler(event, context):
         # Grid: questionType -> difficulty -> count (valid only)
         grid = defaultdict(lambda: defaultdict(int))
 
+        # Map questionType -> themeName for friendly display
+        type_to_theme = {}
+
         # Coverage tracking for zero-coverage count
         covered_keys = set()
 
@@ -71,6 +74,8 @@ def lambda_handler(event, context):
             diff = int(q.get('difficulty', 0))
 
             question_types.add(qtype)
+            if qtype not in type_to_theme and q.get('themeName'):
+                type_to_theme[qtype] = q.get('themeName')
             if diff > 0:
                 difficulty_levels.add(diff)
 
@@ -120,6 +125,7 @@ def lambda_handler(event, context):
                 'zeroCoverageKeys': zero_coverage,
                 'instanceableQuestions': instanceable_count,
                 'needsMigration': needs_migration_count,
+                'typeToTheme': type_to_theme,
                 'grid': grid_output,
                 'difficultyTotals': dict(difficulty_totals),
                 'grandTotal': grand_total,

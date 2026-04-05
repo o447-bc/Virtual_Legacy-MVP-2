@@ -137,7 +137,9 @@ const AdminDashboard = () => {
                 key={qtype}
                 className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
               >
-                <td className="px-3 py-2 font-medium text-gray-900">{qtype}</td>
+                <td className="px-3 py-2 font-medium text-gray-900">
+                  {stats.typeToTheme?.[qtype] || qtype}
+                </td>
                 {difficulties.map((d) => {
                   const count = stats.grid[qtype]?.[d] || 0;
                   return (
