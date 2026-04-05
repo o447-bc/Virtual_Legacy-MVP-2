@@ -100,6 +100,7 @@ const BatchImport = () => {
           <li>Questions flagged as "Duplicate" already exist in the database — you can still import them or remove them from the batch</li>
           <li>Click Import to write all questions to the database with auto-generated IDs</li>
           <li>If any question fails validation, the entire batch is rejected — fix the issue and retry</li>
+          <li>For instanceable questions, use placeholders in the text: <code className="bg-blue-100 px-1 rounded">{'{spouse_name}'}</code> for spouse questions, <code className="bg-blue-100 px-1 rounded">{'{child_name}'}</code> for children, <code className="bg-blue-100 px-1 rounded">{'{deceased_name}'}</code> for loss questions. Example: "What made you decide to marry {'{spouse_name}'}?"</li>
         </ul>
       </div>
 

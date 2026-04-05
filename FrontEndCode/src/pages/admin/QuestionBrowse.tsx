@@ -425,6 +425,9 @@ const QuestionBrowse = () => {
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use this placeholder in the question text. Example: "What made you decide to marry {'{spouse_name}'}?"
+                  </p>
                 </div>
               )}
 

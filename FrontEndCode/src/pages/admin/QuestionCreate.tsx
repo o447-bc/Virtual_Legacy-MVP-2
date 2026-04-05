@@ -155,6 +155,9 @@ const QuestionCreate = () => {
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Use this placeholder in your question text. Example: "What made you decide to marry {'{spouse_name}'}?" — the app replaces it with the person's actual name.
+            </p>
           </div>
         )}
 
