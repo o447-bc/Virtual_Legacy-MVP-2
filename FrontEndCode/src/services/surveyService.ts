@@ -31,6 +31,7 @@ export interface SurveyStatusResponse {
   selectedLifeEvents: string[] | null;
   surveyCompletedAt: string | null;
   lifeEventInstances: LifeEventInstanceGroup[] | null;
+  assignedQuestionCount: number | null;
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {

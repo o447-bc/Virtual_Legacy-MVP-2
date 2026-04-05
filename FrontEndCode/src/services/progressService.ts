@@ -1,5 +1,6 @@
 import { buildApiUrl, API_CONFIG } from '@/config/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { getSurveyStatus } from './surveyService';
 
 export interface ProgressData {
   completed: number;
@@ -72,10 +73,14 @@ export async function getUserCompletedCount(userId: string): Promise<number> {
 }
 
 export async function getUserProgress(userId: string): Promise<ProgressData> {
-  const [completed, total] = await Promise.all([
+  const [completed, defaultTotal, surveyStatus] = await Promise.all([
     getUserCompletedCount(userId),
-    getTotalValidQuestions()
+    getTotalValidQuestions(),
+    getSurveyStatus().catch(() => null),
   ]);
+  
+  // Use assigned question count from survey if available (includes instanced copies)
+  const total = surveyStatus?.assignedQuestionCount ?? defaultTotal;
   
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   

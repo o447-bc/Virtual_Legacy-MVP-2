@@ -96,6 +96,15 @@ def handle_status(event, user_id):
     response = table.get_item(Key={'userId': user_id})
     item = response.get('Item', {})
 
+    # Calculate assigned question count if available
+    assigned_question_count = None
+    assigned = item.get('assignedQuestions')
+    if assigned:
+        count = len(assigned.get('standard', []))
+        for group in assigned.get('instanced', []):
+            count += len(group.get('questionIds', []))
+        assigned_question_count = count
+
     return {
         'statusCode': 200,
         'headers': cors_headers(event),
@@ -104,6 +113,7 @@ def handle_status(event, user_id):
             'selectedLifeEvents': item.get('selectedLifeEvents'),
             'surveyCompletedAt': item.get('surveyCompletedAt'),
             'lifeEventInstances': item.get('lifeEventInstances'),
+            'assignedQuestionCount': assigned_question_count,
         }, cls=DecimalEncoder)
     }
 
