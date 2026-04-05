@@ -57,6 +57,7 @@ def lambda_handler(event, context):
         question_types = set()
         difficulty_levels = set()
         instanceable_count = 0
+        needs_migration_count = 0
 
         # Grid: questionType -> difficulty -> count (valid only)
         grid = defaultdict(lambda: defaultdict(int))
@@ -72,6 +73,10 @@ def lambda_handler(event, context):
             question_types.add(qtype)
             if diff > 0:
                 difficulty_levels.add(diff)
+
+            # Track questions missing new attributes (need migration)
+            if 'requiredLifeEvents' not in q:
+                needs_migration_count += 1
 
             if is_valid:
                 valid_count += 1
@@ -114,6 +119,7 @@ def lambda_handler(event, context):
                 'difficultyLevels': len(difficulty_levels),
                 'zeroCoverageKeys': zero_coverage,
                 'instanceableQuestions': instanceable_count,
+                'needsMigration': needs_migration_count,
                 'grid': grid_output,
                 'difficultyTotals': dict(difficulty_totals),
                 'grandTotal': grand_total,

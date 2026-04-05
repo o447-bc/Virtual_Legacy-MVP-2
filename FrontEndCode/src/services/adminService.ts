@@ -39,6 +39,7 @@ export interface StatsData {
   difficultyLevels: number;
   zeroCoverageKeys: number;
   instanceableQuestions: number;
+  needsMigration: number;
   grid: Record<string, Record<string, number>>;
   difficultyTotals: Record<string, number>;
   grandTotal: number;

@@ -86,12 +86,12 @@ const AdminDashboard = () => {
       <h1 className="text-2xl font-bold text-legacy-navy">Admin Dashboard</h1>
 
       {/* Migration banner */}
-      {stats.zeroCoverageKeys === stats.questionTypes && stats.totalQuestions > 0 && (
+      {stats.needsMigration > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center justify-between">
           <div>
             <p className="font-medium text-amber-800">Questions need initialization</p>
             <p className="text-sm text-amber-600">
-              Existing questions are missing life event attributes. Click to add defaults.
+              {stats.needsMigration} questions are missing life event attributes. Click to add defaults.
             </p>
           </div>
           <Button
