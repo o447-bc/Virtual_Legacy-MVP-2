@@ -132,14 +132,24 @@ const VideoRecorder: React.FC<VideoRecorderProps> = ({
 
     setIsUploading(true);
     try {
+      // Split composite questionId for instanced questions (e.g., "marriage-00001#got_married:1")
+      let actualQuestionId = currentQuestionId;
+      let instanceKey: string | undefined;
+      if (currentQuestionId && currentQuestionId.includes('#')) {
+        const parts = currentQuestionId.split('#');
+        actualQuestionId = parts[0];
+        instanceKey = parts[1];
+      }
+
       await videoStorageService.storeVideo({
         id: '',
-        questionId: currentQuestionId,
+        questionId: actualQuestionId,
         questionType: currentQuestionType,
         questionText: currentQuestionText,
         videoBlob: recordedBlob,
         timestamp: new Date(),
-        userId: user.userId
+        userId: user.userId,
+        instanceKey,
       });
       
       setRecordingSaved(true);

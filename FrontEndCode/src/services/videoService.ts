@@ -29,6 +29,7 @@ export interface VideoData {
   videoBlob: Blob;
   timestamp: Date;
   userId: string;
+  instanceKey?: string;
 }
 
 export interface VideoUploadResponse {
@@ -126,7 +127,8 @@ export const videoStorageService = {
           questionText: videoData.questionText,
           s3Key,
           filename,
-          isVideoMemory
+          isVideoMemory,
+          ...(videoData.instanceKey ? { instanceKey: videoData.instanceKey } : {}),
         })
       }
     );
