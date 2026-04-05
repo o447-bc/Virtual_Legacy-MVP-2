@@ -20,9 +20,10 @@ const ADMIN_ENDPOINTS = {
 export interface QuestionRecord {
   questionId: string;
   questionType: string;
-  Difficulty: number;
-  Valid: number;
-  Question: string;
+  themeName: string;
+  difficulty: number;
+  active: boolean;
+  questionText: string;
   requiredLifeEvents: string[];
   isInstanceable: boolean;
   instancePlaceholder: string;

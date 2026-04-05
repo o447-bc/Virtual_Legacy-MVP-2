@@ -7,7 +7,7 @@ import { toast } from "@/components/ui/sonner";
 import { fetchQuestions, type QuestionRecord } from "@/services/adminService";
 import { Search, ChevronUp, ChevronDown } from "lucide-react";
 
-type SortField = "questionType" | "Difficulty" | "Valid" | "lastModifiedAt";
+type SortField = "questionType" | "difficulty" | "active" | "lastModifiedAt";
 type SortDir = "asc" | "desc";
 
 const QuestionBrowse = () => {
@@ -59,10 +59,10 @@ const QuestionBrowse = () => {
       result = result.filter((q) => q.questionType === filterType);
     }
     if (filterDifficulty) {
-      result = result.filter((q) => q.Difficulty === Number(filterDifficulty));
+      result = result.filter((q) => q.difficulty === Number(filterDifficulty));
     }
-    if (filterValid === "valid") result = result.filter((q) => q.Valid === 1);
-    if (filterValid === "invalid") result = result.filter((q) => q.Valid !== 1);
+    if (filterValid === "valid") result = result.filter((q) => q.active === true);
+    if (filterValid === "invalid") result = result.filter((q) => q.active !== true);
     if (filterTagged === "tagged")
       result = result.filter((q) => q.requiredLifeEvents?.length > 0);
     if (filterTagged === "untagged")
@@ -180,15 +180,15 @@ const QuestionBrowse = () => {
               </th>
               <th
                 className="px-3 py-2 text-center font-medium text-gray-600 cursor-pointer hover:text-legacy-purple"
-                onClick={() => toggleSort("Difficulty")}
+                onClick={() => toggleSort("difficulty")}
               >
-                Level <SortIcon field="Difficulty" />
+                Level <SortIcon field="difficulty" />
               </th>
               <th
                 className="px-3 py-2 text-center font-medium text-gray-600 cursor-pointer hover:text-legacy-purple"
-                onClick={() => toggleSort("Valid")}
+                onClick={() => toggleSort("active")}
               >
-                Valid <SortIcon field="Valid" />
+                Valid <SortIcon field="active" />
               </th>
               <th className="px-3 py-2 text-left font-medium text-gray-600">Question</th>
               <th className="px-3 py-2 text-center font-medium text-gray-600">Tags</th>
@@ -202,15 +202,15 @@ const QuestionBrowse = () => {
               >
                 <td className="px-3 py-2 text-xs text-gray-500 font-mono">{q.questionId}</td>
                 <td className="px-3 py-2">{q.questionType}</td>
-                <td className="px-3 py-2 text-center">{q.Difficulty}</td>
+                <td className="px-3 py-2 text-center">{q.difficulty}</td>
                 <td className="px-3 py-2 text-center">
-                  {q.Valid === 1 ? (
+                  {q.active ? (
                     <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Valid</Badge>
                   ) : (
                     <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Invalid</Badge>
                   )}
                 </td>
-                <td className="px-3 py-2 max-w-md truncate">{q.Question}</td>
+                <td className="px-3 py-2 max-w-md truncate">{q.questionText}</td>
                 <td className="px-3 py-2 text-center">
                   {q.requiredLifeEvents?.length > 0 ? (
                     <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">

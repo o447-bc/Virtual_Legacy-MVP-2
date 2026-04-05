@@ -105,6 +105,7 @@ def handle_list_questions(event):
         item.setdefault('instancePlaceholder', '')
         item.setdefault('lastModifiedBy', '')
         item.setdefault('lastModifiedAt', '')
+        item.setdefault('themeName', '')
 
     return {
         'statusCode': 200,
@@ -120,14 +121,15 @@ def handle_create_question(event, admin_email):
     """Create a new question with auto-generated legacy-format questionId."""
     body = json.loads(event.get('body') or '{}')
 
-    question_text = body.get('Question', '').strip()
+    question_text = body.get('questionText', '').strip()
     question_type = body.get('questionType', '').strip()
+    theme_name = body.get('themeName', '').strip()
 
     if not question_text:
         return {
             'statusCode': 400,
             'headers': cors_headers(event),
-            'body': json.dumps({'error': 'Missing required field: Question'})
+            'body': json.dumps({'error': 'Missing required field: questionText'})
         }
     if not question_type:
         return {
@@ -147,7 +149,7 @@ def handle_create_question(event, admin_email):
 
     is_instanceable = body.get('isInstanceable', False)
     instance_placeholder = body.get('instancePlaceholder', '')
-    difficulty = body.get('Difficulty', 1)
+    difficulty = body.get('difficulty', 1)
 
     # Validate difficulty range
     if not isinstance(difficulty, (int, float)) or difficulty < 1 or difficulty > 10:
@@ -167,9 +169,10 @@ def handle_create_question(event, admin_email):
     table.put_item(Item={
         'questionId': question_id,
         'questionType': question_type,
-        'Difficulty': int(difficulty),
-        'Valid': 1,
-        'Question': question_text,
+        'themeName': theme_name or question_type,
+        'difficulty': int(difficulty),
+        'active': True,
+        'questionText': question_text,
         'requiredLifeEvents': required_events,
         'isInstanceable': is_instanceable,
         'instancePlaceholder': instance_placeholder,
@@ -216,9 +219,10 @@ def handle_update_question(event, admin_email):
     # Build update expression dynamically from provided fields
     updatable_fields = {
         'questionType': 'questionType',
-        'Difficulty': 'Difficulty',
-        'Valid': 'Valid',
-        'Question': 'Question',
+        'themeName': 'themeName',
+        'difficulty': 'difficulty',
+        'active': 'active',
+        'questionText': 'questionText',
         'requiredLifeEvents': 'requiredLifeEvents',
         'isInstanceable': 'isInstanceable',
         'instancePlaceholder': 'instancePlaceholder',
@@ -290,7 +294,8 @@ def handle_batch_import(event, admin_email):
     body = json.loads(event.get('body') or '{}')
 
     question_type = body.get('questionType', '').strip()
-    difficulty = body.get('Difficulty', 1)
+    difficulty = body.get('difficulty', 1)
+    theme_name = body.get('themeName', '').strip()
     required_events = body.get('requiredLifeEvents', [])
     is_instanceable = body.get('isInstanceable', False)
     instance_placeholder = body.get('instancePlaceholder', '')
@@ -357,9 +362,10 @@ def handle_batch_import(event, admin_email):
         items.append({
             'questionId': qid,
             'questionType': question_type,
-            'Difficulty': int(difficulty),
-            'Valid': 1,
-            'Question': text,
+            'themeName': theme_name or question_type,
+            'difficulty': int(difficulty),
+            'active': True,
+            'questionText': text,
             'requiredLifeEvents': required_events,
             'isInstanceable': is_instanceable,
             'instancePlaceholder': instance_placeholder,
