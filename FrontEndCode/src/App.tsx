@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminGate from "./components/AdminGate";
+import AdminLayout from "./components/AdminLayout";
 
 // Pages
 import Home from "./pages/Home";
@@ -25,6 +27,16 @@ import NotFound from "./pages/NotFound";
 import { TestS3 } from "./pages/TestS3";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+
+// Admin pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import QuestionBrowse from "./pages/admin/QuestionBrowse";
+import QuestionCreate from "./pages/admin/QuestionCreate";
+import BatchImport from "./pages/admin/BatchImport";
+import AssignmentSimulator from "./pages/admin/AssignmentSimulator";
+import CoverageReport from "./pages/admin/CoverageReport";
+import ThemeSettings from "./pages/admin/ThemeSettings";
+import ExportView from "./pages/admin/ExportView";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +76,18 @@ const App = () => (
             <Route path="/record-conversation" element={<ProtectedRoute requiredPersona="legacy_maker"><RecordConversation /></ProtectedRoute>} />
             <Route path="/question-themes" element={<ProtectedRoute requiredPersona="legacy_maker"><QuestionThemes /></ProtectedRoute>} />
             <Route path="/test-s3" element={<ProtectedRoute><TestS3 /></ProtectedRoute>} />
+
+            {/* Admin routes — require SoulReelAdmins Cognito group */}
+            <Route path="/admin" element={<AdminGate><AdminLayout /></AdminGate>}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="questions" element={<QuestionBrowse />} />
+              <Route path="create" element={<QuestionCreate />} />
+              <Route path="batch" element={<BatchImport />} />
+              <Route path="simulate" element={<AssignmentSimulator />} />
+              <Route path="coverage" element={<CoverageReport />} />
+              <Route path="themes" element={<ThemeSettings />} />
+              <Route path="export" element={<ExportView />} />
+            </Route>
 
             <Route path="*" element={<NotFound />} />
           </Routes>

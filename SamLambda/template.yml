@@ -38,6 +38,8 @@ Globals:
         TABLE_USER_STATUS: 'userStatusDB'
         TABLE_SIGNUP_TEMP: 'PersonaSignupTempDB'
         TABLE_WS_CONNECTIONS: 'WebSocketConnectionsDB'
+        # Set to 'true' to enable server-side persona enforcement (Phase 2 rollout)
+        ENFORCE_PERSONA_VALIDATION: 'false'
   Api:
     Cors:
       AllowMethods: '''GET,POST,PUT,OPTIONS'''
@@ -870,6 +872,14 @@ Resources:
                 - kms:Decrypt
                 - kms:DescribeKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  cloudwatch:namespace: 'SoulReel/Persona'
 
   GetNumQuestionTypesFunction:
     Type: AWS::Serverless::Function
@@ -2536,6 +2546,302 @@ Resources:
                 - kms:Decrypt
                 - kms:DescribeKey
               Resource: !GetAtt DataEncryptionKey.Arn
+
+  # ============================================================
+  # Admin Tool Lambda Functions
+  # ============================================================
+
+  AdminQuestionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminQuestions/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:Query
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:GetItem
+                - dynamodb:BatchWriteItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminGetQuestionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/questions
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminGetQuestionsOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/questions
+            Method: OPTIONS
+        AdminCreateQuestionApi:
+          Type: Api
+          Properties:
+            Path: /admin/questions
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminUpdateQuestionApi:
+          Type: Api
+          Properties:
+            Path: /admin/questions/{questionId}
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminUpdateQuestionOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/questions/{questionId}
+            Method: OPTIONS
+        AdminBatchImportApi:
+          Type: Api
+          Properties:
+            Path: /admin/questions/batch
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminBatchImportOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/questions/batch
+            Method: OPTIONS
+
+  AdminSimulateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminSimulate/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminSimulateApi:
+          Type: Api
+          Properties:
+            Path: /admin/simulate
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminSimulateOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/simulate
+            Method: OPTIONS
+
+  AdminCoverageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminCoverage/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminCoverageApi:
+          Type: Api
+          Properties:
+            Path: /admin/coverage
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminCoverageOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/coverage
+            Method: OPTIONS
+
+  AdminThemesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminThemes/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:UpdateItem
+                - dynamodb:BatchWriteItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminThemesApi:
+          Type: Api
+          Properties:
+            Path: /admin/themes/{questionType}
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminThemesOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/themes/{questionType}
+            Method: OPTIONS
+
+  AdminStatsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminStats/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminStatsApi:
+          Type: Api
+          Properties:
+            Path: /admin/stats
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminStatsOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/stats
+            Method: OPTIONS
+
+  AdminExportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminExport/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminExportApi:
+          Type: Api
+          Properties:
+            Path: /admin/export
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminExportOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/export
+            Method: OPTIONS
+
+  AdminMigrateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminMigrate/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 60
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:UpdateItem
+                - dynamodb:BatchWriteItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminMigrateApi:
+          Type: Api
+          Properties:
+            Path: /admin/migrate
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminMigrateOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/migrate
+            Method: OPTIONS
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

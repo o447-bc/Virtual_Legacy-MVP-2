@@ -62,6 +62,13 @@ HANDLERS = [
     'functions.videoFunctions.startTranscription.app',
     'functions.videoFunctions.summarizeTranscript.app',
     'functions.videoFunctions.uploadVideoResponse.app',
+    'functions.adminFunctions.adminQuestions.app',
+    'functions.adminFunctions.adminSimulate.app',
+    'functions.adminFunctions.adminCoverage.app',
+    'functions.adminFunctions.adminStats.app',
+    'functions.adminFunctions.adminExport.app',
+    'functions.adminFunctions.adminThemes.app',
+    'functions.adminFunctions.adminMigrate.app',
 ]
 
 
