@@ -58,7 +58,7 @@ def lambda_handler(event, context):
         universal_count = 0
 
         for q in all_questions:
-            if not q.get('active', False):
+            if q.get('Valid') != 1:
                 continue
 
             required = q.get('requiredLifeEvents', [])

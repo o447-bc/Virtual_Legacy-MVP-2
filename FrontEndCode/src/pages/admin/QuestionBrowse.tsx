@@ -12,7 +12,7 @@ import LifeEventTagEditor from "@/components/admin/LifeEventTagEditor";
 import QuestionValidationWarnings from "@/components/admin/QuestionValidationWarnings";
 import { VALID_PLACEHOLDERS } from "@/constants/lifeEventRegistry";
 
-type SortField = "questionType" | "difficulty" | "active" | "lastModifiedAt";
+type SortField = "questionType" | "difficulty" | "Valid" | "lastModifiedAt";
 type SortDir = "asc" | "desc";
 
 const QuestionBrowse = () => {
@@ -80,8 +80,8 @@ const QuestionBrowse = () => {
     if (filterDifficulty) {
       result = result.filter((q) => q.difficulty === Number(filterDifficulty));
     }
-    if (filterValid === "valid") result = result.filter((q) => q.active === true);
-    if (filterValid === "invalid") result = result.filter((q) => q.active !== true);
+    if (filterValid === "valid") result = result.filter((q) => q.Valid === 1);
+    if (filterValid === "invalid") result = result.filter((q) => q.Valid !== 1);
     if (filterTagged === "tagged")
       result = result.filter((q) => q.requiredLifeEvents?.length > 0);
     if (filterTagged === "untagged")
@@ -148,8 +148,8 @@ const QuestionBrowse = () => {
 
   const handleToggleValid = async (q: QuestionRecord) => {
     try {
-      await updateQuestion(q.questionId, { active: !q.active } as Partial<QuestionRecord>);
-      toast.success(q.active ? "Marked as invalid" : "Marked as valid");
+      await updateQuestion(q.questionId, { Valid: q.Valid === 1 ? 0 : 1 } as Partial<QuestionRecord>);
+      toast.success(q.Valid === 1 ? "Marked as invalid" : "Marked as valid");
       loadQuestions();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Update failed";
@@ -247,9 +247,9 @@ const QuestionBrowse = () => {
               </th>
               <th
                 className="px-3 py-2 text-center font-medium text-gray-600 cursor-pointer hover:text-legacy-purple"
-                onClick={() => toggleSort("active")}
+                onClick={() => toggleSort("Valid")}
               >
-                Valid <SortIcon field="active" />
+                Valid <SortIcon field="Valid" />
               </th>
               <th className="px-3 py-2 text-left font-medium text-gray-600">Question</th>
               <th className="px-3 py-2 text-center font-medium text-gray-600">Tags</th>
@@ -266,7 +266,7 @@ const QuestionBrowse = () => {
                 <td className="px-3 py-2">{typeToTheme[q.questionType] || q.questionType}</td>
                 <td className="px-3 py-2 text-center">{q.difficulty}</td>
                 <td className="px-3 py-2 text-center">
-                  {q.active ? (
+                  {q.Valid === 1 ? (
                     <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Valid</Badge>
                   ) : (
                     <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Invalid</Badge>
@@ -374,11 +374,11 @@ const QuestionBrowse = () => {
               {/* Active toggle */}
               <div className="flex items-center gap-3">
                 <Switch
-                  checked={editData.active ?? true}
-                  onCheckedChange={(v) => setEditData({ ...editData, active: v })}
+                  checked={(editData.Valid ?? 1) === 1}
+                  onCheckedChange={(v) => setEditData({ ...editData, Valid: v ? 1 : 0 })}
                 />
                 <label className="text-sm font-medium text-gray-700">
-                  {editData.active ? "Valid (active)" : "Invalid (inactive)"}
+                  {(editData.Valid ?? 1) === 1 ? "Valid (active)" : "Invalid (inactive)"}
                 </label>
               </div>
 

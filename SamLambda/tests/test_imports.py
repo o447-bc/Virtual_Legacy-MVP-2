@@ -63,6 +63,7 @@ HANDLERS = [
     'functions.videoFunctions.summarizeTranscript.app',
     'functions.videoFunctions.uploadVideoResponse.app',
     'functions.adminFunctions.adminQuestions.app',
+    'functions.surveyFunctions.survey.app',
     'functions.adminFunctions.adminSimulate.app',
     'functions.adminFunctions.adminCoverage.app',
     'functions.adminFunctions.adminStats.app',

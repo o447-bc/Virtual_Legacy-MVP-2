@@ -22,7 +22,7 @@ export interface QuestionRecord {
   questionType: string;
   themeName: string;
   difficulty: number;
-  active: boolean;
+  Valid: number;
   questionText: string;
   requiredLifeEvents: string[];
   isInstanceable: boolean;

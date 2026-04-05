@@ -26,7 +26,7 @@ class DecimalEncoder(json.JSONEncoder):
 TABLE_NAME = os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB')
 
 CSV_COLUMNS = [
-    'questionId', 'questionType', 'themeName', 'difficulty', 'active', 'questionText',
+    'questionId', 'questionType', 'themeName', 'difficulty', 'Valid', 'questionText',
     'requiredLifeEvents', 'isInstanceable', 'instancePlaceholder',
     'lastModifiedBy', 'lastModifiedAt',
 ]

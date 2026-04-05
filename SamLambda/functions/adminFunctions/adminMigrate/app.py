@@ -67,12 +67,21 @@ def lambda_handler(event, context):
             if 'lastModifiedAt' not in item:
                 missing['lastModifiedAt'] = now
 
-            if not missing:
+            # Backfill Valid (number) from active (boolean) if Valid is missing
+            if 'Valid' not in item:
+                active_val = item.get('active', True)
+                missing['Valid'] = 1 if active_val else 0
+
+            # Check if active needs to be removed
+            has_active = 'active' in item
+
+            if not missing and not has_active:
                 skipped += 1
                 continue
 
-            # Build update expression for missing attributes only
+            # Build update expression
             update_parts = []
+            remove_parts = []
             expr_names = {}
             expr_values = {}
 
@@ -83,15 +92,36 @@ def lambda_handler(event, context):
                 expr_names[name_ph] = attr
                 expr_values[val_ph] = val
 
-            table.update_item(
-                Key={
+            # Remove the redundant active attribute
+            if has_active:
+                remove_parts.append('#activeAttr')
+                expr_names['#activeAttr'] = 'active'
+
+            # Build full expression
+            expression = ''
+            if update_parts:
+                expression += 'SET ' + ', '.join(update_parts)
+            if remove_parts:
+                if expression:
+                    expression += ' '
+                expression += 'REMOVE ' + ', '.join(remove_parts)
+
+            if not expression:
+                skipped += 1
+                continue
+
+            update_kwargs = {
+                'Key': {
                     'questionId': item['questionId'],
                     'questionType': item['questionType'],
                 },
-                UpdateExpression='SET ' + ', '.join(update_parts),
-                ExpressionAttributeNames=expr_names,
-                ExpressionAttributeValues=expr_values,
-            )
+                'UpdateExpression': expression,
+                'ExpressionAttributeNames': expr_names,
+            }
+            if expr_values:
+                update_kwargs['ExpressionAttributeValues'] = expr_values
+
+            table.update_item(**update_kwargs)
             updated += 1
 
         print(f"[AdminMigrate] Migration complete: {updated} updated, {skipped} skipped")

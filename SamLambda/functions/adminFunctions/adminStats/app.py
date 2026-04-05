@@ -69,7 +69,7 @@ def lambda_handler(event, context):
         covered_keys = set()
 
         for q in all_questions:
-            is_valid = q.get('active', False)
+            is_valid = q.get('Valid') == 1
             qtype = q.get('questionType', 'Unknown')
             diff = int(q.get('difficulty', 0))
 

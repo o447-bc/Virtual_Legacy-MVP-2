@@ -1131,6 +1131,11 @@ Resources:
                 - kms:Decrypt
                 - kms:DescribeKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
       Events:
         GetUnansweredQuestionsFromUserApi:
           Type: Api
@@ -2546,6 +2551,75 @@ Resources:
                 - kms:Decrypt
                 - kms:DescribeKey
               Resource: !GetAtt DataEncryptionKey.Arn
+
+  # ============================================================
+  # Survey Lambda Function
+  # ============================================================
+
+  SurveyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/surveyFunctions/survey/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:GetItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:DeleteItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        SurveySubmitApi:
+          Type: Api
+          Properties:
+            Path: /survey/submit
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SurveySubmitOptionsApi:
+          Type: Api
+          Properties:
+            Path: /survey/submit
+            Method: OPTIONS
+        SurveyStatusApi:
+          Type: Api
+          Properties:
+            Path: /survey/status
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SurveyStatusOptionsApi:
+          Type: Api
+          Properties:
+            Path: /survey/status
+            Method: OPTIONS
 
   # ============================================================
   # Admin Tool Lambda Functions
