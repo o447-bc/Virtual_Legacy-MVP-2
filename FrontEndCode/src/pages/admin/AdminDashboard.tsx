@@ -158,7 +158,9 @@ const AdminDashboard = () => {
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 text-center font-semibold text-legacy-navy">
+                <td className="px-3 py-2 text-center font-semibold text-legacy-navy cursor-pointer hover:bg-legacy-purple/10"
+                  onClick={() => navigate(`/admin/questions?questionType=${encodeURIComponent(qtype)}`)}
+                >
                   {stats.grid[qtype]?.total || 0}
                 </td>
               </tr>
@@ -167,11 +169,17 @@ const AdminDashboard = () => {
             <tr className="bg-legacy-navy/5 font-semibold">
               <td className="px-3 py-2 text-gray-700">Total</td>
               {difficulties.map((d) => (
-                <td key={d} className="px-3 py-2 text-center text-gray-700">
+                <td
+                  key={d}
+                  className="px-3 py-2 text-center text-gray-700 cursor-pointer hover:bg-legacy-purple/10"
+                  onClick={() => navigate(`/admin/questions?difficulty=${d}`)}
+                >
                   {stats.difficultyTotals?.[d] || 0}
                 </td>
               ))}
-              <td className="px-3 py-2 text-center text-legacy-purple font-bold">
+              <td className="px-3 py-2 text-center text-legacy-purple font-bold cursor-pointer hover:bg-legacy-purple/10"
+                onClick={() => navigate("/admin/questions")}
+              >
                 {stats.grandTotal}
               </td>
             </tr>

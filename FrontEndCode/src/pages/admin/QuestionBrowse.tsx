@@ -404,7 +404,12 @@ const QuestionBrowse = () => {
                   checked={editData.isInstanceable ?? false}
                   onCheckedChange={(v) => setEditData({ ...editData, isInstanceable: v })}
                 />
-                <label className="text-sm font-medium text-gray-700">Instanceable</label>
+                <label
+                  className="text-sm font-medium text-gray-700 cursor-help"
+                  title="When enabled, this question gets repeated for each named person (e.g., each spouse or child). The question text must include a placeholder like {spouse_name} that gets replaced with the person's name. Most questions don't need this — only use it for questions specifically about a named individual."
+                >
+                  Instanceable ⓘ
+                </label>
               </div>
 
               {editData.isInstanceable && (
