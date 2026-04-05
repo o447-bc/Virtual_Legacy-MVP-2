@@ -48,6 +48,19 @@ const AssignmentSimulator = () => {
         Select life events to see which questions would be assigned to a user with those selections.
       </p>
 
+      {/* Help section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
+        <p className="font-medium mb-2">How the simulator works</p>
+        <ul className="space-y-1 list-disc list-inside text-blue-700">
+          <li>Check the life events a hypothetical user would select in the survey</li>
+          <li>Click Simulate to see exactly which questions they'd be assigned</li>
+          <li>Questions with no life event tags (universal) are always included for everyone</li>
+          <li>Questions with tags are only included when ALL their required events are checked</li>
+          <li>If no questions are tagged yet, every simulation returns all questions — that's expected</li>
+          <li>Use this to verify your tagging is correct before it affects real users</li>
+        </ul>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: checkboxes */}
         <div className="space-y-4">

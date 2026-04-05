@@ -28,9 +28,21 @@ const CoverageReport = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold text-legacy-navy mb-2">Life Event Coverage</h1>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-gray-500 mb-2">
         Universal questions (no tags): <span className="font-semibold">{data.universalCount}</span>
       </p>
+
+      {/* Help section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
+        <p className="font-medium mb-2">How coverage works</p>
+        <ul className="space-y-1 list-disc list-inside text-blue-700">
+          <li>Each row shows a life event key and how many valid questions are tagged with it</li>
+          <li>Red rows with 0 mean a user could select that event in the survey but get no specific questions for it</li>
+          <li>Universal questions (no tags) are shown to every user regardless of their life events</li>
+          <li>Instanceable count shows questions that get personalized per person (e.g., per spouse or child)</li>
+          <li>Use the Themes page to bulk-tag an entire question type, then come back here to verify coverage</li>
+        </ul>
+      </div>
 
       <div className="space-y-6">
         {LIFE_EVENT_CATEGORIES.map((cat) => {
