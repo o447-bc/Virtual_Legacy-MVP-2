@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users } from "lucide-react";
+import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
@@ -56,7 +56,7 @@ import { useStatistics } from "@/hooks/useStatistics";
  * - 12.7: Separators between logical sections
  */
 export const UserMenu: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasCompletedSurvey } = useAuth();
   const navigate = useNavigate();
   const { data: statisticsData, loading: statisticsLoading, error: statisticsError } = useStatistics(user?.id);
 
@@ -183,6 +183,16 @@ export const UserMenu: React.FC = () => {
             >
               <Palette className="mr-2 h-4 w-4 text-legacy-purple" />
               <span className="text-sm text-legacy-navy">Question Themes</span>
+            </DropdownMenuItem>
+          )}
+
+          {isLegacyMaker && hasCompletedSurvey && (
+            <DropdownMenuItem
+              className="cursor-pointer hover:bg-legacy-purple/10 focus:bg-legacy-purple/10 min-h-[44px] py-3"
+              onClick={() => navigate('/dashboard?retakeSurvey=true')}
+            >
+              <RefreshCw className="mr-2 h-4 w-4 text-legacy-purple" />
+              <span className="text-sm text-legacy-navy">Update Life Events</span>
             </DropdownMenuItem>
           )}
 

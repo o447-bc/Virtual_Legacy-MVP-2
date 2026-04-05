@@ -4,7 +4,7 @@
 // navigation to recording functionality
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +21,6 @@ import { Header } from "@/components/Header";
 import { useProgress, useIncrementLevel, ProgressItem } from "@/hooks/useProgress";
 import LifeEventsSurvey from "@/components/LifeEventsSurvey";
 import { getSurveyStatus, type LifeEventInstanceGroup } from "@/services/surveyService";
-import { RefreshCw } from "lucide-react";
 
 /**
  * MAIN DASHBOARD COMPONENT
@@ -43,8 +42,9 @@ import { RefreshCw } from "lucide-react";
 const Dashboard = () => {
   // HOOKS AND STATE
   const { user, logout, hasCompletedSurvey, refreshSurveyStatus } = useAuth();    // Get current user and logout function from context
-  const navigate = useNavigate();         // React Router navigation function
-  const location = useLocation();         // Access navigation state
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null);
   const [showRetakeSurvey, setShowRetakeSurvey] = useState(false);
   const [retakeSelections, setRetakeSelections] = useState<string[]>([]);
@@ -88,7 +88,23 @@ const Dashboard = () => {
       navigate("/benefactor-dashboard");
       return;
     }
-  }, [user, navigate]); // Re-run effect when user or navigate function changes
+  }, [user, navigate]);
+
+  // Handle retake survey URL param (from profile menu)
+  useEffect(() => {
+    if (searchParams.get('retakeSurvey') === 'true' && hasCompletedSurvey === true) {
+      // Remove the param from URL
+      setSearchParams({}, { replace: true });
+      // Fetch existing survey data and open retake overlay
+      getSurveyStatus().then((status) => {
+        setRetakeSelections(status.selectedLifeEvents || []);
+        setRetakeInstances(status.lifeEventInstances || []);
+        setShowRetakeSurvey(true);
+      }).catch(() => {
+        setShowRetakeSurvey(true);
+      });
+    }
+  }, [searchParams, hasCompletedSurvey]);
 
   // FETCH OVERALL PROGRESS
   // Get user's overall completion percentage
@@ -158,30 +174,6 @@ const Dashboard = () => {
         <div className="mb-6">
           <DashboardInfoPanel />
         </div>
-
-        {/* RETAKE SURVEY BUTTON */}
-        {hasCompletedSurvey === true && (
-          <div className="mb-6">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                try {
-                  const status = await getSurveyStatus();
-                  setRetakeSelections(status.selectedLifeEvents || []);
-                  setRetakeInstances(status.lifeEventInstances || []);
-                  setShowRetakeSurvey(true);
-                } catch {
-                  setShowRetakeSurvey(true);
-                }
-              }}
-              className="text-legacy-purple border-legacy-purple/30 hover:bg-legacy-purple/5"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Update Life Events Survey
-            </Button>
-          </div>
-        )}
         
         {/* PROGRESS TRACKING SECTION */}
         {/* Separate component that handles progress display and category-specific navigation */}
