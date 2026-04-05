@@ -205,6 +205,15 @@ def handle_update_question(event, admin_email):
 
     body = json.loads(event.get('body') or '{}')
 
+    # questionType is required as part of the composite key
+    question_type = body.get('questionType', '').strip()
+    if not question_type:
+        return {
+            'statusCode': 400,
+            'headers': cors_headers(event),
+            'body': json.dumps({'error': 'Missing required field: questionType (needed for composite key)'})
+        }
+
     # Validate life event keys if provided
     required_events = body.get('requiredLifeEvents')
     if required_events is not None:
@@ -218,7 +227,6 @@ def handle_update_question(event, admin_email):
 
     # Build update expression dynamically from provided fields
     updatable_fields = {
-        'questionType': 'questionType',
         'themeName': 'themeName',
         'difficulty': 'difficulty',
         'active': 'active',
@@ -261,7 +269,10 @@ def handle_update_question(event, admin_email):
 
     try:
         table.update_item(
-            Key={'questionId': question_id},
+            Key={
+                'questionId': question_id,
+                'questionType': question_type,
+            },
             UpdateExpression='SET ' + ', '.join(update_parts),
             ExpressionAttributeNames=expr_names,
             ExpressionAttributeValues=expr_values,

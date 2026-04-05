@@ -102,7 +102,10 @@ def lambda_handler(event, context):
         for item in all_questions:
             qid = item['questionId']
             table.update_item(
-                Key={'questionId': qid},
+                Key={
+                    'questionId': qid,
+                    'questionType': question_type,
+                },
                 UpdateExpression=(
                     'SET requiredLifeEvents = :rle, '
                     'isInstanceable = :inst, '

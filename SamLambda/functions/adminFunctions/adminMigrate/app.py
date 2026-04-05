@@ -84,7 +84,10 @@ def lambda_handler(event, context):
                 expr_values[val_ph] = val
 
             table.update_item(
-                Key={'questionId': item['questionId']},
+                Key={
+                    'questionId': item['questionId'],
+                    'questionType': item['questionType'],
+                },
                 UpdateExpression='SET ' + ', '.join(update_parts),
                 ExpressionAttributeNames=expr_names,
                 ExpressionAttributeValues=expr_values,
