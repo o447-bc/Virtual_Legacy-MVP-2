@@ -164,46 +164,34 @@ def handle_status(event, user_id):
 
 def _batch_get_question_details(dynamodb, question_ids):
     """
-    BatchGetItem from allQuestionDB for the given question IDs.
+    Query allQuestionDB for the given question IDs.
     Returns a dict of questionId -> { text, difficulty, questionType }.
-    DynamoDB BatchGetItem supports max 100 keys per request.
+
+    allQuestionDB has a composite key (questionId HASH + questionType RANGE),
+    so we query by partition key to get the first matching item per questionId.
     """
     details = {}
-    # Process in chunks of 100 (DynamoDB BatchGetItem limit)
-    for i in range(0, len(question_ids), 100):
-        chunk = question_ids[i:i + 100]
-        keys = [{'questionId': qid} for qid in chunk]
-        resp = dynamodb.batch_get_item(
-            RequestItems={
-                TABLE_ALL_QUESTIONS: {
-                    'Keys': keys,
-                    'ProjectionExpression': 'questionId, questionText, difficulty, questionType',
-                }
-            }
-        )
-        for q_item in resp.get('Responses', {}).get(TABLE_ALL_QUESTIONS, []):
-            qid = q_item.get('questionId')
-            if qid:
+    table = dynamodb.Table(TABLE_ALL_QUESTIONS)
+    for qid in question_ids:
+        if qid in details:
+            continue
+        try:
+            resp = table.query(
+                KeyConditionExpression='questionId = :qid',
+                ExpressionAttributeValues={':qid': qid},
+                ProjectionExpression='questionId, questionText, difficulty, questionType',
+                Limit=1,
+            )
+            items = resp.get('Items', [])
+            if items:
+                q_item = items[0]
                 details[qid] = {
                     'text': q_item.get('questionText', ''),
                     'difficulty': q_item.get('difficulty', 0),
                     'questionType': q_item.get('questionType', ''),
                 }
-        # Handle unprocessed keys (throttling)
-        unprocessed = resp.get('UnprocessedKeys', {}).get(TABLE_ALL_QUESTIONS)
-        while unprocessed:
-            resp = dynamodb.batch_get_item(
-                RequestItems={TABLE_ALL_QUESTIONS: unprocessed}
-            )
-            for q_item in resp.get('Responses', {}).get(TABLE_ALL_QUESTIONS, []):
-                qid = q_item.get('questionId')
-                if qid:
-                    details[qid] = {
-                        'text': q_item.get('questionText', ''),
-                        'difficulty': q_item.get('difficulty', 0),
-                        'questionType': q_item.get('questionType', ''),
-                    }
-            unprocessed = resp.get('UnprocessedKeys', {}).get(TABLE_ALL_QUESTIONS)
+        except Exception as e:
+            print(f"[Survey] Error querying question {qid}: {e}")
     return details
 
 
