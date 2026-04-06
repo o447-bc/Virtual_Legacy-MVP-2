@@ -23,6 +23,9 @@ import ResponseViewer from "./pages/ResponseViewer";
 import RecordResponse from "./pages/RecordResponse";
 import RecordConversation from "./pages/RecordConversation";
 import QuestionThemes from "./pages/QuestionThemes";
+import LifeStoryReflections from "./pages/LifeStoryReflections";
+import LifeEvents from "./pages/LifeEvents";
+import PersonalInsights from "./pages/PersonalInsights";
 import NotFound from "./pages/NotFound";
 import { TestS3 } from "./pages/TestS3";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -69,6 +72,9 @@ const App = () => (
 
             {/* Protected routes — require authentication */}
             <Route path="/dashboard" element={<ProtectedRoute requiredPersona="legacy_maker"><Dashboard /></ProtectedRoute>} />
+            <Route path="/life-story-reflections" element={<ProtectedRoute requiredPersona="legacy_maker"><LifeStoryReflections /></ProtectedRoute>} />
+            <Route path="/life-events" element={<ProtectedRoute requiredPersona="legacy_maker"><LifeEvents /></ProtectedRoute>} />
+            <Route path="/personal-insights" element={<ProtectedRoute requiredPersona="legacy_maker"><PersonalInsights /></ProtectedRoute>} />
             <Route path="/benefactor-dashboard" element={<ProtectedRoute requiredPersona="legacy_benefactor"><BenefactorDashboard /></ProtectedRoute>} />
             <Route path="/manage-benefactors" element={<ProtectedRoute requiredPersona="legacy_maker"><ManageBenefactors /></ProtectedRoute>} />
             <Route path="/response-viewer/:makerId" element={<ProtectedRoute><ResponseViewer /></ProtectedRoute>} />

@@ -26,12 +26,37 @@ export interface SurveySubmitResponse {
   assignedQuestionCount: number;
 }
 
+export interface AssignedQuestions {
+  standard: string[];
+  instanced: InstanceGroup[];
+}
+
+export interface InstanceGroup {
+  eventKey: string;
+  instanceName: string;
+  instanceOrdinal: number;
+  questionIds: string[];
+}
+
+export interface InstancedProgress {
+  answeredKeys: string[]; // composite keys like "questionId#eventKey:ordinal"
+}
+
+export interface QuestionDetail {
+  text: string;
+  difficulty: number;
+  questionType: string;
+}
+
 export interface SurveyStatusResponse {
   hasCompletedSurvey: boolean;
   selectedLifeEvents: string[] | null;
   surveyCompletedAt: string | null;
   lifeEventInstances: LifeEventInstanceGroup[] | null;
   assignedQuestionCount: number | null;
+  assignedQuestions: AssignedQuestions | null;
+  instancedProgress: InstancedProgress | null;
+  questionDetails: Record<string, QuestionDetail> | null;
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {

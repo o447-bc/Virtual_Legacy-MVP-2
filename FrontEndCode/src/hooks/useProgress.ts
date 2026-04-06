@@ -87,6 +87,21 @@ async function incrementLevel(questionType: string): Promise<{ levelComplete: bo
   return response.json();
 }
 
+// ── Pure computation helpers ─────────────────────────────────────────────────
+
+/**
+ * Compute Life Story progress totals from ProgressData.
+ * Extracted as a pure function for testability.
+ */
+export function computeLifeStoryProgress(progressData: ProgressData): { total: number; completed: number } {
+  const total = progressData.numValidQuestions.reduce((sum, n) => sum + n, 0);
+  const completed = progressData.numValidQuestions.reduce((sum, n, i) => {
+    const unanswered = progressData.progressDataMap[progressData.questionTypes[i]] ?? 0;
+    return sum + (n - unanswered);
+  }, 0);
+  return { total, completed };
+}
+
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useProgress(userId: string | undefined, updatedItem?: ProgressItem) {

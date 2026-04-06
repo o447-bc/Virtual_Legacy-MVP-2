@@ -33,6 +33,7 @@ class DecimalEncoder(json.JSONEncoder):
 TABLE_USER_STATUS = os.environ.get('TABLE_USER_STATUS', 'userStatusDB')
 TABLE_ALL_QUESTIONS = os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB')
 TABLE_QUESTION_PROGRESS = os.environ.get('TABLE_QUESTION_PROGRESS', 'userQuestionLevelProgressDB')
+TABLE_USER_QUESTION_STATUS = os.environ.get('TABLE_USER_QUESTION_STATUS', 'userQuestionStatusDB')
 
 # Status-derived key mapping: status_key -> (base_event_key, required_status)
 STATUS_KEY_MAP = {
@@ -105,6 +106,46 @@ def handle_status(event, user_id):
             count += len(group.get('questionIds', []))
         assigned_question_count = count
 
+    # --- Instanced progress: query userQuestionStatusDB for answered instanced keys ---
+    instanced_progress = {'answeredKeys': []}
+    question_details = {}
+
+    if assigned and assigned.get('instanced'):
+        # Query userQuestionStatusDB for all answered questions for this user
+        uqs_table = dynamodb.Table(TABLE_USER_QUESTION_STATUS)
+        answered_keys = []
+        uqs_response = uqs_table.query(
+            KeyConditionExpression='userId = :uid',
+            ExpressionAttributeValues={':uid': user_id},
+            ProjectionExpression='questionId',
+        )
+        for uqs_item in uqs_response.get('Items', []):
+            qid = uqs_item.get('questionId', '')
+            if '#' in qid:
+                answered_keys.append(qid)
+        while 'LastEvaluatedKey' in uqs_response:
+            uqs_response = uqs_table.query(
+                KeyConditionExpression='userId = :uid',
+                ExpressionAttributeValues={':uid': user_id},
+                ProjectionExpression='questionId',
+                ExclusiveStartKey=uqs_response['LastEvaluatedKey'],
+            )
+            for uqs_item in uqs_response.get('Items', []):
+                qid = uqs_item.get('questionId', '')
+                if '#' in qid:
+                    answered_keys.append(qid)
+        instanced_progress['answeredKeys'] = answered_keys
+
+        # Collect unique instanced question IDs for BatchGetItem
+        instanced_qids = set()
+        for group in assigned.get('instanced', []):
+            for qid in group.get('questionIds', []):
+                instanced_qids.add(qid)
+
+        # BatchGetItem from allQuestionDB for question metadata
+        if instanced_qids:
+            question_details = _batch_get_question_details(dynamodb, list(instanced_qids))
+
     return {
         'statusCode': 200,
         'headers': cors_headers(event),
@@ -114,8 +155,56 @@ def handle_status(event, user_id):
             'surveyCompletedAt': item.get('surveyCompletedAt'),
             'lifeEventInstances': item.get('lifeEventInstances'),
             'assignedQuestionCount': assigned_question_count,
+            'assignedQuestions': assigned,
+            'instancedProgress': instanced_progress,
+            'questionDetails': question_details,
         }, cls=DecimalEncoder)
     }
+
+
+def _batch_get_question_details(dynamodb, question_ids):
+    """
+    BatchGetItem from allQuestionDB for the given question IDs.
+    Returns a dict of questionId -> { text, difficulty, questionType }.
+    DynamoDB BatchGetItem supports max 100 keys per request.
+    """
+    details = {}
+    # Process in chunks of 100 (DynamoDB BatchGetItem limit)
+    for i in range(0, len(question_ids), 100):
+        chunk = question_ids[i:i + 100]
+        keys = [{'questionId': qid} for qid in chunk]
+        resp = dynamodb.batch_get_item(
+            RequestItems={
+                TABLE_ALL_QUESTIONS: {
+                    'Keys': keys,
+                    'ProjectionExpression': 'questionId, questionText, difficulty, questionType',
+                }
+            }
+        )
+        for q_item in resp.get('Responses', {}).get(TABLE_ALL_QUESTIONS, []):
+            qid = q_item.get('questionId')
+            if qid:
+                details[qid] = {
+                    'text': q_item.get('questionText', ''),
+                    'difficulty': q_item.get('difficulty', 0),
+                    'questionType': q_item.get('questionType', ''),
+                }
+        # Handle unprocessed keys (throttling)
+        unprocessed = resp.get('UnprocessedKeys', {}).get(TABLE_ALL_QUESTIONS)
+        while unprocessed:
+            resp = dynamodb.batch_get_item(
+                RequestItems={TABLE_ALL_QUESTIONS: unprocessed}
+            )
+            for q_item in resp.get('Responses', {}).get(TABLE_ALL_QUESTIONS, []):
+                qid = q_item.get('questionId')
+                if qid:
+                    details[qid] = {
+                        'text': q_item.get('questionText', ''),
+                        'difficulty': q_item.get('difficulty', 0),
+                        'questionType': q_item.get('questionType', ''),
+                    }
+            unprocessed = resp.get('UnprocessedKeys', {}).get(TABLE_ALL_QUESTIONS)
+    return details
 
 
 # ---------------------------------------------------------------------------
