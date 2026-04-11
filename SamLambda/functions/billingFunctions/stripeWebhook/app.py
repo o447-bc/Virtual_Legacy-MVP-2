@@ -135,8 +135,8 @@ def lambda_handler(event, context):
         logger.error('[WEBHOOK] Error constructing event: %s', exc)
         return cors_response(400, {'error': 'Invalid signature'}, event)
 
-    event_id = stripe_event.get('id', 'unknown')
-    event_type = stripe_event.get('type', 'unknown')
+    event_id = getattr(stripe_event, 'id', 'unknown')
+    event_type = getattr(stripe_event, 'type', 'unknown')
     logger.info('[WEBHOOK] Processing event %s type=%s', event_id, event_type)
 
     # Set Stripe API key for any API calls we need to make
@@ -172,18 +172,18 @@ def _handle_checkout_completed(stripe_event, api_event):
     Uses userId from session metadata (PK lookup, NOT GSI) to avoid
     GSI eventual consistency issues right after checkout.
     """
-    session = stripe_event['data']['object']
-    user_id = (session.get('metadata') or {}).get('userId')
+    session = stripe_event.data.object
+    user_id = (getattr(session, 'metadata', None) or {}).get('userId')
 
     if not user_id:
         logger.warning('[WEBHOOK] checkout.session.completed without userId in metadata, event=%s',
-                        stripe_event.get('id'))
+                        getattr(stripe_event, 'id', 'unknown'))
         return
 
     logger.info('[WEBHOOK] checkout.session.completed userId=%s', user_id)
 
-    customer_id = session.get('customer')
-    subscription_id = session.get('subscription')
+    customer_id = getattr(session, 'customer', None)
+    subscription_id = getattr(session, 'subscription', None)
 
     # Retrieve subscription details from Stripe
     plan_id = 'premium'
@@ -195,8 +195,8 @@ def _handle_checkout_completed(stripe_event, api_event):
                 sub.current_period_end, tz=timezone.utc
             ).isoformat()
             # Determine plan from price ID
-            if sub.get('items') and sub['items'].get('data'):
-                price_id = sub['items']['data'][0].get('price', {}).get('id', '')
+            if hasattr(sub, 'items') and sub.items and sub.items.data:
+                price_id = sub.items.data[0].price.id if sub.items.data[0].price else ''
                 plan_id = PRICE_PLAN_MAP.get(price_id, 'premium')
         except Exception as exc:
             logger.error('[WEBHOOK] Error retrieving subscription %s: %s', subscription_id, exc)
@@ -236,18 +236,18 @@ def _handle_subscription_updated(stripe_event, api_event):
 
     GSI lookup by stripeCustomerId, update status/planId/currentPeriodEnd.
     """
-    subscription = stripe_event['data']['object']
-    customer_id = subscription.get('customer')
+    subscription = stripe_event.data.object
+    customer_id = getattr(subscription, 'customer', None)
 
     if not customer_id:
         logger.warning('[WEBHOOK] subscription.updated without customer, event=%s',
-                        stripe_event.get('id'))
+                        getattr(stripe_event, 'id', 'unknown'))
         return
 
     item = _lookup_user_by_customer_id(customer_id)
     if not item:
         logger.warning('[WEBHOOK] No user found for stripeCustomerId=%s, event=%s',
-                        customer_id, stripe_event.get('id'))
+                        customer_id, getattr(stripe_event, 'id', 'unknown'))
         return
 
     user_id = item['userId']
@@ -255,11 +255,11 @@ def _handle_subscription_updated(stripe_event, api_event):
 
     # Determine plan from price
     plan_id = 'premium'
-    if subscription.get('items') and subscription['items'].get('data'):
-        price_id = subscription['items']['data'][0].get('price', {}).get('id', '')
+    if hasattr(subscription, 'items') and subscription.items and subscription.items.data:
+        price_id = subscription.items.data[0].price.id if subscription.items.data[0].price else ''
         plan_id = PRICE_PLAN_MAP.get(price_id, 'premium')
 
-    stripe_status = subscription.get('status', 'active')
+    stripe_status = getattr(subscription, 'status', 'active')
     # Map Stripe status to our internal status
     status_map = {
         'active': 'active',
@@ -273,9 +273,9 @@ def _handle_subscription_updated(stripe_event, api_event):
     status = status_map.get(stripe_status, 'active')
 
     current_period_end = None
-    if subscription.get('current_period_end'):
+    if getattr(subscription, 'current_period_end', None):
         current_period_end = datetime.fromtimestamp(
-            subscription['current_period_end'], tz=timezone.utc
+            subscription.current_period_end, tz=timezone.utc
         ).isoformat()
 
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -306,18 +306,18 @@ def _handle_subscription_deleted(stripe_event, api_event):
 
     GSI lookup, set planId=free, status=canceled.
     """
-    subscription = stripe_event['data']['object']
-    customer_id = subscription.get('customer')
+    subscription = stripe_event.data.object
+    customer_id = getattr(subscription, 'customer', None)
 
     if not customer_id:
         logger.warning('[WEBHOOK] subscription.deleted without customer, event=%s',
-                        stripe_event.get('id'))
+                        getattr(stripe_event, 'id', 'unknown'))
         return
 
     item = _lookup_user_by_customer_id(customer_id)
     if not item:
         logger.warning('[WEBHOOK] No user found for stripeCustomerId=%s, event=%s',
-                        customer_id, stripe_event.get('id'))
+                        customer_id, getattr(stripe_event, 'id', 'unknown'))
         return
 
     user_id = item['userId']
@@ -349,18 +349,18 @@ def _handle_payment_failed(stripe_event, api_event):
 
     GSI lookup, set status=past_due.
     """
-    invoice = stripe_event['data']['object']
-    customer_id = invoice.get('customer')
+    invoice = stripe_event.data.object
+    customer_id = getattr(invoice, 'customer', None)
 
     if not customer_id:
         logger.warning('[WEBHOOK] payment_failed without customer, event=%s',
-                        stripe_event.get('id'))
+                        getattr(stripe_event, 'id', 'unknown'))
         return
 
     item = _lookup_user_by_customer_id(customer_id)
     if not item:
         logger.warning('[WEBHOOK] No user found for stripeCustomerId=%s, event=%s',
-                        customer_id, stripe_event.get('id'))
+                        customer_id, getattr(stripe_event, 'id', 'unknown'))
         return
 
     user_id = item['userId']
