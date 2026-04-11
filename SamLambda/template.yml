@@ -4246,3 +4246,4 @@ Outputs:
   WebSocketApiEndpoint:
     Description: WebSocket API endpoint URL for conversation feature
     Value: !Sub wss://${ConversationWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod# KMS CreateGrant added to OIDC role for DynamoDB/S3 encryption
+# KMS policy fix: split direct access from CreateGrant condition
