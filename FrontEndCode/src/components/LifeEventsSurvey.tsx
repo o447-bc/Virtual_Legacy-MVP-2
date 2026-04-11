@@ -329,9 +329,20 @@ const LifeEventsSurvey: React.FC<LifeEventsSurveyProps> = ({
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 border-b bg-gradient-to-r from-legacy-navy to-legacy-purple text-white">
-          <h2 className="text-lg font-bold">
-            {isRetake ? "Update Your Life Events" : "Tell Us About Your Life"}
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">
+              {isRetake ? "Update Your Life Events" : "Tell Us About Your Life"}
+            </h2>
+            {isRetake && (
+              <button
+                onClick={() => onComplete(0)}
+                className="text-white/70 hover:text-white text-sm"
+                aria-label="Close survey"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <div className="flex items-center justify-between mt-1">
             <p className="text-sm text-white/80">{STEP_TITLES[currentStep]}</p>
             <span className="text-sm text-white/80">
@@ -391,15 +402,26 @@ const LifeEventsSurvey: React.FC<LifeEventsSurveyProps> = ({
 
         {/* Footer — navigation */}
         <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            disabled={currentStep === 0 || isSubmitting}
-            className={currentStep === 0 ? "invisible" : ""}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={handleBack}
+              disabled={currentStep === 0 || isSubmitting}
+              className={currentStep === 0 ? "invisible" : ""}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            {!isRetake && currentStep === 0 && (
+              <Button
+                variant="ghost"
+                onClick={() => onComplete(0)}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+              >
+                Skip for now
+              </Button>
+            )}
+          </div>
 
           {isLastStep ? (
             <Button
