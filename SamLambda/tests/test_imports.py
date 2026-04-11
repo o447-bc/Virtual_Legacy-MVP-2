@@ -70,6 +70,12 @@ HANDLERS = [
     'functions.adminFunctions.adminExport.app',
     'functions.adminFunctions.adminThemes.app',
     'functions.adminFunctions.adminMigrate.app',
+    'functions.dataRetentionFunctions.dataExport.app',
+    'functions.dataRetentionFunctions.accountDeletion.app',
+    'functions.dataRetentionFunctions.dormantDetector.app',
+    'functions.dataRetentionFunctions.storageLifecycle.app',
+    'functions.dataRetentionFunctions.legacyProtection.app',
+    'functions.dataRetentionFunctions.adminLifecycle.app',
 ]
 
 
