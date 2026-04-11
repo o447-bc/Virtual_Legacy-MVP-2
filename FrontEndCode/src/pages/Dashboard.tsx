@@ -30,6 +30,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null);
   const [showRetakeSurvey, setShowRetakeSurvey] = useState(false);
+  const [surveyDismissed, setSurveyDismissed] = useState(false);
   const [retakeSelections, setRetakeSelections] = useState<string[]>([]);
   const [retakeInstances, setRetakeInstances] = useState<LifeEventInstanceGroup[]>([]);
   const [streakData, setStreakData] = useState<StreakData | null>(null);
@@ -229,10 +230,14 @@ const Dashboard = () => {
       </main>
 
       {/* Life-Events Survey Overlay */}
-      {(hasCompletedSurvey === false || showRetakeSurvey) && (
+      {(hasCompletedSurvey === false && !surveyDismissed || showRetakeSurvey) && (
         <LifeEventsSurvey
-          onComplete={() => {
-            refreshSurveyStatus();
+          onComplete={(count) => {
+            if (count > 0) {
+              refreshSurveyStatus();
+            } else {
+              setSurveyDismissed(true);
+            }
             setShowRetakeSurvey(false);
           }}
           isRetake={showRetakeSurvey}

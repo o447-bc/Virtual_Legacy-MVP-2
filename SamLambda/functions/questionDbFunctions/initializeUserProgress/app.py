@@ -135,13 +135,19 @@ def lambda_handler(event, context):
         existing_question_types = {item['questionType'] for item in existing['Items']}
         print(f"[DB] Existing question types: {existing_question_types}")
         
-        # Initialize user status with current level = 1 for new users
+        # Initialize user status with current level = 1 for new users.
+        # IMPORTANT: use update_item (not put_item) so we don't overwrite
+        # existing survey data (hasCompletedSurvey, selectedLifeEvents,
+        # assignedQuestions, lifeEventInstances, etc.).
         print(f"[DB] Initializing user status for user: {user_id}")
-        user_status_table.put_item(Item={
-            'userId': user_id,
-            'currLevel': 1,
-            'allowTranscription': True
-        })
+        user_status_table.update_item(
+            Key={'userId': user_id},
+            UpdateExpression='SET currLevel = if_not_exists(currLevel, :lvl), allowTranscription = if_not_exists(allowTranscription, :at)',
+            ExpressionAttributeValues={
+                ':lvl': 1,
+                ':at': True,
+            },
+        )
         print("[DB] User status initialized with currLevel = 1, allowTranscription = True")
         
         # Check if user has assignedQuestions from the life-events survey
