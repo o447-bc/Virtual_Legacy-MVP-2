@@ -24,6 +24,7 @@ from datetime import datetime, timezone, timedelta
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.client import Config
 
 # Add shared layer to path
 sys.path.append('/opt/python')
@@ -40,7 +41,7 @@ logger = logging.getLogger(__name__)
 # AWS clients (module-level — reused across warm invocations)
 # ---------------------------------------------------------------------------
 _dynamodb = boto3.resource('dynamodb')
-_s3 = boto3.client('s3')
+_s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
 
 _TABLE_DATA_RETENTION = os.environ.get('TABLE_DATA_RETENTION', 'DataRetentionDB')
 _TABLE_SUBSCRIPTIONS = os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB')
