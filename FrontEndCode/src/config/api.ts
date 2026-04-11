@@ -32,7 +32,12 @@ export const API_CONFIG = {
     PROCESS_VIDEO: '/functions/videoFunctions/process-video',
     SEND_INVITE: '/invites/send',
     GET_MAKER_VIDEOS: '/videos/maker',
-    GET_AUDIO_SUMMARY_FOR_VIDEO: '/functions/questionDbFunctions/get-audio-summary-for-video'
+    GET_AUDIO_SUMMARY_FOR_VIDEO: '/functions/questionDbFunctions/get-audio-summary-for-video',
+    BILLING_STATUS: '/billing/status',
+    BILLING_CREATE_CHECKOUT: '/billing/create-checkout-session',
+    BILLING_PORTAL: '/billing/portal',
+    BILLING_APPLY_COUPON: '/billing/apply-coupon',
+    BILLING_PLANS: '/billing/plans',
   }
 };
 

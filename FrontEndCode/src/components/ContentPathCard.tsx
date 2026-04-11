@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +12,10 @@ interface ContentPathCardProps {
   accentColor: string;
   disabled?: boolean;
   badge?: string;
+  locked?: boolean;
+  premiumBadge?: boolean;
   onClick: () => void;
+  onLockedClick?: () => void;
 }
 
 /**
@@ -31,23 +34,34 @@ export const ContentPathCard: React.FC<ContentPathCardProps> = ({
   accentColor,
   disabled = false,
   badge,
+  locked = false,
+  premiumBadge = false,
   onClick,
+  onLockedClick,
 }) => {
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (disabled) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
-        onClick();
+        if (locked && onLockedClick) {
+          onLockedClick();
+        } else {
+          onClick();
+        }
       }
     },
-    [disabled, onClick]
+    [disabled, locked, onClick, onLockedClick]
   );
 
   const handleClick = useCallback(() => {
     if (disabled) return;
+    if (locked && onLockedClick) {
+      onLockedClick();
+      return;
+    }
     onClick();
-  }, [disabled, onClick]);
+  }, [disabled, locked, onClick, onLockedClick]);
 
   return (
     <div
@@ -60,7 +74,9 @@ export const ContentPathCard: React.FC<ContentPathCardProps> = ({
         accentColor,
         disabled
           ? "opacity-60 cursor-default"
-          : "cursor-pointer shadow hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-legacy-purple focus-visible:ring-offset-2"
+          : locked
+            ? "cursor-pointer opacity-75 grayscale-[20%] shadow hover:shadow-lg hover:opacity-90 hover:grayscale-0 focus-visible:ring-2 focus-visible:ring-legacy-purple focus-visible:ring-offset-2"
+            : "cursor-pointer shadow hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-legacy-purple focus-visible:ring-offset-2"
       )}
       aria-disabled={disabled || undefined}
     >
@@ -73,6 +89,14 @@ export const ContentPathCard: React.FC<ContentPathCardProps> = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-xl font-semibold text-legacy-navy">{title}</h3>
+          {locked && (
+            <Lock className="h-4 w-4 text-gray-400" />
+          )}
+          {(locked || premiumBadge) && (
+            <Badge className="bg-legacy-purple text-white text-xs">
+              Premium
+            </Badge>
+          )}
           {badge && (
             <Badge variant="secondary" className="text-xs">
               {badge}

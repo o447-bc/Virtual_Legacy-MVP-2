@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Mic, Square, Volume2 } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { AudioVisualizer } from './AudioVisualizer';
+import { UpgradePromptDialog } from './UpgradePromptDialog';
 
 const WS_URL = (import.meta.env.VITE_WS_URL || 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod').trim();
 
@@ -18,6 +20,7 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   questionText,
   onComplete
 }) => {
+  const navigate = useNavigate();
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'ready' | 'listening' | 'processing' | 'complete'>('idle');
   const [aiText, setAiText] = useState('');
@@ -29,6 +32,8 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   const [visualizerAudioUrl, setVisualizerAudioUrl] = useState<string | null>(null);
   const [isVisualizerPlaying, setIsVisualizerPlaying] = useState(false);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -147,6 +152,12 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
       
       case 'error':
         setError(data.message);
+        setStatus('ready');
+        break;
+      
+      case 'limit_reached':
+        setUpgradeMessage(data.message || 'Upgrade to Premium to continue.');
+        setShowUpgradeDialog(true);
         setStatus('ready');
         break;
     }
@@ -353,6 +364,16 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
           </div>
         </div>
       </CardContent>
+      <UpgradePromptDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        title="Upgrade to Premium"
+        message={upgradeMessage}
+        onUpgrade={() => {
+          setShowUpgradeDialog(false);
+          navigate('/pricing');
+        }}
+      />
     </Card>
   );
 };

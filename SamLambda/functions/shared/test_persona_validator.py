@@ -10,22 +10,27 @@ from persona_validator import PersonaValidator
 class TestPersonaValidator(unittest.TestCase):
     
     def test_extract_legacy_maker_persona(self):
-        """Test extracting legacy maker persona from JWT"""
-        
+        """Test extracting legacy maker persona from JWT.
+
+        Production stores persona in the 'profile' claim as JSON — not in
+        custom:persona_type which does not exist in production JWTs.
+        """
         test_event = {
             'requestContext': {
                 'authorizer': {
                     'claims': {
                         'sub': 'test-user-123',
                         'email': 'test@example.com',
-                        'custom:persona_type': 'legacy_maker',
-                        'custom:initiator_id': 'test-user-123',
-                        'custom:related_user_id': ''
+                        'profile': json.dumps({
+                            'persona_type': 'legacy_maker',
+                            'initiator_id': 'test-user-123',
+                            'related_user_id': ''
+                        })
                     }
                 }
             }
         }
-        
+
         persona_info = PersonaValidator.get_user_persona_from_jwt(test_event)
         
         self.assertEqual(persona_info['user_id'], 'test-user-123')

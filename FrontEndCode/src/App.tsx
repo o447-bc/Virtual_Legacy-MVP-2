@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { SubscriptionProvider } from "./contexts/SubscriptionContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminGate from "./components/AdminGate";
 import AdminLayout from "./components/AdminLayout";
@@ -27,6 +28,7 @@ import LifeStoryReflections from "./pages/LifeStoryReflections";
 import LifeEvents from "./pages/LifeEvents";
 import PersonalInsights from "./pages/PersonalInsights";
 import NotFound from "./pages/NotFound";
+import PricingPage from "./pages/PricingPage";
 import { TestS3 } from "./pages/TestS3";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -58,6 +60,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <SubscriptionProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Home />} />
@@ -69,6 +72,7 @@ const App = () => (
             <Route path="/signup-start-their-legacy" element={<SignUpStartTheirLegacy />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/pricing" element={<PricingPage />} />
 
             {/* Protected routes — require authentication */}
             <Route path="/dashboard" element={<ProtectedRoute requiredPersona="legacy_maker"><Dashboard /></ProtectedRoute>} />
@@ -97,6 +101,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </SubscriptionProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

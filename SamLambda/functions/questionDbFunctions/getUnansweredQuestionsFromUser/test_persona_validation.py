@@ -14,7 +14,7 @@ class TestQuestionPersonaValidation(unittest.TestCase):
     def test_legacy_maker_can_access_questions(self):
         """Test that legacy makers can access questions"""
         
-        # Mock event with legacy maker persona
+        # Mock event with legacy maker persona — uses production 'profile' JSON structure
         test_event = {
             'queryStringParameters': {
                 'questionType': 'childhood',
@@ -24,8 +24,11 @@ class TestQuestionPersonaValidation(unittest.TestCase):
                 'authorizer': {
                     'claims': {
                         'sub': 'test-user-123',
-                        'custom:persona_type': 'legacy_maker',
-                        'custom:initiator_id': 'test-user-123'
+                        'profile': json.dumps({
+                            'persona_type': 'legacy_maker',
+                            'initiator_id': 'test-user-123',
+                            'related_user_id': ''
+                        })
                     }
                 }
             }
@@ -42,7 +45,7 @@ class TestQuestionPersonaValidation(unittest.TestCase):
     def test_legacy_benefactor_cannot_access_questions(self):
         """Test that legacy benefactors cannot access questions"""
         
-        # Mock event with legacy benefactor persona
+        # Mock event with legacy benefactor persona — uses production 'profile' JSON structure
         test_event = {
             'queryStringParameters': {
                 'questionType': 'childhood',
@@ -52,8 +55,11 @@ class TestQuestionPersonaValidation(unittest.TestCase):
                 'authorizer': {
                     'claims': {
                         'sub': 'test-user-456',
-                        'custom:persona_type': 'legacy_benefactor',
-                        'custom:initiator_id': 'test-user-456'
+                        'profile': json.dumps({
+                            'persona_type': 'legacy_benefactor',
+                            'initiator_id': 'test-user-456',
+                            'related_user_id': ''
+                        })
                     }
                 }
             }
@@ -81,7 +87,11 @@ class TestQuestionPersonaValidation(unittest.TestCase):
                 'authorizer': {
                     'claims': {
                         'sub': 'test-benefactor-789',
-                        'custom:persona_type': 'legacy_benefactor'
+                        'profile': json.dumps({
+                            'persona_type': 'legacy_benefactor',
+                            'initiator_id': 'test-benefactor-789',
+                            'related_user_id': ''
+                        })
                     }
                 }
             }

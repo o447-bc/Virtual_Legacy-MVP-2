@@ -2,11 +2,34 @@ import json
 import boto3
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
 from invitation_utils import link_registration_to_assignment
 from logging_utils import StructuredLogger
+
+_cloudwatch = None
+
+def _get_cloudwatch():
+    global _cloudwatch
+    if _cloudwatch is None:
+        _cloudwatch = boto3.client('cloudwatch')
+    return _cloudwatch
+
+def _emit_persona_write_failure(username: str, persona_type: str):
+    """Emit a CloudWatch metric when all Cognito persona write retries are exhausted."""
+    try:
+        _get_cloudwatch().put_metric_data(
+            Namespace='SoulReel/Persona',
+            MetricData=[{
+                'MetricName': 'PersonaWriteFailure',
+                'Value': 1,
+                'Unit': 'Count',
+                'Dimensions': [{'Name': 'PersonaType', 'Value': persona_type or 'unknown'}]
+            }]
+        )
+    except Exception:
+        pass  # Never fail signup over metric emission
 
 def lambda_handler(event, context):
     """
@@ -176,10 +199,29 @@ def lambda_handler(event, context):
                     # This will cause them to default to legacy_maker on next login.
                     print(f"CRITICAL: Failed to set persona for user {username} after {max_retries} attempts. "
                           f"Persona type was: {persona_type}. Error: {str(retry_error)}")
+                    _emit_persona_write_failure(username, persona_type)
         
     except Exception as e:
         print(f"CRITICAL: Error preparing persona attributes for user {username}: {str(e)}")
         # Don't fail the signup process
+    
+    # Create 7-day Premium trial subscription record
+    try:
+        dynamodb_resource = boto3.resource('dynamodb')
+        subscriptions_table = dynamodb_resource.Table(os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB'))
+        trial_expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        subscriptions_table.put_item(Item={
+            'userId': username,
+            'planId': 'premium',
+            'status': 'trialing',
+            'trialExpiresAt': trial_expires,
+            'benefactorCount': 0,
+            'createdAt': datetime.now(timezone.utc).isoformat(),
+            'updatedAt': datetime.now(timezone.utc).isoformat(),
+        })
+        print(f"Created trial subscription for user: {username}")
+    except Exception as e:
+        print(f"WARNING: Failed to create trial subscription for {username}: {e}")
     
     return event
 
@@ -260,7 +302,7 @@ def send_assignment_notification_to_new_user(
         
         # Send email via SES
         ses_client = boto3.client('ses', region_name='us-east-1')
-        sender_email = os.environ.get('SENDER_EMAIL', 'noreply@virtuallegacy.com')
+        sender_email = os.environ.get('SENDER_EMAIL', 'noreply@soulreel.net')
         
         subject = "Welcome to Virtual Legacy - Assignment Awaiting Your Response"
         

@@ -1,0 +1,241 @@
+# Implementation Plan: Life-Events Survey
+
+## Overview
+
+Implement a mandatory life-events survey for legacy makers that personalizes their question set. The implementation follows a backend-first approach: SAM template changes, new SurveyFunction Lambda, modifications to existing Lambdas, then frontend survey UI, gating logic, recording flow changes, and retake capability.
+
+## Tasks
+
+- [x] 1. SAM template — Add SurveyFunction Lambda and update IAM
+  - [x] 1.1 Add SurveyFunction Lambda resource to `SamLambda/template.yml`
+    - Define `SurveyFunction` with `SharedUtilsLayer`, `CodeUri: functions/surveyFunctions/survey/`, `Handler: app.lambda_handler`, `arm64`, `Timeout: 30`, `MemorySize: 256`
+    - Add IAM policies: `dynamodb:UpdateItem` + `dynamodb:GetItem` on `userStatusDB`, `dynamodb:Scan` + `dynamodb:Query` on `allQuestionDB` (table + index), `dynamodb:PutItem` + `dynamodb:Query` + `dynamodb:DeleteItem` on `userQuestionLevelProgressDB`, `kms:Decrypt` + `kms:DescribeKey` on `DataEncryptionKey`
+    - Add API Gateway events: `POST /survey/submit` (CognitoAuthorizer), `GET /survey/status` (CognitoAuthorizer), `OPTIONS /survey/submit`, `OPTIONS /survey/status`
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 9.1, 9.2, 10.1, 10.2, 10.3, 10.4, 10.5_
+  - [x] 1.2 Add `dynamodb:GetItem` on `userStatusDB` to `GetUnansweredQuestionsFromUserFunction` policies
+    - Add a new policy statement granting `dynamodb:GetItem` on `arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB`
+    - _Requirements: 15.4_
+
+- [x] 2. Backend — SurveyFunction Lambda (status + submit + assignment)
+  - [x] 2.1 Create `SamLambda/functions/surveyFunctions/survey/app.py` with HTTP method routing, CORS headers, and `GET /survey/status` handler
+    - Route `GET` to status handler, `POST` to submit handler, `OPTIONS` to CORS preflight
+    - Status handler: `GetItem` from `userStatusDB` by userId, return `{ hasCompletedSurvey, selectedLifeEvents, surveyCompletedAt, lifeEventInstances }`
+    - Include `import os`, use `os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')` for CORS
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 5.6, 8.3_
+  - [x] 2.2 Implement `POST /survey/submit` validation logic
+    - Validate `selectedLifeEvents` is present and is a list of strings
+    - Validate each key is a recognized Life_Event_Key or `other` (import registry from shared layer)
+    - Validate `lifeEventInstances`: each `eventKey` is a recognized instanceable key, each instance has non-empty `name` and positive integer `ordinal`
+    - Validate `got_married` instances have `status` in `[married, divorced, deceased]`
+    - Return HTTP 400 with descriptive error messages for validation failures
+    - _Requirements: 5.1, 5.2, 5.4, 5.7, 5.9, 5.11, 5.12_
+  - [x] 2.3 Implement question assignment logic (`assign_questions` function)
+    - Scan `allQuestionDB` for valid questions (`Valid == 1` or `active == true`)
+    - Derive status-aware keys from `got_married` instances (`spouse_divorced`, `spouse_deceased`, `spouse_still_married`)
+    - Filter questions: include if `requiredLifeEvents` is empty OR all keys present in user's effective set
+    - Route non-instanceable matches to `standard`, instanceable matches to `instanced` with per-instance stamping
+    - Handle status-aware matching: `spouse_divorced` → only divorced instances, base `got_married` → all instances
+    - Order instanced groups by `eventKey` then `instanceOrdinal` ascending
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10_
+  - [ ]* 2.4 Write property test for assignment filtering (Python/Hypothesis)
+    - **Property 1: Assignment filtering correctness**
+    - **Validates: Requirements 1.2, 1.8, 6.2, 6.3, 6.4, 6.5**
+  - [ ]* 2.5 Write property test for instance stamping (Python/Hypothesis)
+    - **Property 2: Instance stamping correctness**
+    - **Validates: Requirements 6.6, 6.8, 6.9, 6.10**
+  - [x] 2.6 Implement survey data persistence and progress reinitialization
+    - Use `UpdateItem` (not `PutItem`) to write `selectedLifeEvents`, `hasCompletedSurvey=true`, `surveyCompletedAt`, `lifeEventInstances`, `assignedQuestions`, `customLifeEvent` to `userStatusDB`
+    - Delete existing progress records in `userQuestionLevelProgressDB` for the user
+    - Create new progress records for assigned difficulty-1 questions, counting each instanced copy separately
+    - Return `{ message: "Survey completed", assignedQuestionCount: <number> }`
+    - Handle DynamoDB errors with HTTP 500 and CloudWatch logging
+    - _Requirements: 5.3, 5.5, 5.8, 5.10, 6.11, 8.5, 8.6_
+  - [ ]* 2.7 Write property test for input validation (Python/Hypothesis)
+    - **Property 4: Input validation rejects invalid data**
+    - **Validates: Requirements 3.23, 5.1, 5.2, 5.7, 5.11**
+  - [ ]* 2.8 Write property test for survey data round-trip (Python/Hypothesis)
+    - **Property 3: Survey data round-trip**
+    - **Validates: Requirements 5.3, 5.8, 5.10, 9.3, 13.3**
+
+- [x] 3. Backend — Add `life_event_registry.py` to SharedUtilsLayer
+  - Create `SamLambda/functions/shared/python/life_event_registry.py` with canonical Life_Event_Key lists, instanceable keys, and validation helpers mirroring the frontend `lifeEventRegistry.ts`
+  - _Requirements: 1.3, 1.4_
+
+- [x] 4. Backend — Modify existing Lambdas for assignedQuestions filtering
+  - [x] 4.1 Modify `getUnansweredQuestionsFromUser` Lambda
+    - Add `GetItem` call to `userStatusDB` to fetch `assignedQuestions`
+    - If `assignedQuestions` present, build set of all assigned questionIds (standard + all instanced questionIds) and filter `validQuestionIds` to only assigned ones
+    - Handle legacy flat-list format: treat as `{ standard: <list>, instanced: [] }`
+    - Fall back to current behavior if `assignedQuestions` is missing
+    - Account for composite sort key `{questionId}#{instanceKey}` when checking answered status for instanced questions
+    - _Requirements: 15.1, 15.2, 15.3, 16.5, 12.2_
+  - [x] 4.2 Modify `uploadVideoResponse` Lambda
+    - Accept optional `instanceKey` in request body
+    - When `instanceKey` present, use composite sort key `{questionId}#{instanceKey}` for `userQuestionStatusDB`
+    - Store `instanceKey` as separate attribute on the record
+    - When `instanceKey` absent, use plain `questionId` as sort key (backward compatible)
+    - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.7_
+  - [ ]* 4.3 Write property test for composite sort key correctness (Python/Hypothesis)
+    - **Property 6: Composite sort key correctness**
+    - **Validates: Requirements 14.8, 14.10, 16.1, 16.2, 16.4, 16.6**
+  - [x] 4.4 Modify `getProgressSummary2` Lambda
+    - Fetch `assignedQuestions` from `userStatusDB`
+    - When present, calculate total question count as `len(standard) + sum(len(group.questionIds) for group in instanced)`
+    - Handle legacy flat-list format
+    - Fall back to current behavior if missing
+    - _Requirements: 7.1, 7.2, 12.2, 12.6_
+  - [x] 4.5 Modify `initializeUserProgress` Lambda
+    - When `assignedQuestions` present, filter difficulty-1 questions to only those in the assigned set
+    - Count each instanced copy as a separate question
+    - Fall back to current behavior if missing
+    - _Requirements: 7.3, 12.3_
+  - [x] 4.6 Modify `incrementUserLevel2` Lambda
+    - When advancing to a new level, filter next-level questions to only those in `assignedQuestions`
+    - Fall back to current behavior if missing
+    - _Requirements: 7.4_
+  - [ ]* 4.7 Write property test for assigned-questions-aware filtering (Python/Hypothesis)
+    - **Property 11: Assigned-questions-aware filtering**
+    - **Validates: Requirements 7.3, 7.4, 15.1, 16.5**
+  - [ ]* 4.8 Write property test for progress counting (Python/Hypothesis)
+    - **Property 10: Progress counting with assignedQuestions**
+    - **Validates: Requirements 7.1, 7.5**
+
+- [x] 5. Checkpoint — Backend complete
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify SAM template validates with `sam validate --lint`
+  - Verify SurveyFunction handles GET /survey/status and POST /survey/submit
+  - Verify existing Lambdas fall back gracefully when assignedQuestions is missing
+
+- [x] 6. Frontend — surveyService and AuthContext modifications
+  - [x] 6.1 Create `FrontEndCode/src/services/surveyService.ts`
+    - Implement `submitSurvey(payload)` → `POST /survey/submit` with JWT auth
+    - Implement `getSurveyStatus()` → `GET /survey/status` with JWT auth
+    - Add survey endpoints to `FrontEndCode/src/config/api.ts`: `SURVEY_SUBMIT: '/survey/submit'`, `SURVEY_STATUS: '/survey/status'`
+    - _Requirements: 8.1, 8.6, 9.1_
+  - [x] 6.2 Modify `FrontEndCode/src/contexts/AuthContext.tsx`
+    - Add `hasCompletedSurvey: boolean | null` and `surveyLoading: boolean` to `AuthContextType`
+    - Add `refreshSurveyStatus()` method
+    - On auth check (`checkAuthState`), call `GET /survey/status` for legacy_maker users and cache `hasCompletedSurvey`
+    - _Requirements: 4.5, 4.6_
+
+- [x] 7. Frontend — LifeEventsSurvey component (7-step floating overlay)
+  - [x] 7.1 Create `FrontEndCode/src/components/LifeEventsSurvey.tsx` with overlay structure and step navigation
+    - Floating card overlay with semi-transparent backdrop, `z-50`, centered
+    - 7 category steps with Next/Back navigation, progress indicator ("Step X of 7")
+    - Animated transitions between steps (CSS slide/fade)
+    - No close button, no click-outside-to-dismiss, no escape key handler
+    - Responsive: mobile fills screen, desktop constrained max-width
+    - Use SoulReel design system (Tailwind, `legacy-purple`, `legacy-navy`, shadcn/ui)
+    - _Requirements: 3.1, 3.2, 3.7, 3.8, 3.9, 3.11, 3.12, 3.13_
+  - [x] 7.2 Implement life event checkboxes and consolidated events per step
+    - Render each life event as labeled checkbox with descriptive subtitle
+    - Render Consolidated_Events (e.g., "Experienced the death of someone close") with parent label and indented sub-checkboxes
+    - Allow zero or more selections per step
+    - Free-text input in step 7 for custom life event
+    - _Requirements: 3.3, 3.4, 3.5, 3.6, 3.20_
+  - [x] 7.3 Implement instanceable event follow-up UI
+    - When instanceable event checked, show inline sub-form: number picker (1–10), name inputs with ordinal labels
+    - For `got_married`: add status dropdown per instance (married/divorced/deceased)
+    - Validate non-empty names and valid status before allowing Next/Submit
+    - _Requirements: 3.21, 3.22, 3.23, 3.24_
+  - [x] 7.4 Implement submit flow with loading, success, and error states
+    - Submit button on final step, always enabled (zero selections allowed)
+    - On submit: disable button, show spinner + "Personalizing your questions..."
+    - On success: show "Your personalized questions are ready!" with count, then dismiss overlay
+    - On error: show error toast, keep overlay open, preserve selections, re-enable Submit
+    - Call `surveyService.submitSurvey()` then `refreshSurveyStatus()` on success
+    - _Requirements: 3.10, 3.14, 3.15, 3.16, 3.17, 3.18, 3.19_
+  - [ ]* 7.5 Write property test for placeholder replacement (TypeScript/fast-check)
+    - **Property 8: Placeholder replacement**
+    - **Validates: Requirements 14.4**
+  - [ ]* 7.6 Write property test for composite key uniqueness (TypeScript/fast-check)
+    - **Property 9: Composite key uniqueness**
+    - **Validates: Requirements 14.9**
+
+- [x] 8. Frontend — Survey gating (ProtectedRoute + Dashboard integration)
+  - [x] 8.1 Modify `FrontEndCode/src/components/ProtectedRoute.tsx`
+    - Import `hasCompletedSurvey` from `useAuth()`
+    - For `legacy_maker` routes other than `/dashboard`: redirect to `/dashboard` if `hasCompletedSurvey === false`
+    - Show nothing while `hasCompletedSurvey` is `null` (loading)
+    - _Requirements: 4.2, 4.6_
+  - [x] 8.2 Modify `FrontEndCode/src/pages/Dashboard.tsx` to render survey overlay
+    - Import `LifeEventsSurvey` component
+    - Read `hasCompletedSurvey` and `surveyLoading` from `useAuth()`
+    - Show loading indicator while `surveyLoading` is true
+    - Render `<LifeEventsSurvey onComplete={handleSurveyComplete} />` overlay when `!hasCompletedSurvey`
+    - On complete: call `refreshSurveyStatus()`, dismiss overlay with fade-out
+    - _Requirements: 4.1, 4.3, 4.4_
+  - [ ]* 8.3 Write property test for survey gating logic (TypeScript/fast-check)
+    - **Property 5: Survey gating logic**
+    - **Validates: Requirements 4.1, 4.2, 4.4**
+
+- [x] 9. Checkpoint — Survey UI working
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify survey overlay appears for new users on Dashboard
+  - Verify survey submission assigns questions and dismisses overlay
+  - Verify ProtectedRoute redirects to Dashboard when survey incomplete
+
+- [x] 10. Frontend — Recording flow modifications for instanced questions
+  - [x] 10.1 Modify `FrontEndCode/src/pages/RecordConversation.tsx` for instanced question display
+    - Fetch `assignedQuestions` and `lifeEventInstances` from user status
+    - Group instanced questions by instance: all questions for one instance presented consecutively
+    - Order by `eventKey` → `instanceOrdinal` → `questionIds` order within group
+    - Present instanced groups as contiguous block, separate from standard questions
+    - Replace `instancePlaceholder` in question text with `instanceName` from corresponding instance group
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7_
+  - [x] 10.2 Modify video upload calls to pass `instanceKey`
+    - When recording an instanced question, include `instanceKey` (format `<eventKey>:<ordinal>`) in the upload request body
+    - For non-instanced questions, omit `instanceKey` or set to `null`
+    - _Requirements: 14.8, 14.10, 16.3_
+  - [ ]* 10.3 Write property test for instanced question ordering (TypeScript/fast-check)
+    - **Property 7: Instanced question ordering**
+    - **Validates: Requirements 14.1, 14.2, 14.3, 14.5, 14.6**
+
+- [x] 11. Checkpoint — Recording flow with instanced questions working end-to-end
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify instanced questions display with personalized text
+  - Verify instanced questions are grouped by instance
+  - Verify video uploads use composite sort key for instanced questions
+
+- [x] 12. Frontend — Retake capability
+  - [x] 12.1 Add "Retake Life Events Survey" button to Dashboard
+    - Display button in user profile/settings area on Dashboard
+    - Only visible when `hasCompletedSurvey === true`
+    - _Requirements: 13.1_
+  - [x] 12.2 Implement retake flow with pre-populated survey
+    - On retake click, open `LifeEventsSurvey` overlay with `isRetake=true`, `initialSelections` from `selectedLifeEvents`, `initialInstances` from `lifeEventInstances`
+    - Pre-populate checkboxes and instance data from existing survey data
+    - If pre-population fails, open with empty state and show warning toast
+    - _Requirements: 13.2_
+
+- [x] 13. Backend — Implement diff-based retake assignment logic
+  - [x] 13.1 Add diff logic to `assign_questions` for retake submissions
+    - Compare old `assignedQuestions` with new computed `assignedQuestions`
+    - Kept questions: retain existing progress in `userQuestionLevelProgressDB`
+    - Added questions: add to progress tracking at current difficulty level, marked unanswered
+    - Removed questions: remove from `assignedQuestions` but preserve video responses in `userQuestionStatusDB`
+    - For instanced questions, use `questionId + instanceKey` as composite identifier for diff
+    - Overwrite `selectedLifeEvents`, `lifeEventInstances`, `surveyCompletedAt` in `userStatusDB`
+    - _Requirements: 13.3, 13.4, 13.5, 13.6, 13.7, 7.5_
+  - [ ]* 13.2 Write property test for diff-based retake assignment (Python/Hypothesis)
+    - **Property 12: Diff-based retake assignment**
+    - **Validates: Requirements 13.4, 13.5, 13.7**
+  - [ ]* 13.3 Write property test for assignedQuestions structure validity (TypeScript/fast-check)
+    - **Property 13: AssignedQuestions structure validity**
+    - **Validates: Requirements 2.4**
+
+- [x] 14. Final checkpoint — All features integrated
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify backward compatibility: existing users without survey data continue working
+  - Verify legacy flat-list `assignedQuestions` format handled correctly
+  - Verify retake preserves existing video responses and progress for kept questions
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- Property tests validate universal correctness properties from the design document
+- Backend uses Python 3.12; frontend uses TypeScript/React
+- All Lambda functions must include `import os` and use `os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')` for CORS headers
+- IAM permission changes (task 1.2) must deploy alongside code changes per project rules

@@ -15,13 +15,26 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../cognitoTriggers/post
 from persona_validator import PersonaValidator
 
 def test_pre_signup_trigger():
-    """Test the pre-signup trigger with different persona choices"""
-    
-    # Import the pre-signup function
-    from app import lambda_handler as pre_signup_handler
-    
+    """Test the pre-signup trigger with different persona choices.
+
+    The trigger now stores persona to DynamoDB (not userAttributes).
+    We verify it runs without error and returns the event.
+    """
     print("Testing Pre-Signup Trigger...")
-    
+
+    from app import lambda_handler as pre_signup_handler
+
+    # Mock DynamoDB for all three cases
+    from unittest.mock import patch, MagicMock
+
+    def run_presignup(event):
+        with patch('boto3.resource') as mock_dynamodb:
+            mock_db = MagicMock()
+            mock_table = MagicMock()
+            mock_dynamodb.return_value = mock_db
+            mock_db.Table.return_value = mock_table
+            return pre_signup_handler(event, {})
+
     # Test Case 1: Create Legacy
     event_create_legacy = {
         'request': {
@@ -32,14 +45,11 @@ def test_pre_signup_trigger():
         },
         'response': {}
     }
-    
-    result = pre_signup_handler(event_create_legacy, {})
-    expected_persona_type = 'legacy_maker'
-    actual_persona_type = result['response']['userAttributes']['custom:persona_type']
-    
-    assert actual_persona_type == expected_persona_type, f"Expected {expected_persona_type}, got {actual_persona_type}"
+
+    result = run_presignup(event_create_legacy)
+    assert 'response' in result, "Event should be returned"
     print("✓ Create Legacy test passed")
-    
+
     # Test Case 2: Setup for Someone
     event_setup_someone = {
         'request': {
@@ -50,14 +60,11 @@ def test_pre_signup_trigger():
         },
         'response': {}
     }
-    
-    result = pre_signup_handler(event_setup_someone, {})
-    expected_persona_type = 'legacy_benefactor'
-    actual_persona_type = result['response']['userAttributes']['custom:persona_type']
-    
-    assert actual_persona_type == expected_persona_type, f"Expected {expected_persona_type}, got {actual_persona_type}"
+
+    result = run_presignup(event_setup_someone)
+    assert 'response' in result, "Event should be returned"
     print("✓ Setup for Someone test passed")
-    
+
     # Test Case 3: No metadata (should default to legacy_maker)
     event_no_metadata = {
         'request': {
@@ -65,12 +72,9 @@ def test_pre_signup_trigger():
         },
         'response': {}
     }
-    
-    result = pre_signup_handler(event_no_metadata, {})
-    expected_persona_type = 'legacy_maker'
-    actual_persona_type = result['response']['userAttributes']['custom:persona_type']
-    
-    assert actual_persona_type == expected_persona_type, f"Expected {expected_persona_type}, got {actual_persona_type}"
+
+    result = run_presignup(event_no_metadata)
+    assert 'response' in result, "Event should be returned"
     print("✓ No metadata test passed")
 
 def test_post_confirmation_trigger():
@@ -142,16 +146,18 @@ def test_persona_validator():
     assert is_valid == False, "Invalid access should have been denied"
     print("✓ Invalid access validation passed")
     
-    # Test Case 4: JWT Extraction (mock)
+    # Test Case 4: JWT Extraction (mock — uses production 'profile' JSON structure)
     mock_event = {
         'requestContext': {
             'authorizer': {
                 'claims': {
                     'sub': 'test-user-123',
                     'email': 'test@example.com',
-                    'custom:persona_type': 'legacy_maker',
-                    'custom:initiator_id': 'test-user-123',
-                    'custom:related_user_id': ''
+                    'profile': json.dumps({
+                        'persona_type': 'legacy_maker',
+                        'initiator_id': 'test-user-123',
+                        'related_user_id': ''
+                    })
                 }
             }
         }

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users, RefreshCw } from "lucide-react";
+import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users, RefreshCw, Crown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { getPortalUrl } from "@/services/billingService";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -12,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { StatisticsSection } from "@/components/StatisticsSection";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { PasswordDialog } from "@/components/PasswordDialog";
@@ -58,6 +61,7 @@ import { useStatistics } from "@/hooks/useStatistics";
 export const UserMenu: React.FC = () => {
   const { user, logout, hasCompletedSurvey } = useAuth();
   const navigate = useNavigate();
+  const subscription = useSubscription();
   const { data: statisticsData, loading: statisticsLoading, error: statisticsError } = useStatistics(user?.id);
 
   // Dialog state management
@@ -205,6 +209,31 @@ export const UserMenu: React.FC = () => {
               <span className="text-sm text-legacy-navy">Manage Benefactors</span>
             </DropdownMenuItem>
           )}
+
+          <DropdownMenuItem
+            className="cursor-pointer hover:bg-legacy-purple/10 focus:bg-legacy-purple/10 min-h-[44px] py-3"
+            onClick={async () => {
+              if (subscription.isPremium) {
+                try {
+                  const { portalUrl } = await getPortalUrl();
+                  window.location.href = portalUrl;
+                } catch {
+                  navigate('/pricing');
+                }
+              } else {
+                navigate('/pricing');
+              }
+            }}
+          >
+            <Crown className="mr-2 h-4 w-4 text-legacy-purple" />
+            <span className="text-sm text-legacy-navy">Plan & Billing</span>
+            <Badge
+              variant="outline"
+              className="ml-auto text-xs px-1.5 py-0 h-5 border-legacy-purple/30 text-legacy-purple"
+            >
+              {subscription.isPremium ? 'Premium' : 'Free'}
+            </Badge>
+          </DropdownMenuItem>
 
           <DropdownMenuItem
             className="cursor-pointer hover:bg-legacy-purple/10 focus:bg-legacy-purple/10 min-h-[44px] py-3"

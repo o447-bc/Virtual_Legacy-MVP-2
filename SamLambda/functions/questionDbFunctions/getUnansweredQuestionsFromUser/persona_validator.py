@@ -6,17 +6,28 @@ class PersonaValidator:
     
     @staticmethod
     def get_user_persona_from_jwt(event):
-        """Extract persona information from Cognito JWT token"""
-        
+        """Extract persona information from Cognito JWT token.
+
+        Production stores persona data in the 'profile' claim as JSON, e.g.:
+            {"persona_type": "legacy_maker", "initiator_id": "...", "related_user_id": ""}
+        The old custom:persona_type / custom:initiator_id attributes do not exist
+        in production JWTs and must not be used.
+        """
         auth_context = event.get('requestContext', {}).get('authorizer', {})
         claims = auth_context.get('claims', {})
-        
+
+        profile_raw = claims.get('profile', '{}')
+        try:
+            profile = json.loads(profile_raw)
+        except (json.JSONDecodeError, TypeError):
+            profile = {}
+
         return {
             'user_id': claims.get('sub'),
             'email': claims.get('email'),
-            'persona_type': claims.get('custom:persona_type', ''),
-            'initiator_id': claims.get('custom:initiator_id', ''),
-            'related_user_id': claims.get('custom:related_user_id', '')
+            'persona_type': profile.get('persona_type', ''),
+            'initiator_id': profile.get('initiator_id', ''),
+            'related_user_id': profile.get('related_user_id', '')
         }
     
     @staticmethod

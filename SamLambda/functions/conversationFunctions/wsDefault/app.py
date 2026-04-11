@@ -14,6 +14,7 @@ from storage import (save_transcript_to_s3, update_question_status,
 from transcribe import transcribe_audio
 from transcribe_streaming import transcribe_audio_streaming
 from transcribe_deepgram import transcribe_audio_deepgram
+from plan_check import check_question_category_access
 
 apigateway = None  # Initialized lazily in lambda_handler (endpoint URL comes from env at runtime)
 # Configure S3 client to use Signature Version 4 (required for KMS-encrypted objects)
@@ -48,6 +49,21 @@ def handle_start_conversation(connection_id: str, user_id: str, body: dict, conf
             'message': 'Missing questionId or questionText'
         })
         return
+    
+    # Check subscription access before starting conversation
+    try:
+        access = check_question_category_access(user_id, question_id)
+        if not access['allowed']:
+            send_message(connection_id, {
+                'type': 'limit_reached',
+                'limitType': access['reason'],
+                'message': access['message'],
+                'upgradeUrl': '/pricing'
+            })
+            return
+    except Exception as e:
+        print(f"[PLAN_CHECK] Error checking access, allowing by default: {e}")
+        # Fail open — don't block conversations if plan_check has an error
     
     print(f"[START] Starting conversation for question: {question_id}")
     

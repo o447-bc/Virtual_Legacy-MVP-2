@@ -1,12 +1,20 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { getPublicPlans, type PlanDefinition } from "@/services/billingService";
 
 const Home = () => {
   const { user } = useAuth();
+  const [premiumPlan, setPremiumPlan] = useState<PlanDefinition | null>(null);
+
+  useEffect(() => {
+    getPublicPlans()
+      .then((data) => setPremiumPlan(data.plans?.premium ?? null))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -53,7 +61,7 @@ const Home = () => {
               <>
                 <Link to="/signup-create-legacy">
                   <Button className="text-lg py-6 px-8 bg-legacy-purple hover:bg-legacy-navy">
-                    Create Your Legacy
+                    Start Free
                   </Button>
                 </Link>
                 <Link to="/signup-start-their-legacy">
@@ -97,6 +105,26 @@ const Home = () => {
             </div>
           </div>
         </section>
+
+        {/* Pricing Section */}
+        <section className="py-16 bg-white">
+          <div className="container mx-auto text-center px-4">
+            <h2 className="text-3xl font-bold text-legacy-navy mb-4">Simple, Transparent Pricing</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-2">
+              Free to start. Upgrade to Premium for{' '}
+              {premiumPlan?.monthlyPriceDisplay ?? '$9.99'}/mo to unlock all questions and features.
+            </p>
+            <p className="text-sm text-legacy-purple font-medium mb-8">
+              {premiumPlan?.annualMonthlyEquivalentDisplay ?? '$6.58'}/mo — save{' '}
+              {premiumPlan?.annualSavingsPercent ?? 34}% with annual billing
+            </p>
+            <Link to="/pricing">
+              <Button className="bg-legacy-purple hover:bg-legacy-navy text-lg py-5 px-8">
+                View Plans
+              </Button>
+            </Link>
+          </div>
+        </section>
       </main>
       
       <footer className="bg-legacy-navy text-white py-8">
@@ -125,6 +153,11 @@ const Home = () => {
                 <li>
                   <Link to="/legacy-create-choice" className="text-gray-300 hover:text-white">
                     Sign Up
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/pricing" className="text-gray-300 hover:text-white">
+                    Pricing
                   </Link>
                 </li>
               </ul>

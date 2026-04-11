@@ -1,5 +1,7 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { UserMenu } from "@/components/UserMenu";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 /**
  * Header Component
@@ -19,13 +21,26 @@ import { UserMenu } from "@/components/UserMenu";
  * - 12.8: Consistent spacing with other UI components
  */
 export const Header: React.FC = () => {
+  const { trialDaysRemaining } = useSubscription();
+  const showTrialIndicator = trialDaysRemaining !== null && trialDaysRemaining <= 3 && trialDaysRemaining > 0;
+
   return (
     <header className="bg-white shadow-sm">
       <div className="container mx-auto py-3 px-4 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
         {/* Application Title */}
-        <h1 className="text-lg sm:text-xl font-semibold text-legacy-navy text-center sm:text-left">
-          SoulReel
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg sm:text-xl font-semibold text-legacy-navy text-center sm:text-left">
+            SoulReel
+          </h1>
+          {showTrialIndicator && (
+            <Link
+              to="/pricing"
+              className="text-xs font-medium text-amber-700 bg-amber-100 border border-amber-300 rounded-full px-2.5 py-0.5 hover:bg-amber-200 transition-colors"
+            >
+              Trial: {trialDaysRemaining} {trialDaysRemaining === 1 ? 'day' : 'days'} left
+            </Link>
+          )}
+        </div>
         
         {/* User Menu */}
         <UserMenu />

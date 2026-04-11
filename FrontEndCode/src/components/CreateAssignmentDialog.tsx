@@ -27,6 +27,7 @@ interface CreateAssignmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  onBenefactorLimitError?: (message: string) => void;
 }
 
 interface FormErrors {
@@ -50,7 +51,8 @@ interface FormErrors {
 export const CreateAssignmentDialog: React.FC<CreateAssignmentDialogProps> = ({
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  onBenefactorLimitError
 }) => {
   // Form state
   const [benefactorEmail, setBenefactorEmail] = useState('');
@@ -224,7 +226,14 @@ export const CreateAssignmentDialog: React.FC<CreateAssignmentDialogProps> = ({
 
     } catch (error: any) {
       console.error('Error creating assignment:', error);
-      toast.error(error.message || 'Failed to create assignment');
+      if (error.status === 403 && error.errorType === 'benefactor_limit' && onBenefactorLimitError) {
+        const message = error.errorData?.message || 'You have reached your benefactor limit. Upgrade to Premium to add more.';
+        resetForm();
+        onOpenChange(false);
+        onBenefactorLimitError(message);
+      } else {
+        toast.error(error.message || 'Failed to create assignment');
+      }
     } finally {
       setIsSubmitting(false);
     }

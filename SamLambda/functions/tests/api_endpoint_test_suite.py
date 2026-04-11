@@ -89,9 +89,11 @@ class APIEndpointTestSuite(unittest.TestCase):
                     'claims': {
                         'sub': user_data['user_id'],
                         'email': user_data['email'],
-                        'custom:persona_type': user_data['persona_type'],
-                        'custom:initiator_id': user_data['initiator_id'],
-                        'custom:related_user_id': user_data['related_user_id']
+                        'profile': json.dumps({
+                            'persona_type': user_data['persona_type'],
+                            'initiator_id': user_data['initiator_id'],
+                            'related_user_id': user_data['related_user_id']
+                        })
                     }
                 }
             },

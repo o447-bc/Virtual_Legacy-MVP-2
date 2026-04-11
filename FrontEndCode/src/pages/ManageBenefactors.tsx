@@ -53,6 +53,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { CreateAssignmentDialog } from "@/components/CreateAssignmentDialog";
+import { UpgradePromptDialog } from "@/components/UpgradePromptDialog";
 
 /**
  * ManageBenefactors Page Component
@@ -97,6 +98,10 @@ const ManageBenefactors: React.FC = () => {
 
   // Create assignment dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // Upgrade prompt dialog state
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
 
   // Redirect non-legacy-makers
   useEffect(() => {
@@ -321,6 +326,14 @@ const ManageBenefactors: React.FC = () => {
         console.error('Error refreshing assignments:', err);
       }
     }
+  };
+
+  /**
+   * Handle benefactor limit error from CreateAssignmentDialog
+   */
+  const handleBenefactorLimitError = (message: string) => {
+    setUpgradeMessage(message);
+    setShowUpgradeDialog(true);
   };
 
   // Early return for authentication checks
@@ -590,6 +603,19 @@ const ManageBenefactors: React.FC = () => {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={handleAssignmentCreated}
+        onBenefactorLimitError={handleBenefactorLimitError}
+      />
+
+      {/* Upgrade Prompt Dialog */}
+      <UpgradePromptDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        title="Upgrade to Premium"
+        message={upgradeMessage}
+        onUpgrade={() => {
+          setShowUpgradeDialog(false);
+          navigate('/pricing');
+        }}
       />
     </div>
   );

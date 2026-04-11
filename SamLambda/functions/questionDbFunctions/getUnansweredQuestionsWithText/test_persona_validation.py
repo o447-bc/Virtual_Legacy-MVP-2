@@ -14,7 +14,7 @@ class TestQuestionWithTextPersonaValidation(unittest.TestCase):
     def test_legacy_maker_can_access_questions_with_text(self):
         """Test that legacy makers can access questions with text"""
         
-        # Mock event with legacy maker persona
+        # Mock event with legacy maker persona — uses production 'profile' JSON structure
         test_event = {
             'queryStringParameters': {
                 'questionType': 'childhood',
@@ -24,8 +24,11 @@ class TestQuestionWithTextPersonaValidation(unittest.TestCase):
                 'authorizer': {
                     'claims': {
                         'sub': 'test-user-123',
-                        'custom:persona_type': 'legacy_maker',
-                        'custom:initiator_id': 'test-user-123'
+                        'profile': json.dumps({
+                            'persona_type': 'legacy_maker',
+                            'initiator_id': 'test-user-123',
+                            'related_user_id': ''
+                        })
                     }
                 }
             }
@@ -52,7 +55,11 @@ class TestQuestionWithTextPersonaValidation(unittest.TestCase):
                 'authorizer': {
                     'claims': {
                         'sub': 'test-benefactor-789',
-                        'custom:persona_type': 'legacy_benefactor'
+                        'profile': json.dumps({
+                            'persona_type': 'legacy_benefactor',
+                            'initiator_id': 'test-benefactor-789',
+                            'related_user_id': ''
+                        })
                     }
                 }
             }

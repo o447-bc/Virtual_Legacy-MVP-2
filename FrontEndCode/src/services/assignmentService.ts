@@ -144,7 +144,11 @@ export const createAssignment = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      const err = new Error(errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      (err as any).status = response.status;
+      (err as any).errorType = errorData.error;
+      (err as any).errorData = errorData;
+      throw err;
     }
 
     const data = await response.json();

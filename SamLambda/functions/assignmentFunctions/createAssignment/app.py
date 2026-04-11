@@ -32,6 +32,7 @@ from assignment_dal import delete_assignment
 from logging_utils import StructuredLogger
 from cors import cors_headers
 from responses import error_response
+from plan_check import check_benefactor_limit
 
 
 
@@ -82,6 +83,23 @@ def lambda_handler(event, context):
                 'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unable to identify user from token'})
             }
+
+        # Check benefactor limit before creating assignment
+        try:
+            limit_check = check_benefactor_limit(legacy_maker_id)
+            if not limit_check['allowed']:
+                return {
+                    'statusCode': 403,
+                    'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
+                    'body': json.dumps({
+                        'error': 'benefactor_limit',
+                        'message': limit_check['message'],
+                        'currentCount': limit_check['currentCount'],
+                        'limit': limit_check['limit']
+                    })
+                }
+        except Exception as e:
+            print(f"[PLAN_CHECK] Error checking benefactor limit, allowing by default: {e}")
 
         # Parse request body
         body = json.loads(event.get('body', '{}'))
@@ -246,6 +264,22 @@ def lambda_handler(event, context):
 
         if invitation_token:
             response_body['invitation_token'] = invitation_token
+
+        # Increment benefactor count in subscription record
+        try:
+            dynamodb_resource = boto3.resource('dynamodb')
+            sub_table = dynamodb_resource.Table(os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB'))
+            sub_table.update_item(
+                Key={'userId': legacy_maker_id},
+                UpdateExpression='SET benefactorCount = if_not_exists(benefactorCount, :zero) + :inc, updatedAt = :now',
+                ExpressionAttributeValues={
+                    ':zero': 0,
+                    ':inc': 1,
+                    ':now': datetime.now().isoformat() + 'Z',
+                },
+            )
+        except Exception as e:
+            print(f"WARNING: Failed to increment benefactorCount: {e}")
 
         return {
             'statusCode': 201,
