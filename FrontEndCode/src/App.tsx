@@ -32,6 +32,7 @@ import PricingPage from "./pages/PricingPage";
 import { TestS3 } from "./pages/TestS3";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import YourData from "./pages/YourData";
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/record" element={<ProtectedRoute requiredPersona="legacy_maker"><RecordResponse /></ProtectedRoute>} />
             <Route path="/record-conversation" element={<ProtectedRoute requiredPersona="legacy_maker"><RecordConversation /></ProtectedRoute>} />
             <Route path="/question-themes" element={<ProtectedRoute requiredPersona="legacy_maker"><QuestionThemes /></ProtectedRoute>} />
+            <Route path="/your-data" element={<ProtectedRoute><YourData /></ProtectedRoute>} />
             <Route path="/test-s3" element={<ProtectedRoute><TestS3 /></ProtectedRoute>} />
 
             {/* Admin routes — require SoulReelAdmins Cognito group */}

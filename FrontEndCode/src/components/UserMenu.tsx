@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users, RefreshCw, Crown } from "lucide-react";
+import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users, RefreshCw, Crown, HardDrive } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { getPortalUrl } from "@/services/billingService";
@@ -260,6 +260,14 @@ export const UserMenu: React.FC = () => {
           >
             <Shield className="mr-2 h-4 w-4 text-legacy-purple" />
             <span className="text-sm text-legacy-navy">Security & Privacy</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            className="cursor-pointer hover:bg-legacy-purple/10 focus:bg-legacy-purple/10 min-h-[44px] py-3"
+            onClick={() => navigate('/your-data')}
+          >
+            <HardDrive className="mr-2 h-4 w-4 text-legacy-purple" />
+            <span className="text-sm text-legacy-navy">Your Data</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem

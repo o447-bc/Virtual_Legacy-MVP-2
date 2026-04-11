@@ -41,6 +41,7 @@ Globals:
         TABLE_SUBSCRIPTIONS: 'UserSubscriptionsDB'
         # Set to 'true' to enable server-side persona enforcement (Phase 2 rollout)
         ENFORCE_PERSONA_VALIDATION: 'false'
+        TABLE_DATA_RETENTION: !Ref DataRetentionTable
   Api:
     Cors:
       AllowMethods: '''GET,POST,PUT,OPTIONS'''
@@ -277,6 +278,105 @@ Resources:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+
+  # Data Retention Lifecycle — Audit log bucket with Object Lock for regulatory compliance (3-year retention)
+  RetentionAuditBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub soulreel-retention-audit-${AWS::AccountId}
+      ObjectLockEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+            Mode: COMPLIANCE
+            Years: 3
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt DataEncryptionKey.Arn
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveAfterRetention
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 1095
+                StorageClass: DEEP_ARCHIVE
+      Tags:
+        - Key: Project
+          Value: SoulReel
+        - Key: Purpose
+          Value: DataRetentionAudit
+
+  # Data Retention Lifecycle — Temporary bucket for Content_Package ZIP archives (auto-expire after 7 days)
+  ExportsTempBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub soulreel-exports-temp-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt DataEncryptionKey.Arn
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireExports
+            Status: Enabled
+            ExpirationInDays: 7
+      Tags:
+        - Key: Project
+          Value: SoulReel
+        - Key: Purpose
+          Value: DataExportTemp
+
+  # -----------------------------------------------------------------------
+  # Data Retention Lifecycle — S3 Intelligent-Tiering for virtual-legacy bucket
+  # The virtual-legacy bucket is NOT managed by CloudFormation (created via AWS console).
+  # Apply this lifecycle rule manually via the AWS CLI (one-time command):
+  #
+  #   aws s3api put-bucket-lifecycle-configuration \
+  #     --bucket virtual-legacy \
+  #     --lifecycle-configuration '{
+  #       "Rules": [
+  #         {
+  #           "ID": "IntelligentTieringConversations",
+  #           "Status": "Enabled",
+  #           "Filter": { "Prefix": "conversations/" },
+  #           "Transitions": [
+  #             { "Days": 30, "StorageClass": "INTELLIGENT_TIERING" }
+  #           ]
+  #         },
+  #         {
+  #           "ID": "IntelligentTieringUserResponses",
+  #           "Status": "Enabled",
+  #           "Filter": { "Prefix": "user-responses/" },
+  #           "Transitions": [
+  #             { "Days": 30, "StorageClass": "INTELLIGENT_TIERING" }
+  #           ]
+  #         }
+  #       ]
+  #     }'
+  #
+  # Note: Glacier Deep Archive transitions are handled selectively by the
+  # StorageLifecycleManager Lambda for legacy-protected content only, because
+  # the transition criteria depend on per-user state that S3 lifecycle rules
+  # cannot evaluate.
+  # -----------------------------------------------------------------------
 
   # GuardDuty threat detection
   GuardDutyDetector:
@@ -556,6 +656,45 @@ Resources:
               KeyType: HASH
           Projection:
             ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Data Retention Lifecycle — DynamoDB table for tracking exports, deletions, dormancy, legacy protection, and storage metrics
+  DataRetentionTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DataRetentionDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: recordType
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: updatedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: recordType
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: status-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: updatedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
       SSESpecification:
         SSEEnabled: true
         SSEType: KMS
@@ -2163,6 +2302,9 @@ Resources:
         - arm64
       Timeout: 15
       MemorySize: 256
+      Environment:
+        Variables:
+          TABLE_DATA_RETENTION: !Ref DataRetentionTable
       Policies:
         - Statement:
             - Effect: Allow
@@ -2176,12 +2318,26 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
                 - s3:GetObject
                 - s3:ListBucket
+                - s3:RestoreObject
               Resource:
                 - arn:aws:s3:::virtual-legacy/user-responses/*
                 - arn:aws:s3:::virtual-legacy/conversations/*
                 - arn:aws:s3:::virtual-legacy
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:HeadObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy/*
         - Statement:
             - Effect: Allow
               Action:
@@ -3126,6 +3282,11 @@ Resources:
       Environment:
         Variables:
           SUBSCRIPTIONS_TABLE: !Ref UserSubscriptionsTable
+          DATA_EXPORT_FUNCTION: !GetAtt DataExportFunction.Arn
+          STORAGE_LIFECYCLE_FUNCTION: !GetAtt StorageLifecycleManager.Arn
+          SENDER_EMAIL: noreply@soulreel.net
+          TABLE_DATA_RETENTION: !Ref DataRetentionTable
+          FRONTEND_URL: https://www.soulreel.net
       Policies:
         - Statement:
             - Effect: Allow
@@ -3140,6 +3301,12 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
                 - ssm:GetParameter
               Resource:
                 - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/stripe/*
@@ -3149,6 +3316,18 @@ Resources:
                 - kms:Decrypt
                 - kms:DescribeKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt DataExportFunction.Arn
+                - !GetAtt StorageLifecycleManager.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: '*'
       Events:
         Webhook:
           Type: Api
@@ -3159,6 +3338,764 @@ Resources:
           Type: Api
           Properties:
             Path: /billing/webhook
+            Method: OPTIONS
+
+  # ============================================================
+  # Data Retention Lambda Functions
+  # ============================================================
+
+  DataExportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/dataRetentionFunctions/dataExport/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 900
+      MemorySize: 512
+      EphemeralStorage:
+        Size: 10240
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          EXPORTS_BUCKET: !Ref ExportsTempBucket
+          AUDIT_BUCKET: !Ref RetentionAuditBucket
+          SENDER_EMAIL: noreply@soulreel.net
+          FRONTEND_URL: 'https://www.soulreel.net'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+                - !Sub ${DataRetentionTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/UserSubscriptionsDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !Sub ${PersonaRelationshipsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+                - s3:HeadObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy
+                - arn:aws:s3:::virtual-legacy/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+              Resource:
+                - !Sub ${ExportsTempBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:RestoreObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub ${RetentionAuditBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/data-retention/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ExportRequest:
+          Type: Api
+          Properties:
+            Path: /data/export-request
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ExportRequestOptions:
+          Type: Api
+          Properties:
+            Path: /data/export-request
+            Method: OPTIONS
+        GdprExport:
+          Type: Api
+          Properties:
+            Path: /data/gdpr-export
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GdprExportOptions:
+          Type: Api
+          Properties:
+            Path: /data/gdpr-export
+            Method: OPTIONS
+        ExportStatus:
+          Type: Api
+          Properties:
+            Path: /data/export-status
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ExportStatusOptions:
+          Type: Api
+          Properties:
+            Path: /data/export-status
+            Method: OPTIONS
+
+  # ============================================================
+  # Account Deletion Function (API Gateway + EventBridge — daily)
+  # ============================================================
+
+  AccountDeletionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/dataRetentionFunctions/accountDeletion/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+        - !Ref StripeDependencyLayer
+      Environment:
+        Variables:
+          AUDIT_BUCKET: !Ref RetentionAuditBucket
+          SENDER_EMAIL: noreply@soulreel.net
+          FRONTEND_URL: 'https://www.soulreel.net'
+          COGNITO_USER_POOL_ID: !Ref ExistingUserPoolId
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+                - !Sub ${DataRetentionTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/UserSubscriptionsDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !Sub ${PersonaRelationshipsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt ConversationStateTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:DeleteItem
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt EngagementTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt AccessConditionsTable.Arn
+                - !Sub ${AccessConditionsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:DeleteObject
+                - s3:ListBucket
+              Resource:
+                - arn:aws:s3:::virtual-legacy
+                - arn:aws:s3:::virtual-legacy/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub ${RetentionAuditBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/stripe/*
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/data-retention/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminDeleteUser
+              Resource: !Ref ExistingUserPoolArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        DeleteRequest:
+          Type: Api
+          Properties:
+            Path: /account/delete-request
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        DeleteRequestOptions:
+          Type: Api
+          Properties:
+            Path: /account/delete-request
+            Method: OPTIONS
+        CancelDeletion:
+          Type: Api
+          Properties:
+            Path: /account/cancel-deletion
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        CancelDeletionOptions:
+          Type: Api
+          Properties:
+            Path: /account/cancel-deletion
+            Method: OPTIONS
+        DeletionStatus:
+          Type: Api
+          Properties:
+            Path: /account/deletion-status
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        DeletionStatusOptions:
+          Type: Api
+          Properties:
+            Path: /account/deletion-status
+            Method: OPTIONS
+        DailyDeletionScan:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(1 day)'
+            Description: Process pending account deletions past grace period
+            Enabled: true
+
+  # ============================================================
+  # Dormant Account Detector (EventBridge — weekly)
+  # ============================================================
+
+  DormantAccountDetector:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/dataRetentionFunctions/dormantDetector/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          SENDER_EMAIL: noreply@soulreel.net
+          FRONTEND_URL: 'https://www.soulreel.net'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+                - !Sub ${DataRetentionTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/UserSubscriptionsDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !Sub ${PersonaRelationshipsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub ${RetentionAuditBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/data-retention/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        WeeklyDormancyScan:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(7 days)'
+            Description: Detect dormant accounts and send re-engagement emails
+            Enabled: true
+
+  # ============================================================
+  # Storage Lifecycle Manager (EventBridge — weekly + Admin API)
+  # ============================================================
+
+  StorageLifecycleManager:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/dataRetentionFunctions/storageLifecycle/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 900
+      MemorySize: 512
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          AUDIT_BUCKET: !Ref RetentionAuditBucket
+          SENDER_EMAIL: noreply@soulreel.net
+          FRONTEND_URL: 'https://www.soulreel.net'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+                - !Sub ${DataRetentionTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:ListBucket
+                - s3:GetObject
+                - s3:HeadObject
+                - s3:RestoreObject
+                - s3:PutObject
+                - s3:CopyObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy
+                - arn:aws:s3:::virtual-legacy/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub ${RetentionAuditBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/data-retention/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        WeeklyReconciliation:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(7 days)'
+            Description: Reconcile storage metrics and manage Glacier transitions
+            Enabled: true
+        StorageReport:
+          Type: Api
+          Properties:
+            Path: /admin/storage-report
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        StorageReportOptions:
+          Type: Api
+          Properties:
+            Path: /admin/storage-report
+            Method: OPTIONS
+
+  # ============================================================
+  # Legacy Protection Function (Cognito Auth + EventBridge weekly)
+  # ============================================================
+
+  LegacyProtectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/dataRetentionFunctions/legacyProtection/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 120
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          AUDIT_BUCKET: !Ref RetentionAuditBucket
+          SENDER_EMAIL: noreply@soulreel.net
+          FRONTEND_URL: 'https://www.soulreel.net'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+                - !Sub ${DataRetentionTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/UserSubscriptionsDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !Sub ${PersonaRelationshipsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub ${RetentionAuditBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/data-retention/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ProtectionRequest:
+          Type: Api
+          Properties:
+            Path: /legacy/protection-request
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ProtectionRequestOptions:
+          Type: Api
+          Properties:
+            Path: /legacy/protection-request
+            Method: OPTIONS
+        WeeklyAutoEvaluation:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(7 days)'
+            Description: Auto-evaluate accounts for legacy protection activation
+            Enabled: true
+
+  # ============================================================
+  # Admin Lifecycle Function (Cognito Auth — Admin Only)
+  # ============================================================
+
+  AdminLifecycleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/dataRetentionFunctions/adminLifecycle/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          AUDIT_BUCKET: !Ref RetentionAuditBucket
+          SENDER_EMAIL: noreply@soulreel.net
+          FRONTEND_URL: 'https://www.soulreel.net'
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt DataRetentionTable.Arn
+                - !Sub ${DataRetentionTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/UserSubscriptionsDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt PersonaRelationshipsTable.Arn
+                - !Sub ${PersonaRelationshipsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource:
+                - !Sub ${RetentionAuditBucket.Arn}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/data-retention/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource:
+                - !GetAtt DormantAccountDetector.Arn
+                - !GetAtt AccountDeletionFunction.Arn
+                - !GetAtt StorageLifecycleManager.Arn
+                - !GetAtt LegacyProtectionFunction.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        LifecycleSimulate:
+          Type: Api
+          Properties:
+            Path: /admin/lifecycle/simulate
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        LifecycleSimulateOptions:
+          Type: Api
+          Properties:
+            Path: /admin/lifecycle/simulate
+            Method: OPTIONS
+        SetTimestamps:
+          Type: Api
+          Properties:
+            Path: /admin/lifecycle/set-timestamps
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SetTimestampsOptions:
+          Type: Api
+          Properties:
+            Path: /admin/lifecycle/set-timestamps
+            Method: OPTIONS
+        RunScenario:
+          Type: Api
+          Properties:
+            Path: /admin/lifecycle/run-scenario
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        RunScenarioOptions:
+          Type: Api
+          Properties:
+            Path: /admin/lifecycle/run-scenario
+            Method: OPTIONS
+        SimulateTier:
+          Type: Api
+          Properties:
+            Path: /admin/storage/simulate-tier
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SimulateTierOptions:
+          Type: Api
+          Properties:
+            Path: /admin/storage/simulate-tier
+            Method: OPTIONS
+        ClearSimulation:
+          Type: Api
+          Properties:
+            Path: /admin/storage/clear-simulation
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ClearSimulationOptions:
+          Type: Api
+          Properties:
+            Path: /admin/storage/clear-simulation
             Method: OPTIONS
 
   # ============================================================

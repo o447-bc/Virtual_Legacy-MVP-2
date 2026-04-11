@@ -3,9 +3,12 @@ import json
 import boto3
 from botocore.client import Config
 from decimal import Decimal
+from datetime import datetime, timezone
 from botocore.exceptions import ClientError
 from cors import cors_headers
 from responses import error_response
+
+_TABLE_DATA_RETENTION = os.environ.get('TABLE_DATA_RETENTION', 'DataRetentionDB')
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -67,6 +70,11 @@ def lambda_handler(event, context):
                 'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
                 'body': json.dumps({'error': 'Unauthorized access'})
             }
+        
+        # --- Storage tier check: detect Glacier/Deep Archive content (Req 4.1-4.6) ---
+        glacier_response = _check_storage_tier(maker_id, benefactor_id, dynamodb)
+        if glacier_response is not None:
+            return glacier_response
         
         # Query videos
         video_table = dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
@@ -223,3 +231,134 @@ def lambda_handler(event, context):
             'headers': {'Access-Control-Allow-Origin': os.environ.get('ALLOWED_ORIGIN', 'https://www.soulreel.net')},
             'body': json.dumps({'error': 'A server error occurred. Please try again.'})
         }
+
+
+# ===================================================================
+# Storage tier check helpers (Req 4.1-4.6)
+# ===================================================================
+
+def _check_storage_tier(maker_id: str, benefactor_id: str,
+                        dynamodb_resource) -> dict | None:
+    """
+    Check DataRetentionDB for the maker's storage tier.
+
+    If content is in GLACIER or DEEP_ARCHIVE (real or simulated),
+    initiate a restore and return an HTTP 202 response.
+    Returns None if content is accessible (STANDARD / INTELLIGENT_TIERING).
+    """
+    try:
+        retention_table = dynamodb_resource.Table(_TABLE_DATA_RETENTION)
+        resp = retention_table.get_item(
+            Key={'userId': maker_id, 'recordType': 'storage_metrics'},
+        )
+        metrics = resp.get('Item')
+        if not metrics:
+            return None  # No metrics → assume content is accessible
+
+        # Check simulated tier first (admin testing), then real tiers
+        simulated_tier = metrics.get('simulatedTier', '')
+        is_simulated = metrics.get('simulated', False)
+
+        if is_simulated and simulated_tier in ('GLACIER', 'DEEP_ARCHIVE'):
+            tier = simulated_tier
+        else:
+            glacier_bytes = int(metrics.get('glacierBytes', 0) or 0)
+            deep_archive_bytes = int(metrics.get('deepArchiveBytes', 0) or 0)
+            if deep_archive_bytes > 0:
+                tier = 'DEEP_ARCHIVE'
+            elif glacier_bytes > 0:
+                tier = 'GLACIER'
+            else:
+                return None  # Content is accessible
+
+        # Determine retrieval tier and estimated time
+        if tier == 'DEEP_ARCHIVE':
+            retrieval_tier = 'Standard'
+            estimated_minutes = 720  # 3-5 hours → use upper bound
+        else:
+            retrieval_tier = 'Expedited'
+            estimated_minutes = 5  # 1-5 minutes
+
+        # Create retrieval_queue entry in DataRetentionDB
+        now = datetime.now(timezone.utc)
+        estimated_completion = now.isoformat()
+        expires_at = int((now.timestamp())) + (estimated_minutes * 60) + 86400  # +24h TTL
+
+        try:
+            retention_table.put_item(
+                Item={
+                    'userId': maker_id,
+                    'recordType': f'retrieval_queue#{benefactor_id}',
+                    'status': 'pending',
+                    'requestedBy': benefactor_id,
+                    'retrievalTier': retrieval_tier,
+                    'estimatedMinutes': estimated_minutes,
+                    'requestedAt': now.isoformat(),
+                    'updatedAt': now.isoformat(),
+                    'expiresAt': expires_at,
+                },
+                ConditionExpression='attribute_not_exists(userId)',
+            )
+        except ClientError as exc:
+            if exc.response['Error']['Code'] != 'ConditionalCheckFailedException':
+                raise
+            # Entry already exists — retrieval already in progress
+
+        # Initiate S3 RestoreObject if not simulated
+        if not is_simulated:
+            _initiate_restore_for_maker(maker_id, retrieval_tier)
+
+        return {
+            'statusCode': 202,
+            'headers': {
+                'Access-Control-Allow-Origin': os.environ.get(
+                    'ALLOWED_ORIGIN', 'https://www.soulreel.net'
+                ),
+            },
+            'body': json.dumps({
+                'status': 'retrieving',
+                'estimatedMinutes': estimated_minutes,
+                'message': (
+                    "This recording is being retrieved from our archive. "
+                    "We'll email you when it's ready."
+                ),
+            }),
+        }
+    except Exception as exc:
+        print(f"Error checking storage tier for maker {maker_id}: {exc}")
+        return None  # On error, fall through to normal flow
+
+
+def _initiate_restore_for_maker(maker_id: str, retrieval_tier: str) -> None:
+    """Initiate S3 RestoreObject for all of a maker's archived content."""
+    try:
+        s3_client = boto3.client('s3')
+        bucket = 'virtual-legacy'
+        prefixes = [f'conversations/{maker_id}/', f'user-responses/{maker_id}/']
+
+        for prefix in prefixes:
+            paginator = s3_client.get_paginator('list_objects_v2')
+            for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+                for obj in page.get('Contents', []):
+                    key = obj['Key']
+                    try:
+                        head = s3_client.head_object(Bucket=bucket, Key=key)
+                        storage_class = head.get('StorageClass', 'STANDARD')
+                        if storage_class in ('GLACIER', 'DEEP_ARCHIVE'):
+                            s3_client.restore_object(
+                                Bucket=bucket,
+                                Key=key,
+                                RestoreRequest={
+                                    'Days': 7,
+                                    'GlacierJobParameters': {
+                                        'Tier': retrieval_tier,
+                                    },
+                                },
+                            )
+                    except ClientError as exc:
+                        error_code = exc.response['Error']['Code']
+                        if error_code == 'RestoreAlreadyInProgress':
+                            continue
+                        print(f"Error restoring {key}: {exc}")
+    except Exception as exc:
+        print(f"Error initiating restore for maker {maker_id}: {exc}")

@@ -34,8 +34,15 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _dynamodb = boto3.resource('dynamodb')
 _ssm = boto3.client('ssm')
+_lambda_client = boto3.client('lambda')
+_ses = boto3.client('ses', region_name='us-east-1')
 
 _TABLE_NAME = os.environ.get('SUBSCRIPTIONS_TABLE', 'UserSubscriptionsDB')
+_TABLE_DATA_RETENTION = os.environ.get('TABLE_DATA_RETENTION', 'DataRetentionDB')
+_DATA_EXPORT_FUNCTION = os.environ.get('DATA_EXPORT_FUNCTION', '')
+_STORAGE_LIFECYCLE_FUNCTION = os.environ.get('STORAGE_LIFECYCLE_FUNCTION', '')
+_SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'noreply@soulreel.net')
+_FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://www.soulreel.net')
 
 # ---------------------------------------------------------------------------
 # Module-level SSM caches (survive warm Lambda invocations)
@@ -229,6 +236,9 @@ def _handle_checkout_completed(stripe_event, api_event):
         },
     )
 
+    # --- Check for Glacier content and trigger reactivation restore (Req 3.6) ---
+    _check_and_trigger_reactivation_restore(user_id)
+
 
 def _handle_subscription_updated(stripe_event, api_event):
     """
@@ -305,6 +315,7 @@ def _handle_subscription_deleted(stripe_event, api_event):
     Handle customer.subscription.deleted.
 
     GSI lookup, set planId=free, status=canceled.
+    Send lapse reassurance email (Req 9.4) and trigger auto-export (Req 2.1).
     """
     subscription = stripe_event.data.object
     customer_id = getattr(subscription, 'customer', None)
@@ -341,6 +352,12 @@ def _handle_subscription_deleted(stripe_event, api_event):
             ':now': now_iso,
         },
     )
+
+    # --- Lapse reassurance email (Req 9.4) ---
+    _send_lapse_reassurance_email(item)
+
+    # --- Trigger async auto-export (Req 2.1) ---
+    _trigger_auto_export(user_id)
 
 
 def _handle_payment_failed(stripe_event, api_event):
@@ -383,3 +400,124 @@ def _handle_payment_failed(stripe_event, api_event):
             ':now': now_iso,
         },
     )
+
+
+# ===================================================================
+# Data retention lifecycle helpers
+# ===================================================================
+
+def _send_lapse_reassurance_email(user_item: dict) -> None:
+    """Send reassurance email when subscription lapses (Req 9.4)."""
+    email = user_item.get('email') or user_item.get('userEmail', '')
+    if not email:
+        logger.warning('[WEBHOOK] No email found for user %s, skipping lapse reassurance',
+                        user_item.get('userId', 'unknown'))
+        return
+
+    try:
+        subject = 'Your SoulReel Content Is Safe'
+        html_body = (
+            '<h2>Your subscription has ended, but your stories are safe</h2>'
+            '<p>We wanted to reassure you that all your recordings, transcripts, '
+            'and AI conversation summaries remain fully accessible to your benefactors. '
+            'Nothing has been deleted or archived.</p>'
+            '<p>Your content is always yours — all recordings remain accessible '
+            'regardless of your plan.</p>'
+            f'<p><a href="{_FRONTEND_URL}/pricing">Resubscribe anytime</a> to unlock '
+            'Premium features like data export.</p>'
+            '<p>Warm regards,<br/>The SoulReel Team</p>'
+        )
+        text_body = (
+            'Your subscription has ended, but your stories are safe.\n\n'
+            'All your recordings, transcripts, and AI conversation summaries '
+            'remain fully accessible to your benefactors. Nothing has been deleted.\n\n'
+            'Your content is always yours — all recordings remain accessible '
+            'regardless of your plan.\n\n'
+            f'Resubscribe anytime at {_FRONTEND_URL}/pricing to unlock Premium features.\n\n'
+            'Warm regards,\nThe SoulReel Team'
+        )
+        _ses.send_email(
+            Source=_SENDER_EMAIL,
+            Destination={'ToAddresses': [email]},
+            Message={
+                'Subject': {'Data': subject},
+                'Body': {
+                    'Html': {'Data': html_body},
+                    'Text': {'Data': text_body},
+                },
+            },
+        )
+        logger.info('[WEBHOOK] Lapse reassurance email sent to %s', email)
+    except Exception as exc:
+        logger.error('[WEBHOOK] Failed to send lapse reassurance email: %s', exc)
+
+
+def _trigger_auto_export(user_id: str) -> None:
+    """Trigger async auto-export via DataExportFunction (Req 2.1)."""
+    if not _DATA_EXPORT_FUNCTION:
+        logger.warning('[WEBHOOK] DATA_EXPORT_FUNCTION not configured, skipping auto-export')
+        return
+
+    try:
+        payload = json.dumps({
+            'source': 'auto_export_on_cancellation',
+            'userId': user_id,
+        })
+        _lambda_client.invoke(
+            FunctionName=_DATA_EXPORT_FUNCTION,
+            InvocationType='Event',  # async
+            Payload=payload,
+        )
+        logger.info('[WEBHOOK] Auto-export triggered for userId=%s', user_id)
+    except Exception as exc:
+        logger.error('[WEBHOOK] Failed to trigger auto-export for userId=%s: %s',
+                      user_id, exc)
+
+
+def _check_and_trigger_reactivation_restore(user_id: str) -> None:
+    """Check for Glacier content and trigger reactivation restore (Req 3.6)."""
+    if not _STORAGE_LIFECYCLE_FUNCTION:
+        logger.warning('[WEBHOOK] STORAGE_LIFECYCLE_FUNCTION not configured, '
+                        'skipping reactivation restore check')
+        return
+
+    try:
+        # Check DataRetentionDB for storage_metrics to see if user has Glacier content
+        retention_table = _dynamodb.Table(_TABLE_DATA_RETENTION)
+        resp = retention_table.get_item(
+            Key={'userId': user_id, 'recordType': 'storage_metrics'},
+        )
+        metrics = resp.get('Item')
+        if not metrics:
+            logger.info('[WEBHOOK] No storage metrics for userId=%s, no restore needed', user_id)
+            return
+
+        # Check if any content is in Glacier or Deep Archive
+        glacier_bytes = int(metrics.get('glacierBytes', 0) or 0)
+        deep_archive_bytes = int(metrics.get('deepArchiveBytes', 0) or 0)
+        simulated_tier = metrics.get('simulatedTier', '')
+
+        needs_restore = (
+            glacier_bytes > 0
+            or deep_archive_bytes > 0
+            or simulated_tier in ('GLACIER', 'DEEP_ARCHIVE')
+        )
+
+        if not needs_restore:
+            logger.info('[WEBHOOK] No Glacier content for userId=%s, no restore needed', user_id)
+            return
+
+        # Trigger reactivation restore via StorageLifecycleManager
+        payload = json.dumps({
+            'source': 'reactivation_restore',
+            'userId': user_id,
+        })
+        _lambda_client.invoke(
+            FunctionName=_STORAGE_LIFECYCLE_FUNCTION,
+            InvocationType='Event',  # async
+            Payload=payload,
+        )
+        logger.info('[WEBHOOK] Reactivation restore triggered for userId=%s', user_id)
+    except Exception as exc:
+        logger.error('[WEBHOOK] Failed to check/trigger reactivation restore for userId=%s: %s',
+                      user_id, exc)

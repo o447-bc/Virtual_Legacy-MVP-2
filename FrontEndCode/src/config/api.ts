@@ -38,6 +38,16 @@ export const API_CONFIG = {
     BILLING_PORTAL: '/billing/portal',
     BILLING_APPLY_COUPON: '/billing/apply-coupon',
     BILLING_PLANS: '/billing/plans',
+
+    // Data Retention & Lifecycle
+    DATA_EXPORT_REQUEST: '/data/export-request',
+    DATA_GDPR_EXPORT: '/data/gdpr-export',
+    DATA_EXPORT_STATUS: '/data/export-status',
+    ACCOUNT_DELETE_REQUEST: '/account/delete-request',
+    ACCOUNT_CANCEL_DELETION: '/account/cancel-deletion',
+    ACCOUNT_DELETION_STATUS: '/account/deletion-status',
+    LEGACY_PROTECTION_REQUEST: '/legacy/protection-request',
+    ADMIN_STORAGE_REPORT: '/admin/storage-report',
   }
 };
 

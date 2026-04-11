@@ -1,0 +1,380 @@
+# Implementation Plan: Data Retention Lifecycle
+
+## Overview
+
+Implements a comprehensive data retention, export, and account lifecycle system for SoulReel. The implementation is ordered by dependency: infrastructure first (DynamoDB table, S3 buckets, SSM parameters), then shared utilities, then backend Lambda functions (starting with DataExportFunction since StripeWebhookFunction depends on it), then modifications to existing functions, then frontend service layer and page components, and finally integration wiring and testing checkpoints.
+
+Backend: Python 3.12 (Lambda). Frontend: TypeScript/React. Infrastructure: AWS SAM (template.yml).
+
+## Tasks
+
+- [x] 1. Infrastructure: DynamoDB table, S3 buckets, and SAM Globals update
+  - [x] 1.1 Add DataRetentionDB table to SamLambda/template.yml
+    - Add `DataRetentionTable` resource with userId (PK), recordType (SK), PAY_PER_REQUEST billing, KMS encryption via DataEncryptionKey, PITR enabled, TTL on `expiresAt`, and GSI `status-index` (PK: status, SK: updatedAt)
+    - Add `TABLE_DATA_RETENTION: !Ref DataRetentionTable` to `Globals.Function.Environment.Variables`
+    - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6_
+  - [x] 1.2 Add RetentionAuditBucket to SamLambda/template.yml
+    - Add `RetentionAuditBucket` S3 bucket with Object Lock (Compliance mode, 3-year retention), versioning enabled, KMS encryption via DataEncryptionKey with BucketKeyEnabled, all public access blocked, lifecycle rule to transition to DEEP_ARCHIVE after 1095 days
+    - Bucket name: `!Sub soulreel-retention-audit-${AWS::AccountId}`
+    - _Requirements: 11.1, 11.2, 11.3, 11.4_
+  - [x] 1.3 Add ExportsTempBucket to SamLambda/template.yml
+    - Add `ExportsTempBucket` S3 bucket with KMS encryption via DataEncryptionKey with BucketKeyEnabled, all public access blocked, lifecycle rule to expire all objects after 7 days
+    - Bucket name: `!Sub soulreel-exports-temp-${AWS::AccountId}`
+    - _Requirements: 1.3_
+  - [x] 1.4 Document S3 lifecycle policy for virtual-legacy bucket
+    - Add a comment block in template.yml with the `aws s3api put-bucket-lifecycle-configuration` CLI command for Intelligent-Tiering on `conversations/` and `user-responses/` prefixes after 30 days
+    - This is a manual one-time CLI command since virtual-legacy is not managed by CloudFormation
+    - _Requirements: 3.1_
+
+- [x] 2. SSM Parameters and shared utilities
+  - [x] 2.1 Create SSM Parameter Store entries
+    - Create a deployment script or SAM custom resource for all `/soulreel/data-retention/*` parameters: dormancy-threshold-1 (180), dormancy-threshold-2 (365), dormancy-threshold-3 (730), deletion-grace-period (30), legacy-protection-dormancy-days (730), legacy-protection-lapse-days (365), glacier-transition-days (365), glacier-no-access-days (180), intelligent-tiering-days (30), export-rate-limit-days (30), export-link-expiry-hours (72), testing-mode (disabled)
+    - _Requirements: 17.1, 17.5_
+  - [x] 2.2 Create audit_logger.py in SharedUtilsLayer
+    - Create `SamLambda/functions/shared/python/audit_logger.py` with `log_audit_event(event_type, user_id, details, initiator)` function
+    - SHA-256 hash the userId before writing, validate event_type against VALID_EVENT_TYPES list, write JSON record to audit S3 bucket with key pattern `audit/{YYYY}/{MM}/{DD}/{eventType}/{anonymizedUserId}_{HHMMSSffffff}.json`
+    - _Requirements: 11.1, 11.3_
+  - [x] 2.3 Create retention_config.py in SharedUtilsLayer
+    - Create `SamLambda/functions/shared/python/retention_config.py` with `get_config(key)`, `is_testing_mode()`, and `get_current_time(event)` functions
+    - Read from SSM `/soulreel/data-retention/{key}` with module-level caching and hardcoded DEFAULTS fallback
+    - `get_current_time()` respects `simulatedCurrentTime` parameter when testing mode is enabled
+    - _Requirements: 17.1, 17.2, 17.5_
+
+- [x] 3. Checkpoint — Verify infrastructure builds
+  - Ensure `sam build` succeeds with the new table, buckets, and globals. Ensure all tests pass, ask the user if questions arise.
+
+
+- [x] 4. DataExportFunction Lambda
+  - [x] 4.1 Add DataExportFunction resource to SamLambda/template.yml
+    - Define Lambda function at `SamLambda/functions/dataRetentionFunctions/dataExport/app.py`
+    - Runtime: python3.12, Architecture: arm64, Timeout: 900, MemorySize: 512, EphemeralStorage: 10240
+    - Layers: SharedUtilsLayer
+    - Environment variables: TABLE_DATA_RETENTION, EXPORTS_BUCKET (!Ref ExportsTempBucket), AUDIT_BUCKET (!Ref RetentionAuditBucket), SENDER_EMAIL (noreply@soulreel.net), FRONTEND_URL (https://www.soulreel.net) — plus inherited globals
+    - IAM policies: DynamoDB (GetItem/PutItem/UpdateItem/Query on DataRetentionTable + index, GetItem on UserSubscriptionsDB, Query on userQuestionStatusDB, Query on PersonaRelationshipsTable + index, GetItem on userStatusDB), S3 (GetObject/ListBucket/HeadObject on virtual-legacy, PutObject/GetObject on ExportsTempBucket, RestoreObject on virtual-legacy/*, PutObject on RetentionAuditBucket), SES (SendEmail), SSM (GetParameter on /soulreel/data-retention/*), KMS (Decrypt/DescribeKey/GenerateDataKey on DataEncryptionKey)
+    - API Events with OPTIONS: POST /data/export-request (CognitoAuthorizer), OPTIONS /data/export-request, POST /data/gdpr-export (CognitoAuthorizer), OPTIONS /data/gdpr-export, GET /data/export-status (CognitoAuthorizer), OPTIONS /data/export-status
+    - _Requirements: 1.1, 6.3_
+  - [x] 4.2 Implement DataExportFunction handler (app.py)
+    - Route by httpMethod + path: OPTIONS → CORS response, POST /data/export-request → handle_export_request(), POST /data/gdpr-export → handle_gdpr_export(), GET /data/export-status → handle_export_status()
+    - `handle_export_request()`: Extract userId from Cognito claims, check subscription (Premium required → 403), check rate limit (30 days → 429), check active export (→ 409), check storage tiers for Glacier content (→ 202 pending_retrieval), build ZIP with manifest.json + README.txt + data-portability.json + all S3 content, upload to exports-temp bucket, generate presigned URL (72h), create/update DataRetentionDB record, send email via send_email_with_retry(), log audit event
+    - `handle_gdpr_export()`: Available to all users, produce data-portability.json only (no videos), query userQuestionStatusDB for transcripts/summaries, query PersonaRelationshipsDB for benefactors, query userStatusDB for profile, query UserSubscriptionsDB for subscription history, upload to exports-temp, generate presigned URL, send email
+    - `handle_export_status()`: Query DataRetentionDB for userId + recordType=export_request, return current status
+    - Handle auto-export invocation from StripeWebhookFunction (event source: auto_export_on_cancellation with userId in payload, skip if recent export within 24h)
+    - Include `import os` at top, use `cors_headers(event)` on all responses, use `error_response()` for errors
+    - _Requirements: 1.1–1.9, 2.1–2.4, 6.1–6.7, 16.1_
+  - [x] 4.3 Write property tests for DataExportFunction
+    - [x] 4.3.1 Property 1: Export access control by subscription and export type
+      - **Property 1: Export access control by subscription and export type**
+      - Generate random (subscription_status, export_type) pairs, verify full export requires Premium, GDPR export available to all
+      - **Validates: Requirements 1.4, 6.3, 7.8**
+    - [x] 4.3.2 Property 2: Content_Package completeness
+      - **Property 2: Content_Package completeness**
+      - Generate random lists of content items, verify ZIP contains all items plus manifest.json, README.txt, data-portability.json
+      - **Validates: Requirements 1.2, 1.9, 6.4, 6.5**
+    - [x] 4.3.3 Property 3: GDPR export contains only text data
+      - **Property 3: GDPR export contains only text data**
+      - Generate random user data with mixed content types, verify output contains only text (no video/audio binaries), has schemaVersion
+      - **Validates: Requirements 6.2, 6.5, 6.7**
+    - [x] 4.3.4 Property 4: Export record round trip
+      - **Property 4: Export record round trip**
+      - Generate random export requests, verify DataRetentionDB record created with correct userId, recordType, timestamp, status
+      - **Validates: Requirements 1.5**
+    - [x] 4.3.5 Property 5: Glacier content triggers pending_retrieval for exports
+      - **Property 5: Glacier content triggers pending_retrieval for exports**
+      - Generate random content sets with mixed storage tiers, verify pending_retrieval when any Glacier content exists
+      - **Validates: Requirements 1.7, 18.2**
+    - [x] 4.3.6 Property 6: One active export at a time
+      - **Property 6: One active export at a time**
+      - Generate random sequences of export requests, verify at most one active export per user at any time
+      - **Validates: Requirements 1.8**
+    - [x] 4.3.7 Property 7: Auto-export deduplication on cancellation
+      - **Property 7: Auto-export deduplication on cancellation**
+      - Generate random (cancellation_time, last_export_time) pairs, verify skip when recent export within 24h
+      - **Validates: Requirements 2.1, 2.4**
+    - [x] 4.3.8 Property 23: Rate limiting enforcement (export)
+      - **Property 23: Rate limiting enforcement**
+      - Generate random request timestamp sequences, verify 429 when within rate-limit window
+      - **Validates: Requirements 16.1, 16.3**
+
+
+- [x] 5. AccountDeletionFunction Lambda
+  - [x] 5.1 Add AccountDeletionFunction resource to SamLambda/template.yml
+    - Define Lambda function at `SamLambda/functions/dataRetentionFunctions/accountDeletion/app.py`
+    - Runtime: python3.12, Architecture: arm64, Timeout: 300, MemorySize: 256
+    - Layers: SharedUtilsLayer, StripeDependencyLayer (for Stripe subscription cancellation)
+    - Environment variables: TABLE_DATA_RETENTION, AUDIT_BUCKET (!Ref RetentionAuditBucket), SENDER_EMAIL, FRONTEND_URL, COGNITO_USER_POOL_ID (!Ref ExistingUserPoolId) — plus inherited globals
+    - IAM policies: DynamoDB (GetItem/PutItem/UpdateItem/DeleteItem/Query on DataRetentionTable + index, DeleteItem/GetItem on UserSubscriptionsDB, DeleteItem/Query on userQuestionStatusDB, DeleteItem/Query on userQuestionLevelProgressDB, DeleteItem/Query on userStatusDB, Query/DeleteItem on PersonaRelationshipsTable + index, DeleteItem/Query on ConversationStateTable, DeleteItem/GetItem on EngagementTable, Query/DeleteItem on AccessConditionsTable + index), S3 (DeleteObject/ListBucket on virtual-legacy, PutObject on RetentionAuditBucket), SES (SendEmail), SSM (GetParameter on /soulreel/data-retention/* and /soulreel/stripe/*), Cognito (AdminDeleteUser on ExistingUserPoolArn), KMS (Decrypt/DescribeKey/GenerateDataKey on DataEncryptionKey)
+    - API Events with OPTIONS: POST /account/delete-request (CognitoAuthorizer), OPTIONS /account/delete-request, POST /account/cancel-deletion (CognitoAuthorizer), OPTIONS /account/cancel-deletion, GET /account/deletion-status (CognitoAuthorizer), OPTIONS /account/deletion-status
+    - Schedule Event: DailyDeletionScan with `rate(1 day)`
+    - _Requirements: 5.1, 5.10, 14.1_
+  - [x] 5.2 Implement AccountDeletionFunction handler (app.py)
+    - Route by httpMethod + path and event source: OPTIONS → CORS, POST /account/delete-request → handle_delete_request(), POST /account/cancel-deletion → handle_cancel_deletion(), GET /account/deletion-status → handle_deletion_status(), Schedule event → handle_process_deletions()
+    - `handle_delete_request()`: Extract userId, check rate limit (30 days → 429), check existing pending deletion (→ 409), create DataRetentionDB record (status: pending, graceEndDate: now + grace period days from SSM), send confirmation email, log audit event (deletion_requested)
+    - `handle_cancel_deletion()`: Check for pending deletion, if within grace period → update status to canceled, send confirmation email, log audit (deletion_canceled). If completed → 410. If not found → 404
+    - `handle_deletion_status()`: Query DataRetentionDB for userId + recordType=deletion_request
+    - `handle_process_deletions()`: Query status-index for status=pending where graceEndDate < now. For each: cancel Stripe subscription (best-effort), delete S3 objects under conversations/{userId}/ and user-responses/{userId}/, delete records from all DynamoDB tables (userQuestionStatusDB, userQuestionLevelProgressDB, userStatusDB, UserSubscriptionsDB, DataRetentionDB except deletion record, ConversationStateDB, EngagementDB, PersonaRelationshipsDB, AccessConditionsDB), notify affected benefactors via SES, AdminDeleteUser from Cognito, update deletion record to completed, log audit (deletion_completed)
+    - Include `import os`, use `cors_headers(event)`, use `error_response()`, use `get_current_time(event)` for simulated time support
+    - _Requirements: 5.1–5.10, 14.1–14.4, 16.2_
+  - [x] 5.3 Write property tests for AccountDeletionFunction
+    - [x] 5.3.1 Property 8: Grace period calculation and deletion state machine
+      - **Property 8: Grace period calculation and deletion state machine**
+      - Generate random (request_time, cancel_time, grace_days) triples, verify graceEndDate = T + G, cancellation succeeds iff C < graceEndDate, no data deleted during grace period
+      - **Validates: Requirements 5.2, 5.3, 14.2, 14.4**
+    - [x] 5.3.2 Property 9: Cascading deletion completeness
+      - **Property 9: Cascading deletion completeness**
+      - Generate random user data across tables, verify all S3 objects, DynamoDB records, and Cognito account are deleted after grace period
+      - **Validates: Requirements 5.5, 5.6**
+    - [x] 5.3.3 Property 23: Rate limiting enforcement (deletion)
+      - **Property 23: Rate limiting enforcement**
+      - Generate random deletion request timestamp sequences, verify 429 when within rate-limit window
+      - **Validates: Requirements 16.2, 16.3**
+
+- [x] 6. Checkpoint — Verify export and deletion Lambdas build
+  - Ensure `sam build` succeeds with DataExportFunction and AccountDeletionFunction. Ensure all tests pass, ask the user if questions arise.
+
+
+- [x] 7. DormantAccountDetector Lambda
+  - [x] 7.1 Add DormantAccountDetector resource to SamLambda/template.yml
+    - Define Lambda function at `SamLambda/functions/dataRetentionFunctions/dormantDetector/app.py`
+    - Runtime: python3.12, Architecture: arm64, Timeout: 300, MemorySize: 256
+    - Layers: SharedUtilsLayer
+    - Environment variables: TABLE_DATA_RETENTION, SENDER_EMAIL, FRONTEND_URL — plus inherited globals (TABLE_USER_STATUS, TABLE_SUBSCRIPTIONS, TABLE_QUESTION_STATUS, TABLE_RELATIONSHIPS)
+    - IAM policies: DynamoDB (GetItem/PutItem/UpdateItem/Query/Scan on DataRetentionTable + index, Scan on userStatusDB, Scan on UserSubscriptionsDB, Query on userQuestionStatusDB, Query on PersonaRelationshipsTable + index), S3 (PutObject on RetentionAuditBucket), SES (SendEmail), SSM (GetParameter on /soulreel/data-retention/*), KMS (Decrypt/DescribeKey on DataEncryptionKey)
+    - Schedule Event: WeeklyDormancyScan with `rate(7 days)`
+    - _Requirements: 7.1_
+  - [x] 7.2 Implement DormantAccountDetector handler (app.py)
+    - `lambda_handler()`: Use `get_current_time(event)` for simulated time support. Scan userStatusDB for all users with `lastLoginAt`. For each user: calculate dormancy days, check existing dormancy_state record in DataRetentionDB, skip if legacy_protected
+    - 6-month threshold: Send "Your stories are waiting for you" email if no 6mo email sent, record in DataRetentionDB emailsSent map, log audit (dormancy_email_sent)
+    - 12-month threshold: Send "Don't let your legacy go silent" email if no 12mo email sent, record, log audit
+    - 24-month threshold + 12mo lapsed + benefactors exist: Flag for legacy protection evaluation in DataRetentionDB
+    - Query UserSubscriptionsDB for subscription status, query PersonaRelationshipsDB for benefactor count
+    - Include `import os`, use `cors_headers(event)` (not needed for schedule-only but safe pattern)
+    - _Requirements: 7.1–7.9_
+  - [x] 7.3 Write property tests for DormantAccountDetector
+    - [x] 7.3.1 Property 11: Dormancy escalation correctness
+      - **Property 11: Dormancy escalation correctness**
+      - Generate random (lastLoginAt, currentTime, thresholds, existing_emails) tuples, verify correct email sent at each threshold, no duplicates, skip if legacy_protected
+      - **Validates: Requirements 7.2, 7.3, 7.4, 7.6, 7.9**
+    - [x] 7.3.2 Property 12: Dormancy never triggers deletion
+      - **Property 12: Dormancy never triggers deletion**
+      - Generate random dormant accounts, verify no S3 deletions or DynamoDB record removals occur
+      - **Validates: Requirements 7.7**
+
+- [x] 8. StorageLifecycleManager Lambda
+  - [x] 8.1 Add StorageLifecycleManager resource to SamLambda/template.yml
+    - Define Lambda function at `SamLambda/functions/dataRetentionFunctions/storageLifecycle/app.py`
+    - Runtime: python3.12, Architecture: arm64, Timeout: 900, MemorySize: 512
+    - Layers: SharedUtilsLayer
+    - Environment variables: TABLE_DATA_RETENTION, AUDIT_BUCKET (!Ref RetentionAuditBucket), SENDER_EMAIL, FRONTEND_URL — plus inherited globals
+    - IAM policies: DynamoDB (GetItem/PutItem/UpdateItem/Query/Scan on DataRetentionTable + index, UpdateItem on userQuestionStatusDB), S3 (ListBucket/GetObject/HeadObject/RestoreObject/PutObject/CopyObject on virtual-legacy, PutObject on RetentionAuditBucket), SES (SendEmail), SSM (GetParameter on /soulreel/data-retention/*), CloudWatch (PutMetricData), KMS (Decrypt/DescribeKey/GenerateDataKey on DataEncryptionKey)
+    - API Events with OPTIONS: GET /admin/storage-report (CognitoAuthorizer), OPTIONS /admin/storage-report
+    - Schedule Event: WeeklyReconciliation with `rate(7 days)`
+    - _Requirements: 3.5, 10.3_
+  - [x] 8.2 Implement StorageLifecycleManager handler (app.py)
+    - Route by event source: Schedule → handle_weekly_reconciliation(), GET /admin/storage-report → handle_storage_report(), OPTIONS → CORS
+    - `handle_weekly_reconciliation()`: List all S3 objects per user under conversations/ and user-responses/, calculate per-user storage metrics (totalBytes, bytes per tier, contentItemCount, estimatedMonthlyCostUsd), update storage_metrics records in DataRetentionDB. For legacy-protected accounts: check glacier-transition-days and glacier-no-access-days thresholds, transition eligible content to Glacier Deep Archive via S3 CopyObject with StorageClass. Log CloudWatch metrics. Log audit events for tier transitions.
+    - `handle_storage_report()`: Verify admin user, aggregate all storage_metrics records, return aggregate + per-lifecycle-state breakdown
+    - Handle reactivation restore: accept async invocation from StripeWebhookFunction, list user's Glacier/Deep Archive objects, initiate RestoreObject for each, create reactivation_restore record in DataRetentionDB, poll/track completion, CopyObject to Standard, send completion email
+    - Use `get_current_time(event)` for simulated time support
+    - _Requirements: 3.1–3.9, 10.1–10.4_
+  - [x] 8.3 Write property tests for StorageLifecycleManager
+    - [x] 8.3.1 Property 19: Reactivation restore completeness
+      - **Property 19: Reactivation restore completeness**
+      - Generate random object counts in Glacier, verify all restored to Standard, storage_metrics updated, reactivation_restore record completed
+      - **Validates: Requirements 3.6, 3.8**
+    - [x] 8.3.2 Property 20: Partial restore accessibility
+      - **Property 20: Partial restore accessibility**
+      - Generate random (total, restored) pairs, verify restored objects accessible, remaining return 202
+      - **Validates: Requirements 3.9**
+    - [x] 8.3.3 Property 21: Storage metrics accuracy
+      - **Property 21: Storage metrics accuracy**
+      - Generate random S3 object lists with sizes and tiers, verify totalBytes, per-tier bytes, contentItemCount, and cost calculation
+      - **Validates: Requirements 3.3, 10.1**
+    - [x] 8.3.4 Property 22: Aggregate metrics consistency
+      - **Property 22: Aggregate metrics consistency**
+      - Generate random per-user metrics, verify aggregate totals = sum of per-user values
+      - **Validates: Requirements 10.2**
+    - [x] 8.3.5 Property 27: Glacier transition criteria for legacy-protected content
+      - **Property 27: Glacier transition criteria for legacy-protected content**
+      - Generate random (legacy_protection_days, last_access_days) pairs, verify transition only when both thresholds met
+      - **Validates: Requirements 3.2, 8.4**
+
+
+- [x] 9. LegacyProtectionFunction Lambda
+  - [x] 9.1 Add LegacyProtectionFunction resource to SamLambda/template.yml
+    - Define Lambda function at `SamLambda/functions/dataRetentionFunctions/legacyProtection/app.py`
+    - Runtime: python3.12, Architecture: arm64, Timeout: 120, MemorySize: 256
+    - Layers: SharedUtilsLayer
+    - Environment variables: TABLE_DATA_RETENTION, AUDIT_BUCKET (!Ref RetentionAuditBucket), SENDER_EMAIL, FRONTEND_URL — plus inherited globals (TABLE_USER_STATUS, TABLE_SUBSCRIPTIONS, TABLE_RELATIONSHIPS)
+    - IAM policies: DynamoDB (GetItem/PutItem/UpdateItem/Query/Scan on DataRetentionTable + index, Scan on userStatusDB, Scan on UserSubscriptionsDB, Query on PersonaRelationshipsTable + index), S3 (PutObject on RetentionAuditBucket), SES (SendEmail), SSM (GetParameter on /soulreel/data-retention/*), KMS (Decrypt/DescribeKey on DataEncryptionKey)
+    - API Events with OPTIONS: POST /legacy/protection-request (CognitoAuthorizer), OPTIONS /legacy/protection-request
+    - Schedule Event: WeeklyAutoEvaluation with `rate(7 days)`
+    - _Requirements: 8.5_
+  - [x] 9.2 Implement LegacyProtectionFunction handler (app.py)
+    - Route: OPTIONS → CORS, POST /legacy/protection-request → handle_protection_request(), Schedule → handle_auto_evaluation()
+    - `handle_protection_request()`: Extract requesting userId from Cognito claims, parse legacyMakerId and reason from body. Verify requester is a benefactor of the maker via PersonaRelationshipsDB (→ 403 if not). Check if already legacy_protected (→ 409). Create legacy_protection record in DataRetentionDB (status: active, activationType: manual, requestedBy: benefactorId). Send email to all benefactors. Log audit (legacy_protection_activated).
+    - `handle_auto_evaluation()`: Query DataRetentionDB for accounts flagged_for_legacy_protection. For each: verify 24mo dormant + 12mo lapsed + benefactors exist. Activate legacy protection, send benefactor emails, log audit.
+    - `deactivate_legacy_protection(user_id)`: Update status to deactivated, log audit (legacy_protection_deactivated), send welcome-back email.
+    - Use `get_current_time(event)` for simulated time support
+    - _Requirements: 8.1–8.9_
+  - [x] 9.3 Write property tests for LegacyProtectionFunction
+    - [x] 9.3.1 Property 14: Legacy protection exempts from cleanup
+      - **Property 14: Legacy protection exempts from cleanup**
+      - Generate random legacy-protected accounts, verify skipped by dormancy detector, deletion scan, and storage lifecycle (no delete, only Glacier transition after threshold)
+      - **Validates: Requirements 8.2, 8.3**
+    - [x] 9.3.2 Property 15: Legacy protection benefactor verification
+      - **Property 15: Legacy protection benefactor verification**
+      - Generate random (requester_id, maker_id, relationships) triples, verify 403 when no relationship exists
+      - **Validates: Requirements 8.6**
+    - [x] 9.3.3 Property 16: Legacy protection deactivation on login
+      - **Property 16: Legacy protection deactivation on login**
+      - Generate random login events for legacy-protected accounts, verify status → deactivated and welcome-back email triggered
+      - **Validates: Requirements 8.9**
+    - [x] 9.3.4 Property 13: Benefactor access invariant across subscription changes
+      - **Property 13: Benefactor access invariant across subscription changes**
+      - Generate random subscription state transitions, verify PersonaRelationshipsDB relationships unchanged
+      - **Validates: Requirements 9.1, 9.2, 9.3**
+
+- [x] 10. AdminLifecycleFunction Lambda
+  - [x] 10.1 Add AdminLifecycleFunction resource to SamLambda/template.yml
+    - Define Lambda function at `SamLambda/functions/dataRetentionFunctions/adminLifecycle/app.py`
+    - Runtime: python3.12, Architecture: arm64, Timeout: 300, MemorySize: 256
+    - Layers: SharedUtilsLayer
+    - Environment variables: TABLE_DATA_RETENTION, AUDIT_BUCKET (!Ref RetentionAuditBucket), SENDER_EMAIL, FRONTEND_URL — plus inherited globals (TABLE_USER_STATUS, TABLE_SUBSCRIPTIONS, TABLE_QUESTION_STATUS, TABLE_RELATIONSHIPS)
+    - IAM policies: DynamoDB (GetItem/PutItem/UpdateItem/Query/Scan on DataRetentionTable + index, GetItem/UpdateItem on userStatusDB, GetItem/UpdateItem on UserSubscriptionsDB, Query/UpdateItem on userQuestionStatusDB, Query on PersonaRelationshipsTable + index), S3 (PutObject on RetentionAuditBucket), SES (SendEmail), SSM (GetParameter on /soulreel/data-retention/*), Lambda (InvokeFunction on DormantAccountDetector, AccountDeletionFunction, StorageLifecycleManager, LegacyProtectionFunction), KMS (Decrypt/DescribeKey/GenerateDataKey on DataEncryptionKey)
+    - API Events with OPTIONS: POST /admin/lifecycle/simulate (CognitoAuthorizer) + OPTIONS, POST /admin/lifecycle/set-timestamps (CognitoAuthorizer) + OPTIONS, POST /admin/lifecycle/run-scenario (CognitoAuthorizer) + OPTIONS, POST /admin/storage/simulate-tier (CognitoAuthorizer) + OPTIONS, POST /admin/storage/clear-simulation (CognitoAuthorizer) + OPTIONS
+    - _Requirements: 17.3, 17.4, 18.1, 18.5, 19.1_
+  - [x] 10.2 Implement AdminLifecycleFunction handler (app.py)
+    - Route by path: OPTIONS → CORS, /admin/lifecycle/simulate → handle_simulate(), /admin/lifecycle/set-timestamps → handle_set_timestamps(), /admin/lifecycle/run-scenario → handle_run_scenario(), /admin/storage/simulate-tier → handle_simulate_tier(), /admin/storage/clear-simulation → handle_clear_simulation()
+    - All handlers: verify admin user (check Cognito groups), verify testing mode enabled via SSM (→ 403 if disabled)
+    - `handle_simulate()`: Parse userId, simulatedCurrentTime, action. Invoke corresponding lifecycle Lambda with simulated time for the specified user. Return result. Log audit (lifecycle_simulation).
+    - `handle_set_timestamps()`: Parse userId, lastLoginAt, subscriptionLapsedAt. Update userStatusDB.lastLoginAt and UserSubscriptionsDB.subscriptionLapsedAt. Return confirmation.
+    - `handle_run_scenario()`: Parse userId, scenario name. Execute predefined step sequences (dormancy_full_cycle, deletion_with_grace_period, deletion_canceled, legacy_protection_activation, reactivation_from_glacier, export_premium_only, gdpr_export_free_tier). Return steps array with pass/fail per step. Log audit (test_scenario_executed).
+    - `handle_simulate_tier()`: Parse userId, storageTier. Update storage_metrics record in DataRetentionDB with simulated tier and simulated=true flag.
+    - `handle_clear_simulation()`: Parse userId. Remove simulated flag and restore actual storage tier in storage_metrics record.
+    - _Requirements: 17.2–17.6, 18.1–18.5, 19.1–19.5_
+  - [x] 10.3 Write property tests for AdminLifecycleFunction
+    - [x] 10.3.1 Property 24: Testing mode gate
+      - **Property 24: Testing mode gate**
+      - Generate random (testing_mode, endpoint) pairs, verify 403 when testing mode is disabled regardless of payload
+      - **Validates: Requirements 17.5, 18.4, 19.4**
+    - [x] 10.3.2 Property 25: Simulated time override
+      - **Property 25: Simulated time override**
+      - Generate random (real_time, simulated_time, thresholds) triples, verify all threshold calculations use simulated time
+      - **Validates: Requirements 17.2**
+    - [x] 10.3.3 Property 26: Storage tier simulation round trip
+      - **Property 26: Storage tier simulation round trip**
+      - Generate random tier simulations, verify simulate → clear restores pre-simulation state, simulated flag is true during simulation
+      - **Validates: Requirements 18.1, 18.2, 18.5**
+    - [x] 10.3.4 Property 30: Scenario result structure
+      - **Property 30: Scenario result structure**
+      - Generate random scenario executions, verify response has scenario, non-empty steps array (each with step/status/details), and overallStatus
+      - **Validates: Requirements 19.3**
+
+- [x] 11. Checkpoint — Verify all new Lambdas build
+  - Ensure `sam build` succeeds with all six new Lambda functions. Ensure all tests pass, ask the user if questions arise.
+
+
+- [x] 12. Modify existing Lambda functions
+  - [x] 12.1 Modify StripeWebhookFunction for auto-export and lapse reassurance
+    - File: `SamLambda/functions/billingFunctions/stripeWebhook/app.py`
+    - In `customer.subscription.deleted` handler: after updating subscription status, send lapse reassurance email via send_email_with_retry() (Req 9.4), then trigger async auto-export by invoking DataExportFunction with InvocationType='Event' and payload {source: 'auto_export_on_cancellation', userId} (Req 2.1)
+    - In `checkout.session.completed` handler: check if user has Glacier-archived content in DataRetentionDB, if so trigger reactivation restore by async-invoking StorageLifecycleManager (Req 3.6)
+    - Add new environment variables to template.yml: DATA_EXPORT_FUNCTION (!GetAtt DataExportFunction.Arn), STORAGE_LIFECYCLE_FUNCTION (!GetAtt StorageLifecycleManager.Arn), SENDER_EMAIL (noreply@soulreel.net)
+    - Add new IAM policies: lambda:InvokeFunction on DataExportFunction.Arn and StorageLifecycleManager.Arn, ses:SendEmail (if not already present), dynamodb:GetItem on DataRetentionTable (to check for Glacier content and recent exports)
+    - _Requirements: 2.1–2.4, 3.6, 9.4_
+  - [x] 12.2 Modify GetMakerVideos for storage tier check and Glacier retrieval
+    - File: `SamLambda/functions/videoFunctions/getMakerVideos/app.py`
+    - Before generating presigned URLs: check storage_metrics record in DataRetentionDB for the maker's storage tier (including simulated tiers)
+    - If tier is GLACIER or DEEP_ARCHIVE: return HTTP 202 with {status: "retrieving", estimatedMinutes, message}, initiate S3 RestoreObject (Expedited for IT archive, Standard for Deep Archive), create retrieval_queue entry in DataRetentionDB
+    - If tier is STANDARD or INTELLIGENT_TIERING: proceed with normal presigned URL generation
+    - Add new environment variable to template.yml: TABLE_DATA_RETENTION (!Ref DataRetentionTable)
+    - Add new IAM policies: dynamodb:GetItem and dynamodb:PutItem on DataRetentionTable, s3:RestoreObject on virtual-legacy/*
+    - _Requirements: 4.1–4.6_
+  - [x] 12.3 Write property tests for modified existing functions
+    - [x] 12.3.1 Property 17: Glacier retrieval tier selection
+      - **Property 17: Glacier retrieval tier selection**
+      - Generate random storage tiers, verify Expedited for IT archive, Standard for Deep Archive, HTTP 202 response with correct estimatedMinutes, retrieval_queue entry created
+      - **Validates: Requirements 4.2, 4.3, 4.4**
+    - [x] 12.3.2 Property 18: Retrieval queue TTL
+      - **Property 18: Retrieval queue TTL**
+      - Generate random completion timestamps, verify expiresAt = completionTime + 24 hours (epoch seconds)
+      - **Validates: Requirements 4.6**
+
+- [x] 13. Audit logging integration
+  - [x] 13.1 Wire audit_logger.py into all Lambda functions
+    - Ensure every lifecycle Lambda imports and calls `log_audit_event()` at the correct points:
+    - DataExportFunction: export_requested, export_completed, export_failed
+    - AccountDeletionFunction: deletion_requested, deletion_canceled, deletion_completed, benefactor_access_revoked
+    - DormantAccountDetector: dormancy_email_sent
+    - StorageLifecycleManager: storage_tier_transition, glacier_retrieval_requested
+    - LegacyProtectionFunction: legacy_protection_activated, legacy_protection_deactivated
+    - AdminLifecycleFunction: lifecycle_simulation, test_scenario_executed
+    - _Requirements: 11.1, 11.4_
+  - [x] 13.2 Write property test for audit log integrity
+    - [x] 13.2.1 Property 10: Audit log integrity — no PII, correct hash, required fields
+      - **Property 10: Audit log integrity — no PII, correct hash, required fields**
+      - Generate random lifecycle events, verify record contains eventType (from valid list), anonymizedUserId (SHA-256 hex), valid ISO 8601 timestamp, non-empty details, initiator (user/system/admin), and NO raw userId/email/name
+      - **Validates: Requirements 11.1, 11.3, 11.4**
+
+- [x] 14. Checkpoint — Verify all backend changes build and pass
+  - Ensure `sam build` succeeds. Run all property tests and unit tests. Ensure all tests pass, ask the user if questions arise.
+
+
+- [x] 15. Frontend: Service layer and API config
+  - [x] 15.1 Add data retention API endpoints to FrontEndCode/src/config/api.ts
+    - Add to API_CONFIG.ENDPOINTS: DATA_EXPORT_REQUEST ('/data/export-request'), DATA_GDPR_EXPORT ('/data/gdpr-export'), DATA_EXPORT_STATUS ('/data/export-status'), ACCOUNT_DELETE_REQUEST ('/account/delete-request'), ACCOUNT_CANCEL_DELETION ('/account/cancel-deletion'), ACCOUNT_DELETION_STATUS ('/account/deletion-status'), LEGACY_PROTECTION_REQUEST ('/legacy/protection-request'), ADMIN_STORAGE_REPORT ('/admin/storage-report')
+    - _Requirements: 13.1, 13.3_
+  - [x] 15.2 Create dataRetentionService.ts
+    - Create `FrontEndCode/src/services/dataRetentionService.ts` following existing billingService.ts pattern
+    - Use fetchAuthSession() for Cognito tokens, buildApiUrl() for API URLs
+    - Export functions: requestDataExport(), requestGdprExport(), getExportStatus(), requestAccountDeletion(), cancelAccountDeletion(), getDeletionStatus(), requestLegacyProtection(legacyMakerId, reason?)
+    - Define TypeScript interfaces: ExportResponse, ExportStatusResponse, DeletionResponse, DeletionStatusResponse, CancelDeletionResponse, LegacyProtectionResponse
+    - _Requirements: 1.1, 5.1, 6.3, 8.5, 13.1, 14.1_
+
+- [x] 16. Frontend: YourData page and components
+  - [x] 16.1 Create DeleteConfirmationDialog component
+    - Create `FrontEndCode/src/components/DeleteConfirmationDialog.tsx`
+    - Use shadcn Dialog component. Show warning about 30-day grace period, permanence, benefactor impact. Require user to type "DELETE" in input to enable confirm button. Call requestAccountDeletion() on confirm.
+    - _Requirements: 13.3_
+  - [x] 16.2 Create YourData page component
+    - Create `FrontEndCode/src/pages/YourData.tsx` as a protected route page
+    - Component hierarchy: Header, TrustStatement, StorageExplanation, LegacyProtectionSection, ExportSection (legacy_maker only), DeletionSection (legacy_maker only), ContentSummary, RightsSection
+    - ExportSection: "Download My Legacy" button (Premium) triggers requestDataExport(), "Download My Data (Text Only)" button (Free/all) triggers requestGdprExport(), show ExportStatusDisplay when export in progress (poll getExportStatus()), show UpgradePrompt for Free users
+    - DeletionSection: "Delete My Account" button opens DeleteConfirmationDialog, show PendingDeletionDisplay with grace end date and "Cancel Deletion" button when deletion pending (poll getDeletionStatus())
+    - ContentSummary: Display recording count, storage used (human-readable), benefactor count
+    - Persona-based visibility: legacy_benefactor sees only TrustStatement, LegacyProtection, Rights sections
+    - Use non-technical language throughout, no S3 class names or cost figures
+    - _Requirements: 13.1–13.4, 15.4–15.8_
+  - [x] 16.3 Add /your-data route to App.tsx
+    - Import YourData page, add `<Route path="/your-data" element={<ProtectedRoute><YourData /></ProtectedRoute>} />`
+    - _Requirements: 15.3_
+  - [x] 16.4 Add "Your Data" menu item to UserMenu.tsx
+    - Add HardDrive icon import from lucide-react
+    - Add "Your Data" DropdownMenuItem after "Security & Privacy" and before disabled "Settings" item
+    - onClick navigates to '/your-data'
+    - Visible to both legacy_maker and legacy_benefactor persona types
+    - _Requirements: 15.1, 15.2, 15.8_
+  - [x] 16.5 Write frontend property tests
+    - [x] 16.5.1 Property 28: Persona-based page section visibility
+      - **Property 28: Persona-based page section visibility**
+      - Generate random persona types, verify legacy_benefactor sees only TrustStatement/LegacyProtection/Rights, legacy_maker sees all sections
+      - **Validates: Requirements 15.8**
+    - [x] 16.5.2 Property 29: Content summary accuracy
+      - **Property 29: Content summary accuracy**
+      - Generate random byte counts and item counts, verify human-readable formatting and correct display values
+      - **Validates: Requirements 15.6**
+
+- [x] 17. Final checkpoint — Full integration verification
+  - Ensure `sam build` succeeds with all changes. Ensure `npm run build` succeeds in FrontEndCode/. Run all backend property tests and frontend property tests. Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation after each major phase
+- Property tests validate the 30 correctness properties from the design document
+- Backend uses Python 3.12 with hypothesis for property-based tests
+- Frontend uses TypeScript with fast-check for property-based tests
+- All Lambda functions must include `import os` at the top (CORS rule)
+- All API endpoints include OPTIONS events for CORS preflight
+- IAM policies must match exact boto3 method calls per lambda-iam-permissions rule
