@@ -281,9 +281,6 @@ Resources:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
-                - !GetAtt PsychTestsTable.Arn
-                - !GetAtt UserTestProgressTable.Arn
-                - !GetAtt UserTestResultsTable.Arn
 
   # Data Retention Lifecycle — Audit log bucket with Object Lock for regulatory compliance (3-year retention)
   RetentionAuditBucket:
