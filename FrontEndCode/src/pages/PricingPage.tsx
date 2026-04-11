@@ -389,6 +389,18 @@ const PricingPage: React.FC = () => {
         </section>
       </main>
 
+      {/* Trust messaging */}
+      <section className="bg-gray-100 py-8">
+        <div className="container mx-auto px-4 text-center max-w-2xl">
+          <p className="text-sm text-gray-600">
+            Your stories are always yours. All recordings, transcripts, and summaries remain
+            fully accessible regardless of your plan. Benefactors you've already shared with
+            keep their access too. Premium unlocks new content paths and features — it never
+            restricts what you've already created.
+          </p>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-legacy-navy text-white py-8">
         <div className="container mx-auto px-4 text-center text-gray-400">

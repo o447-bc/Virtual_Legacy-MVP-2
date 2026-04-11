@@ -123,6 +123,9 @@ const Home = () => {
                 View Plans
               </Button>
             </Link>
+            <p className="text-xs text-gray-500 mt-4">
+              Your stories are always yours — all recordings remain accessible regardless of your plan.
+            </p>
           </div>
         </section>
       </main>
