@@ -3364,6 +3364,7 @@ Resources:
           AUDIT_BUCKET: !Ref RetentionAuditBucket
           SENDER_EMAIL: noreply@soulreel.net
           FRONTEND_URL: 'https://www.soulreel.net'
+          COGNITO_USER_POOL_ID: !Ref ExistingUserPoolId
       Policies:
         - Statement:
             - Effect: Allow
@@ -3446,6 +3447,11 @@ Resources:
                 - kms:DescribeKey
                 - kms:GenerateDataKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !Ref ExistingUserPoolArn
       Events:
         ExportRequest:
           Type: Api

@@ -662,12 +662,16 @@ def _delete_cognito_user(user_id):
 # ===================================================================
 
 def _get_user_email(user_id):
-    """Get user email from userStatusDB."""
+    """Get user email from Cognito."""
     try:
-        table = _dynamodb.Table(_TABLE_USER_STATUS)
-        resp = table.get_item(Key={'userId': user_id})
-        item = resp.get('Item', {})
-        return item.get('email', '')
+        resp = _cognito.admin_get_user(
+            UserPoolId=_COGNITO_USER_POOL_ID,
+            Username=user_id,
+        )
+        for attr in resp.get('UserAttributes', []):
+            if attr['Name'] == 'email':
+                return attr['Value']
+        return ''
     except Exception as e:
         logger.warning('Failed to get user email for %s: %s', user_id, e)
         return ''

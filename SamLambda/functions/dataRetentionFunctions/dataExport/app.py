@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _dynamodb = boto3.resource('dynamodb')
 _s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+_cognito = boto3.client('cognito-idp')
 
 _TABLE_DATA_RETENTION = os.environ.get('TABLE_DATA_RETENTION', 'DataRetentionDB')
 _TABLE_SUBSCRIPTIONS = os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB')
@@ -53,6 +54,7 @@ _EXPORTS_BUCKET = os.environ.get('EXPORTS_BUCKET', '')
 _AUDIT_BUCKET = os.environ.get('AUDIT_BUCKET', '')
 _SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'noreply@soulreel.net')
 _FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://www.soulreel.net')
+_COGNITO_USER_POOL_ID = os.environ.get('COGNITO_USER_POOL_ID', '')
 
 
 # ===================================================================
@@ -755,12 +757,16 @@ def _list_user_content(user_id):
 
 
 def _get_user_email(user_id):
-    """Get user email from userStatusDB."""
+    """Get user email from Cognito."""
     try:
-        table = _dynamodb.Table(_TABLE_USER_STATUS)
-        resp = table.get_item(Key={'userId': user_id})
-        item = resp.get('Item', {})
-        return item.get('email', '')
+        resp = _cognito.admin_get_user(
+            UserPoolId=_COGNITO_USER_POOL_ID,
+            Username=user_id,
+        )
+        for attr in resp.get('UserAttributes', []):
+            if attr['Name'] == 'email':
+                return attr['Value']
+        return ''
     except Exception as e:
         logger.warning('Failed to get user email for %s: %s', user_id, e)
         return ''
@@ -778,16 +784,24 @@ def _build_data_portability(user_id):
         'subscriptionHistory': {},
     }
 
-    # User profile from userStatusDB
+    # User profile from Cognito
     try:
-        user_table = _dynamodb.Table(_TABLE_USER_STATUS)
-        resp = user_table.get_item(Key={'userId': user_id})
-        item = resp.get('Item', {})
+        resp = _cognito.admin_get_user(
+            UserPoolId=_COGNITO_USER_POOL_ID,
+            Username=user_id,
+        )
+        attrs = {a['Name']: a['Value'] for a in resp.get('UserAttributes', [])}
+        profile_json = attrs.get('profile', '{}')
+        try:
+            profile_data = json.loads(profile_json)
+        except (json.JSONDecodeError, TypeError):
+            profile_data = {}
         data['profile'] = {
-            'name': item.get('name', ''),
-            'email': item.get('email', ''),
-            'createdAt': item.get('createdAt', ''),
-            'personaType': item.get('persona_type', ''),
+            'firstName': attrs.get('given_name', ''),
+            'lastName': attrs.get('family_name', ''),
+            'email': attrs.get('email', ''),
+            'personaType': profile_data.get('persona_type', ''),
+            'accountCreatedAt': resp.get('UserCreateDate', ''),
         }
     except Exception as e:
         logger.warning('Failed to get user profile: %s', e)
