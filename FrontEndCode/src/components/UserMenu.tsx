@@ -134,11 +134,30 @@ export const UserMenu: React.FC = () => {
                 {getUserInitials()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <p className="text-base font-semibold text-legacy-navy">
-                {getDisplayName()}
-              </p>
-              <p className="text-sm text-gray-600">{user.email}</p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-base font-semibold text-legacy-navy truncate">
+                  {getDisplayName()}
+                </p>
+                <Badge
+                  variant="outline"
+                  className={`text-xs px-1.5 py-0 h-5 shrink-0 ${
+                    subscription.isPremium
+                      ? 'border-legacy-purple/30 text-legacy-purple'
+                      : 'border-gray-300 text-gray-500'
+                  }`}
+                >
+                  {subscription.isPremium ? 'Premium' : 'Free'}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm text-gray-600 truncate">{user.email}</p>
+                {subscription.status === 'trialing' && subscription.trialDaysRemaining !== null && subscription.trialDaysRemaining > 0 && (
+                  <span className="text-xs text-amber-600 font-medium shrink-0">
+                    Trial: {subscription.trialDaysRemaining}d left
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

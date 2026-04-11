@@ -159,6 +159,19 @@ const PricingPage: React.FC = () => {
       )}
 
       <main className="flex-1">
+        {/* Back to Dashboard — authenticated users only */}
+        {isAuthenticated && (
+          <div className="container mx-auto px-4 pt-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/dashboard')}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              ← Return to Dashboard
+            </Button>
+          </div>
+        )}
+
         {/* Hero */}
         <section className="py-12 sm:py-16 text-center">
           <div className="container mx-auto px-4">
@@ -316,55 +329,60 @@ const PricingPage: React.FC = () => {
                   </Button>
                 )}
 
-                {/* Coupon Section */}
-                {isAuthenticated && (
-                  <div className="mt-4 text-center">
-                    {!couponExpanded ? (
-                      <button
-                        onClick={() => setCouponExpanded(true)}
-                        className="text-sm text-legacy-purple hover:underline"
-                      >
-                        Have a code?
-                      </button>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="Enter coupon code"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
-                            className="text-sm"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleApplyCoupon}
-                            disabled={couponLoading || !couponCode.trim()}
-                            className="shrink-0"
-                          >
-                            {couponLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              "Apply"
-                            )}
-                          </Button>
-                        </div>
-                        {couponMessage && (
-                          <p
-                            className={`text-xs ${
-                              couponMessage.type === "success"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {couponMessage.text}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Coupon Section — visible for all users */}
+                <div className="mt-4 text-center">
+                  {!couponExpanded ? (
+                    <button
+                      onClick={() => setCouponExpanded(true)}
+                      className="text-sm text-legacy-purple hover:underline"
+                    >
+                      Have a code?
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      {!isAuthenticated && (
+                        <p className="text-xs text-gray-500">Sign up first, then apply your code from the dashboard.</p>
+                      )}
+                      {isAuthenticated && (
+                        <>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter coupon code"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
+                              className="text-sm"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleApplyCoupon}
+                              disabled={couponLoading || !couponCode.trim()}
+                              className="shrink-0"
+                            >
+                              {couponLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Apply"
+                              )}
+                            </Button>
+                          </div>
+                          {couponMessage && (
+                            <p
+                              className={`text-xs ${
+                                couponMessage.type === "success"
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {couponMessage.text}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
