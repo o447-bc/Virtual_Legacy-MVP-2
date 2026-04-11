@@ -46,8 +46,8 @@ _ssm_cache: dict = {}
 # Price-to-plan mapping (Stripe Price IDs → internal plan IDs)
 # ---------------------------------------------------------------------------
 PRICE_PLAN_MAP = {
-    'price_monthly_xxx': 'premium',  # Replace with actual Stripe Price ID
-    'price_annual_xxx': 'premium',   # Replace with actual Stripe Price ID
+    'price_1TL03V6hMyNf0PnbOaSd399o': 'premium',  # Premium Monthly
+    'price_1TL06w6hMyNf0PnbCgehYyZB': 'premium',   # Premium Annual
 }
 
 
