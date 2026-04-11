@@ -47,6 +47,9 @@ jobs:
           VITE_AWS_REGION: us-east-1
           VITE_S3_BUCKET: ${{ secrets.VITE_S3_BUCKET }}
           VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+          VITE_STRIPE_MONTHLY_PRICE_ID: ${{ secrets.VITE_STRIPE_MONTHLY_PRICE_ID }}
+          VITE_STRIPE_ANNUAL_PRICE_ID: ${{ secrets.VITE_STRIPE_ANNUAL_PRICE_ID }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
