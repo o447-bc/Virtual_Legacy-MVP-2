@@ -665,7 +665,7 @@ def _get_user_email(user_id):
     """Get user email from userStatusDB."""
     try:
         table = _dynamodb.Table(_TABLE_USER_STATUS)
-        resp = table.get_item(Key={'UserId': user_id})
+        resp = table.get_item(Key={'userId': user_id})
         item = resp.get('Item', {})
         return item.get('email', '')
     except Exception as e:

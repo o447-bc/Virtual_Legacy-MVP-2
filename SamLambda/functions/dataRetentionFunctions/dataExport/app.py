@@ -758,7 +758,7 @@ def _get_user_email(user_id):
     """Get user email from userStatusDB."""
     try:
         table = _dynamodb.Table(_TABLE_USER_STATUS)
-        resp = table.get_item(Key={'UserId': user_id})
+        resp = table.get_item(Key={'userId': user_id})
         item = resp.get('Item', {})
         return item.get('email', '')
     except Exception as e:
@@ -781,7 +781,7 @@ def _build_data_portability(user_id):
     # User profile from userStatusDB
     try:
         user_table = _dynamodb.Table(_TABLE_USER_STATUS)
-        resp = user_table.get_item(Key={'UserId': user_id})
+        resp = user_table.get_item(Key={'userId': user_id})
         item = resp.get('Item', {})
         data['profile'] = {
             'name': item.get('name', ''),
