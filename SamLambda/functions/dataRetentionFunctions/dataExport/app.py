@@ -142,25 +142,40 @@ def handle_export_request(event, user_id):
     ).get('Item')
 
     if existing:
-        last_requested = existing.get('requestedAt', '')
-        if last_requested:
-            last_dt = datetime.fromisoformat(last_requested.replace('Z', '+00:00'))
-            if (now - last_dt).days < rate_limit_days:
-                return cors_response(429, {
-                    'error': f'Export rate limit: one export per {rate_limit_days} days',
-                    'nextAvailable': (last_dt + timedelta(days=rate_limit_days)).isoformat(),
-                }, event)
-
-        # 3. Check for active export in progress
         active_status = existing.get('status', '')
-        if active_status in ('processing', 'pending_retrieval'):
+
+        # Allow re-export if previous export failed or is stale pending_retrieval
+        if active_status == 'processing':
             return cors_response(409, {
                 'error': 'An export is already in progress',
                 'status': active_status,
             }, event)
 
+        # Only enforce rate limit if last export succeeded (status == 'ready')
+        if active_status == 'ready':
+            last_requested = existing.get('requestedAt', '')
+            if last_requested:
+                last_dt = datetime.fromisoformat(last_requested.replace('Z', '+00:00'))
+                if (now - last_dt).days < rate_limit_days:
+                    return cors_response(429, {
+                        'error': f'Export rate limit: one export per {rate_limit_days} days',
+                        'nextAvailable': (last_dt + timedelta(days=rate_limit_days)).isoformat(),
+                    }, event)
+
+        # pending_retrieval and failed statuses are allowed to re-export
+
     # 4. List all user content from S3
     content_objects = _list_user_content(user_id)
+
+    # 7. Size check — prevent Lambda crash on very large content sets (>5GB)
+    total_size = sum(obj.get('Size', 0) for obj in content_objects)
+    max_export_size = 5 * 1024 * 1024 * 1024  # 5GB
+    if total_size > max_export_size:
+        return cors_response(413, {
+            'error': 'Your content exceeds the maximum export size (5GB). '
+                     'Please contact support@soulreel.net for assistance.',
+            'totalSizeBytes': total_size,
+        }, event)
 
     # 5. Check for Glacier content
     glacier_objects = [
@@ -221,6 +236,12 @@ def handle_export_request(event, user_id):
                        'We will email you when your export is ready.',
             'glacierObjectCount': len(glacier_objects),
         }, event)
+
+    # TODO (Issue 8): A separate mechanism (S3 event notification or polling Lambda)
+    # is needed to detect Glacier restore completion and automatically trigger the
+    # ZIP build. For now, the user can manually re-trigger the export after the
+    # restore completes — the rate limit logic allows re-export when the previous
+    # status was 'pending_retrieval'.
 
     # 6. All content accessible — build ZIP
     return _build_and_upload_export(event, user_id, content_objects, now, retention_table)
@@ -380,21 +401,27 @@ def handle_gdpr_export(event, user_id):
     ).get('Item')
 
     if existing:
-        last_requested = existing.get('requestedAt', '')
-        if last_requested:
-            last_dt = datetime.fromisoformat(last_requested.replace('Z', '+00:00'))
-            if (now - last_dt).days < rate_limit_days:
-                return cors_response(429, {
-                    'error': f'Export rate limit: one export per {rate_limit_days} days',
-                    'nextAvailable': (last_dt + timedelta(days=rate_limit_days)).isoformat(),
-                }, event)
-
         active_status = existing.get('status', '')
-        if active_status in ('processing', 'pending_retrieval'):
+
+        # Allow re-export if previous export failed or is stale pending_retrieval
+        if active_status == 'processing':
             return cors_response(409, {
                 'error': 'An export is already in progress',
                 'status': active_status,
             }, event)
+
+        # Only enforce rate limit if last export succeeded (status == 'ready')
+        if active_status == 'ready':
+            last_requested = existing.get('requestedAt', '')
+            if last_requested:
+                last_dt = datetime.fromisoformat(last_requested.replace('Z', '+00:00'))
+                if (now - last_dt).days < rate_limit_days:
+                    return cors_response(429, {
+                        'error': f'Export rate limit: one export per {rate_limit_days} days',
+                        'nextAvailable': (last_dt + timedelta(days=rate_limit_days)).isoformat(),
+                    }, event)
+
+        # pending_retrieval and failed statuses are allowed to re-export
 
     # Update status to processing
     retention_table.put_item(Item={
@@ -729,30 +756,24 @@ def _build_and_upload_auto_export(user_id, content_objects, now, retention_table
 # ===================================================================
 
 def _list_user_content(user_id):
-    """List all S3 objects for a user under conversations/ and user-responses/."""
+    """List all S3 objects for a user under conversations/ and user-responses/.
+
+    Uses StorageClass from list_objects_v2 response directly (no HeadObject calls).
+    If StorageClass is absent in the list response, defaults to STANDARD.
+    """
     objects = []
     for prefix in [f'conversations/{user_id}/', f'user-responses/{user_id}/']:
         paginator = _s3.get_paginator('list_objects_v2')
         for page in paginator.paginate(Bucket=_S3_BUCKET, Prefix=prefix):
             for obj in page.get('Contents', []):
-                # Get storage class via HeadObject for accurate tier info
-                try:
-                    head = _s3.head_object(Bucket=_S3_BUCKET, Key=obj['Key'])
-                    objects.append({
-                        'Key': obj['Key'],
-                        'Size': obj['Size'],
-                        'LastModified': obj['LastModified'].isoformat()
-                        if hasattr(obj['LastModified'], 'isoformat')
-                        else str(obj['LastModified']),
-                        'StorageClass': head.get('StorageClass', 'STANDARD'),
-                    })
-                except ClientError:
-                    objects.append({
-                        'Key': obj['Key'],
-                        'Size': obj['Size'],
-                        'LastModified': str(obj.get('LastModified', '')),
-                        'StorageClass': obj.get('StorageClass', 'STANDARD'),
-                    })
+                objects.append({
+                    'Key': obj['Key'],
+                    'Size': obj.get('Size', 0),
+                    'LastModified': obj['LastModified'].isoformat()
+                    if hasattr(obj.get('LastModified'), 'isoformat')
+                    else str(obj.get('LastModified', '')),
+                    'StorageClass': obj.get('StorageClass', 'STANDARD'),
+                })
     return objects
 
 
@@ -796,12 +817,19 @@ def _build_data_portability(user_id):
             profile_data = json.loads(profile_json)
         except (json.JSONDecodeError, TypeError):
             profile_data = {}
+        # Issue 9: Convert Cognito UserCreateDate datetime to ISO string
+        user_create_date = resp.get('UserCreateDate')
+        account_created_at = (
+            user_create_date.isoformat()
+            if hasattr(user_create_date, 'isoformat')
+            else str(user_create_date or '')
+        )
         data['profile'] = {
             'firstName': attrs.get('given_name', ''),
             'lastName': attrs.get('family_name', ''),
             'email': attrs.get('email', ''),
             'personaType': profile_data.get('persona_type', ''),
-            'accountCreatedAt': resp.get('UserCreateDate', ''),
+            'accountCreatedAt': account_created_at,
         }
     except Exception as e:
         logger.warning('Failed to get user profile: %s', e)
@@ -810,31 +838,31 @@ def _build_data_portability(user_id):
     try:
         qs_table = _dynamodb.Table(_TABLE_QUESTION_STATUS)
         resp = qs_table.query(
-            KeyConditionExpression=boto3.dynamodb.conditions.Key('UserId').eq(user_id)
+            KeyConditionExpression=boto3.dynamodb.conditions.Key('userId').eq(user_id)
         )
         for item in resp.get('Items', []):
             data['questionResponses'].append({
-                'questionId': item.get('QuestionId', ''),
-                'questionText': item.get('questionText', ''),
-                'transcript': item.get('transcript', ''),
-                'summary': item.get('summary', ''),
-                'answeredAt': item.get('answeredAt', ''),
-                'category': item.get('questionType', ''),
+                'questionId': item.get('questionId', ''),
+                'responseType': item.get('responseType', ''),
+                'audioOneSentence': item.get('audioOneSentence', ''),
+                'audioDetailedSummary': item.get('audioDetailedSummary', ''),
+                'completedAt': item.get('completedAt', ''),
+                'status': item.get('status', ''),
             })
         # Handle pagination
         while resp.get('LastEvaluatedKey'):
             resp = qs_table.query(
-                KeyConditionExpression=boto3.dynamodb.conditions.Key('UserId').eq(user_id),
+                KeyConditionExpression=boto3.dynamodb.conditions.Key('userId').eq(user_id),
                 ExclusiveStartKey=resp['LastEvaluatedKey'],
             )
             for item in resp.get('Items', []):
                 data['questionResponses'].append({
-                    'questionId': item.get('QuestionId', ''),
-                    'questionText': item.get('questionText', ''),
-                    'transcript': item.get('transcript', ''),
-                    'summary': item.get('summary', ''),
-                    'answeredAt': item.get('answeredAt', ''),
-                    'category': item.get('questionType', ''),
+                    'questionId': item.get('questionId', ''),
+                    'responseType': item.get('responseType', ''),
+                    'audioOneSentence': item.get('audioOneSentence', ''),
+                    'audioDetailedSummary': item.get('audioDetailedSummary', ''),
+                    'completedAt': item.get('completedAt', ''),
+                    'status': item.get('status', ''),
                 })
     except Exception as e:
         logger.warning('Failed to get question responses: %s', e)
@@ -843,16 +871,29 @@ def _build_data_portability(user_id):
     try:
         rel_table = _dynamodb.Table(_TABLE_RELATIONSHIPS)
         resp = rel_table.query(
-            KeyConditionExpression=boto3.dynamodb.conditions.Key('makerId').eq(user_id)
+            KeyConditionExpression=boto3.dynamodb.conditions.Key('initiator_id').eq(user_id)
         )
         for item in resp.get('Items', []):
-            data['benefactors'].append({
-                'benefactorId': item.get('visitorId', ''),
-                'name': item.get('visitorName', ''),
-                'email': item.get('visitorEmail', ''),
-                'relationship': item.get('relationship', ''),
-                'createdAt': item.get('createdAt', ''),
-            })
+            benefactor_id = item.get('related_user_id', '')
+            benefactor_info = {
+                'benefactorId': benefactor_id,
+                'relationshipType': item.get('relationship_type', ''),
+                'status': item.get('status', ''),
+                'createdAt': item.get('created_at', ''),
+            }
+            # Look up benefactor name/email from Cognito (skip pending invites)
+            if benefactor_id and not benefactor_id.startswith('pending#'):
+                try:
+                    cog_resp = _cognito.admin_get_user(
+                        UserPoolId=_COGNITO_USER_POOL_ID,
+                        Username=benefactor_id,
+                    )
+                    cog_attrs = {a['Name']: a['Value'] for a in cog_resp.get('UserAttributes', [])}
+                    benefactor_info['name'] = f"{cog_attrs.get('given_name', '')} {cog_attrs.get('family_name', '')}".strip()
+                    benefactor_info['email'] = cog_attrs.get('email', '')
+                except Exception:
+                    pass  # Cognito lookup failed — skip name/email
+            data['benefactors'].append(benefactor_info)
     except Exception as e:
         logger.warning('Failed to get benefactors: %s', e)
 

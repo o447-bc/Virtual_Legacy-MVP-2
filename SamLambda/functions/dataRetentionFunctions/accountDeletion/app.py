@@ -470,7 +470,7 @@ def _delete_s3_objects(user_id):
 def _delete_dynamodb_records(user_id):
     """Delete user records from all DynamoDB tables."""
     # Tables with simple userId key
-    _delete_from_table(_TABLE_QUESTION_STATUS, 'UserId', user_id, is_query=True)
+    _delete_from_table(_TABLE_QUESTION_STATUS, 'userId', user_id, is_query=True)
     _delete_from_table(_TABLE_QUESTION_PROGRESS, 'UserId', user_id, is_query=True)
     _delete_from_table(_TABLE_USER_STATUS, 'UserId', user_id, is_single=True)
     _delete_from_table(_TABLE_SUBSCRIPTIONS, 'userId', user_id, is_single=True)
@@ -479,10 +479,10 @@ def _delete_dynamodb_records(user_id):
     # ConversationState — query by userId
     _delete_from_table(_TABLE_CONVERSATION_STATE, 'userId', user_id, is_query=True)
 
-    # PersonaRelationships — query by makerId
+    # PersonaRelationships — query by initiator_id
     _delete_relationships(user_id)
 
-    # AccessConditions — query by makerId
+    # AccessConditions — query by initiator_id
     _delete_access_conditions(user_id)
 
     # DataRetentionDB — delete all records EXCEPT the deletion_request record
@@ -526,17 +526,17 @@ def _extract_key(table, item):
 
 
 def _delete_relationships(user_id):
-    """Delete PersonaRelationships records where user is the maker."""
+    """Delete PersonaRelationships records where user is the initiator (maker)."""
     try:
         table = _dynamodb.Table(_TABLE_RELATIONSHIPS)
         resp = table.query(
-            KeyConditionExpression=Key('makerId').eq(user_id)
+            KeyConditionExpression=Key('initiator_id').eq(user_id)
         )
         for item in resp.get('Items', []):
             table.delete_item(Key=_extract_key(table, item))
         while resp.get('LastEvaluatedKey'):
             resp = table.query(
-                KeyConditionExpression=Key('makerId').eq(user_id),
+                KeyConditionExpression=Key('initiator_id').eq(user_id),
                 ExclusiveStartKey=resp['LastEvaluatedKey'],
             )
             for item in resp.get('Items', []):
@@ -551,13 +551,13 @@ def _delete_access_conditions(user_id):
     try:
         table = _dynamodb.Table(_TABLE_ACCESS_CONDITIONS)
         resp = table.query(
-            KeyConditionExpression=Key('makerId').eq(user_id)
+            KeyConditionExpression=Key('initiator_id').eq(user_id)
         )
         for item in resp.get('Items', []):
             table.delete_item(Key=_extract_key(table, item))
         while resp.get('LastEvaluatedKey'):
             resp = table.query(
-                KeyConditionExpression=Key('makerId').eq(user_id),
+                KeyConditionExpression=Key('initiator_id').eq(user_id),
                 ExclusiveStartKey=resp['LastEvaluatedKey'],
             )
             for item in resp.get('Items', []):
@@ -601,13 +601,29 @@ def _notify_benefactors(user_id):
     try:
         table = _dynamodb.Table(_TABLE_RELATIONSHIPS)
         resp = table.query(
-            KeyConditionExpression=Key('makerId').eq(user_id)
+            KeyConditionExpression=Key('initiator_id').eq(user_id)
         )
         benefactors = resp.get('Items', [])
 
         for ben in benefactors:
-            ben_email = ben.get('visitorEmail', '')
-            maker_name = ben.get('makerName', 'a legacy maker')
+            benefactor_id = ben.get('related_user_id', '')
+            # Skip pending invites (no Cognito user to look up)
+            if not benefactor_id or benefactor_id.startswith('pending#'):
+                continue
+
+            # Look up benefactor email from Cognito
+            ben_email = ''
+            maker_name = 'a legacy maker'
+            try:
+                cog_resp = _cognito.admin_get_user(
+                    UserPoolId=_COGNITO_USER_POOL_ID,
+                    Username=benefactor_id,
+                )
+                cog_attrs = {a['Name']: a['Value'] for a in cog_resp.get('UserAttributes', [])}
+                ben_email = cog_attrs.get('email', '')
+            except Exception:
+                pass  # Cognito lookup failed — skip notification
+
             if ben_email:
                 try:
                     send_email_with_retry(
@@ -624,11 +640,11 @@ def _notify_benefactors(user_id):
                     )
                 except Exception as exc:
                     logger.warning('[ACCOUNT_DELETION] Failed to notify benefactor %s: %s',
-                                   ben.get('visitorId', ''), exc)
+                                   benefactor_id, exc)
 
             # Audit log for each benefactor access revocation
             log_audit_event('benefactor_access_revoked', user_id, {
-                'benefactorId': ben.get('visitorId', ''),
+                'benefactorId': benefactor_id,
                 'reason': 'account_deletion',
             }, initiator='system')
 
