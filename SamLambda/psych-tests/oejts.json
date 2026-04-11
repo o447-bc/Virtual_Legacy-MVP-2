@@ -1,0 +1,1235 @@
+{
+  "testId": "oejts",
+  "testName": "Open Extended Jungian Type Scales",
+  "description": "A 60-item assessment producing a 16-type personality classification based on Jungian psychological types, measuring Extraversion/Introversion, Sensing/Intuition, Thinking/Feeling, and Judging/Perceiving dimensions.",
+  "version": "1.0.0",
+  "estimatedMinutes": 15,
+  "consentBlock": {
+    "title": "Open Extended Jungian Type Scales (OEJTS)",
+    "bodyText": "This assessment contains 60 statements about your preferences and tendencies. For each statement, indicate how much you agree or disagree. There are no right or wrong answers. Your responses will be used to determine your Jungian personality type as part of your Legacy Portrait. Your data is stored securely and encrypted. This instrument is based on open-source items from Open Source Psychometrics Project.",
+    "requiredCheckboxLabel": "I understand this is a self-report personality type assessment and consent to my responses being stored and scored."
+  },
+  "disclaimerText": "This assessment is for personal insight and legacy-building purposes only. It is not a clinical diagnostic tool. Based on open-source items from the Open Source Psychometrics Project (openpsychometrics.org).",
+  "questions": [
+    {
+      "questionId": "oejts-q1",
+      "text": "At a party, you tend to interact with many people, including strangers.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "EI",
+      "groupByFacet": "extraversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q2",
+      "text": "You prefer to be in the thick of things rather than on the sidelines.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "EI",
+      "groupByFacet": "extraversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q3",
+      "text": "You feel energized after spending time with a large group of people.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "EI",
+      "groupByFacet": "extraversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q4",
+      "text": "You enjoy being the center of attention.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "EI",
+      "groupByFacet": "extraversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q5",
+      "text": "You find it easy to introduce yourself to new people.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "EI",
+      "groupByFacet": "extraversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q6",
+      "text": "You tend to think out loud.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "EI",
+      "groupByFacet": "extraversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q7",
+      "text": "You are more of a talker than a listener.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "EI",
+      "groupByFacet": "extraversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q8",
+      "text": "You prefer to spend your free time alone or with one close friend.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q9",
+      "text": "You need time alone to recharge after social events.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q10",
+      "text": "You prefer deep conversations with one person over group discussions.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q11",
+      "text": "You tend to think things through before speaking.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q12",
+      "text": "You find small talk draining.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q13",
+      "text": "You prefer written communication over phone calls.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q14",
+      "text": "You feel drained after attending large social gatherings.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q15",
+      "text": "You prefer working independently rather than in a team.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "EI",
+      "groupByFacet": "introversion_pole",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q16",
+      "text": "You focus on the details and specifics of a situation.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "SN",
+      "groupByFacet": "sensing_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q17",
+      "text": "You prefer practical, hands-on learning experiences.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "SN",
+      "groupByFacet": "sensing_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q18",
+      "text": "You trust your direct experience more than theories.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "SN",
+      "groupByFacet": "sensing_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q19",
+      "text": "You prefer step-by-step instructions over general guidelines.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "SN",
+      "groupByFacet": "sensing_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q20",
+      "text": "You pay close attention to what is happening around you right now.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "SN",
+      "groupByFacet": "sensing_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference.",
+      "videoPromptFrequency": 20
+    },
+    {
+      "questionId": "oejts-q21",
+      "text": "You prefer dealing with facts rather than possibilities.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "SN",
+      "groupByFacet": "sensing_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q22",
+      "text": "You are more interested in what is real than what is possible.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "SN",
+      "groupByFacet": "sensing_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q23",
+      "text": "You are drawn to the big picture and future possibilities.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q24",
+      "text": "You enjoy exploring abstract concepts and theories.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q25",
+      "text": "You often think about what could be rather than what is.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q26",
+      "text": "You trust your gut feelings and hunches.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q27",
+      "text": "You prefer learning new skills over perfecting existing ones.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q28",
+      "text": "You are more interested in patterns and connections than individual facts.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q29",
+      "text": "You enjoy brainstorming and generating new ideas.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q30",
+      "text": "You are more imaginative than practical.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "SN",
+      "groupByFacet": "intuition_pole",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q31",
+      "text": "You make decisions based on logic and objective analysis.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "TF",
+      "groupByFacet": "thinking_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q32",
+      "text": "You value fairness and consistency over individual circumstances.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "TF",
+      "groupByFacet": "thinking_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q33",
+      "text": "You prefer to be direct and honest, even if it might hurt feelings.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "TF",
+      "groupByFacet": "thinking_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q34",
+      "text": "You believe the best decisions are made with the head, not the heart.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "TF",
+      "groupByFacet": "thinking_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q35",
+      "text": "You tend to analyze problems objectively without getting emotionally involved.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "TF",
+      "groupByFacet": "thinking_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q36",
+      "text": "You are more convinced by logical arguments than emotional appeals.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "TF",
+      "groupByFacet": "thinking_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q37",
+      "text": "You prioritize truth over tact in conversations.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "TF",
+      "groupByFacet": "thinking_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q38",
+      "text": "You consider how decisions will affect people's feelings.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q39",
+      "text": "You value harmony and try to avoid conflict.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q40",
+      "text": "You are more interested in people than in systems or processes.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference.",
+      "videoPromptFrequency": 20
+    },
+    {
+      "questionId": "oejts-q41",
+      "text": "You make decisions based on your personal values and how others will be affected.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q42",
+      "text": "You are sensitive to others' needs and emotions.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q43",
+      "text": "You prefer to encourage and support rather than critique.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q44",
+      "text": "You believe compassion is more important than objectivity.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q45",
+      "text": "You find it difficult to give negative feedback.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "TF",
+      "groupByFacet": "feeling_pole",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q46",
+      "text": "You prefer to have a plan and stick to it.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "JP",
+      "groupByFacet": "judging_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q47",
+      "text": "You like to have things decided and settled.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "JP",
+      "groupByFacet": "judging_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q48",
+      "text": "You prefer a structured and organized environment.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "JP",
+      "groupByFacet": "judging_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q49",
+      "text": "You feel uncomfortable when things are left open-ended.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "JP",
+      "groupByFacet": "judging_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q50",
+      "text": "You like to make lists and check things off.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "JP",
+      "groupByFacet": "judging_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q51",
+      "text": "You prefer to finish one project before starting another.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "JP",
+      "groupByFacet": "judging_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q52",
+      "text": "You are punctual and expect others to be as well.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": false,
+      "scoringKey": "JP",
+      "groupByFacet": "judging_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q53",
+      "text": "You prefer to keep your options open and stay flexible.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q54",
+      "text": "You enjoy spontaneity and going with the flow.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q55",
+      "text": "You tend to start many projects but may not finish all of them.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q56",
+      "text": "You prefer to adapt to situations as they arise.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q57",
+      "text": "You find deadlines more motivating than stressful.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q58",
+      "text": "You enjoy exploring new possibilities rather than following a set plan.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q59",
+      "text": "You are comfortable with ambiguity and uncertainty.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Select the point on the scale that best represents your preference."
+    },
+    {
+      "questionId": "oejts-q60",
+      "text": "You prefer a flexible schedule over a rigid routine.",
+      "responseType": "bipolar5",
+      "options": [
+        "Strongly Disagree",
+        "Disagree",
+        "Neutral",
+        "Agree",
+        "Strongly Agree"
+      ],
+      "reverseScored": true,
+      "scoringKey": "JP",
+      "groupByFacet": "perceiving_pole",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Select the point on the scale that best represents your preference.",
+      "videoPromptFrequency": 20
+    }
+  ],
+  "scoringRules": {
+    "EI": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Strong"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Moderate"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "Strong"
+        }
+      ]
+    },
+    "SN": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Strong"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Moderate"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "Strong"
+        }
+      ]
+    },
+    "TF": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Strong"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Moderate"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "Strong"
+        }
+      ]
+    },
+    "JP": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Strong"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Moderate"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "Strong"
+        }
+      ]
+    }
+  },
+  "compositeRules": {
+    "legacy_portrait_type": {
+      "sources": [
+        {
+          "testId": "oejts",
+          "domain": "EI"
+        },
+        {
+          "testId": "oejts",
+          "domain": "SN"
+        },
+        {
+          "testId": "oejts",
+          "domain": "TF"
+        },
+        {
+          "testId": "oejts",
+          "domain": "JP"
+        },
+        {
+          "testId": "ipip-neo-60",
+          "domain": "extraversion"
+        },
+        {
+          "testId": "personality-ei",
+          "domain": "social_awareness"
+        }
+      ],
+      "formula": "mean"
+    }
+  },
+  "interpretationTemplates": {
+    "EI": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "You show a clear preference for Extraversion, drawing energy from social interaction and external activity."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "You show a balanced preference between Extraversion and Introversion."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "You show a clear preference for Introversion, drawing energy from solitude and internal reflection."
+      }
+    ],
+    "SN": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "You show a clear preference for Sensing, focusing on concrete facts and present realities."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "You show a balanced preference between Sensing and Intuition."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "You show a clear preference for Intuition, focusing on patterns, possibilities, and future potential."
+      }
+    ],
+    "TF": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "You show a clear preference for Thinking, making decisions based on logic and objective analysis."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "You show a balanced preference between Thinking and Feeling."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "You show a clear preference for Feeling, making decisions based on personal values and how others will be affected."
+      }
+    ],
+    "JP": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "You show a clear preference for Judging, preferring structure, planning, and decisiveness."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "You show a balanced preference between Judging and Perceiving."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "You show a clear preference for Perceiving, preferring flexibility, spontaneity, and keeping options open."
+      }
+    ]
+  },
+  "bedrockConfig": {
+    "useBedrock": true,
+    "maxTokens": 1024,
+    "temperature": 0.7,
+    "cacheResultsForDays": 30
+  },
+  "videoPromptTrigger": "Reflect on the preferences you just indicated. Record a brief video sharing how these tendencies show up in your relationships and daily decisions.",
+  "saveProgressEnabled": true,
+  "analyticsEnabled": true,
+  "exportFormats": [
+    "PDF",
+    "JSON",
+    "CSV"
+  ]
+}

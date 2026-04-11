@@ -48,6 +48,14 @@ export const API_CONFIG = {
     ACCOUNT_DELETION_STATUS: '/account/deletion-status',
     LEGACY_PROTECTION_REQUEST: '/legacy/protection-request',
     ADMIN_STORAGE_REPORT: '/admin/storage-report',
+
+    // Psychological Testing
+    PSYCH_TESTS_LIST: '/psych-tests/list',
+    PSYCH_TEST_DEFINITION: '/psych-tests',
+    PSYCH_TESTS_SCORE: '/psych-tests/score',
+    PSYCH_TESTS_PROGRESS_SAVE: '/psych-tests/progress/save',
+    PSYCH_TESTS_PROGRESS_GET: '/psych-tests/progress',
+    PSYCH_TESTS_EXPORT: '/psych-tests/export',
   }
 };
 

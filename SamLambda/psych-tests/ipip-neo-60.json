@@ -1,0 +1,1276 @@
+{
+  "testId": "ipip-neo-60",
+  "testName": "IPIP-NEO-60",
+  "description": "A 60-item measure of the Big Five personality domains: Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism, based on the International Personality Item Pool.",
+  "version": "1.0.0",
+  "estimatedMinutes": 15,
+  "consentBlock": {
+    "title": "IPIP-NEO-60 Personality Assessment",
+    "bodyText": "This assessment contains 60 statements about your personality. For each statement, indicate how accurately it describes you on a scale from Very Inaccurate to Very Accurate. There are no right or wrong answers. Your responses will be used to generate a personality profile as part of your Legacy Portrait. Your data is stored securely and encrypted. This instrument uses items from the International Personality Item Pool (ipip.ori.org), which is in the public domain.",
+    "requiredCheckboxLabel": "I understand this is a self-report personality assessment and consent to my responses being stored and scored."
+  },
+  "disclaimerText": "This assessment is for personal insight and legacy-building purposes only. It is not a clinical diagnostic tool. Items are from the public-domain International Personality Item Pool (ipip.ori.org).",
+  "questions": [
+    {
+      "questionId": "neo60-q1",
+      "text": "I have a vivid imagination.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "openness",
+      "groupByFacet": "imagination",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale.",
+      "videoPromptFrequency": 20
+    },
+    {
+      "questionId": "neo60-q2",
+      "text": "I believe in the importance of art.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "openness",
+      "groupByFacet": "imagination",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q3",
+      "text": "I tend to vote for liberal political candidates.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "openness",
+      "groupByFacet": "imagination",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q4",
+      "text": "I enjoy hearing new ideas.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "openness",
+      "groupByFacet": "imagination",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q5",
+      "text": "I enjoy thinking about things.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "openness",
+      "groupByFacet": "imagination",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q6",
+      "text": "I carry the conversation to a higher level.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "openness",
+      "groupByFacet": "imagination",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q7",
+      "text": "I do not like art.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "openness",
+      "groupByFacet": "artistic_interests",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q8",
+      "text": "I avoid philosophical discussions.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "openness",
+      "groupByFacet": "artistic_interests",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q9",
+      "text": "I do not enjoy going to art museums.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "openness",
+      "groupByFacet": "artistic_interests",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q10",
+      "text": "I tend to vote for conservative political candidates.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "openness",
+      "groupByFacet": "artistic_interests",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q11",
+      "text": "I am not interested in abstract ideas.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "openness",
+      "groupByFacet": "artistic_interests",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q12",
+      "text": "I have difficulty understanding abstract ideas.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "openness",
+      "groupByFacet": "artistic_interests",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q13",
+      "text": "I am always prepared.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "self_efficacy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q14",
+      "text": "I pay attention to details.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "self_efficacy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q15",
+      "text": "I get chores done right away.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "self_efficacy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q16",
+      "text": "I carry out my plans.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "self_efficacy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q17",
+      "text": "I make plans and stick to them.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "self_efficacy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q18",
+      "text": "I complete tasks successfully.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "self_efficacy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q19",
+      "text": "I waste my time.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "orderliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q20",
+      "text": "I find it difficult to get down to work.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "orderliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q21",
+      "text": "I do just enough work to get by.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "orderliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale.",
+      "videoPromptFrequency": 20
+    },
+    {
+      "questionId": "neo60-q22",
+      "text": "I don't see things through.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "orderliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q23",
+      "text": "I shirk my duties.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "orderliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q24",
+      "text": "I leave a mess in my room.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "conscientiousness",
+      "groupByFacet": "orderliness",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q25",
+      "text": "I am the life of the party.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "extraversion",
+      "groupByFacet": "friendliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q26",
+      "text": "I feel comfortable around people.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "extraversion",
+      "groupByFacet": "friendliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q27",
+      "text": "I start conversations.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "extraversion",
+      "groupByFacet": "friendliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q28",
+      "text": "I talk to a lot of different people at parties.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "extraversion",
+      "groupByFacet": "friendliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q29",
+      "text": "I make friends easily.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "extraversion",
+      "groupByFacet": "friendliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q30",
+      "text": "I know how to captivate people.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "extraversion",
+      "groupByFacet": "friendliness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q31",
+      "text": "I don't talk a lot.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "extraversion",
+      "groupByFacet": "gregariousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q32",
+      "text": "I keep in the background.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "extraversion",
+      "groupByFacet": "gregariousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q33",
+      "text": "I have little to say.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "extraversion",
+      "groupByFacet": "gregariousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q34",
+      "text": "I don't like to draw attention to myself.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "extraversion",
+      "groupByFacet": "gregariousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q35",
+      "text": "I am quiet around strangers.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "extraversion",
+      "groupByFacet": "gregariousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q36",
+      "text": "I would describe my experiences as somewhat dull.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "extraversion",
+      "groupByFacet": "gregariousness",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q37",
+      "text": "I sympathize with others' feelings.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "trust",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q38",
+      "text": "I have a good word for everyone.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "trust",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q39",
+      "text": "I am interested in people.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "trust",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q40",
+      "text": "I take time out for others.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "trust",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q41",
+      "text": "I feel others' emotions.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "trust",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale.",
+      "videoPromptFrequency": 20
+    },
+    {
+      "questionId": "neo60-q42",
+      "text": "I make people feel at ease.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "trust",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q43",
+      "text": "I am not really interested in others.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "altruism",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q44",
+      "text": "I insult people.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "altruism",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q45",
+      "text": "I am not interested in other people's problems.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "altruism",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q46",
+      "text": "I feel little concern for others.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "altruism",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q47",
+      "text": "I am hard to get to know.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "altruism",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q48",
+      "text": "I cut others to pieces.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "agreeableness",
+      "groupByFacet": "altruism",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q49",
+      "text": "I get stressed out easily.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "anxiety",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q50",
+      "text": "I worry about things.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "anxiety",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q51",
+      "text": "I am easily disturbed.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "anxiety",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q52",
+      "text": "I get upset easily.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "anxiety",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q53",
+      "text": "I change my mood a lot.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "anxiety",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q54",
+      "text": "I have frequent mood swings.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "anxiety",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q55",
+      "text": "I seldom feel blue.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "self_consciousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q56",
+      "text": "I am relaxed most of the time.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "self_consciousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q57",
+      "text": "I am not easily bothered by things.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "self_consciousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q58",
+      "text": "I rarely get irritated.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "self_consciousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q59",
+      "text": "I seldom get mad.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "self_consciousness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "neo60-q60",
+      "text": "I am very pleased with myself.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "neuroticism",
+      "groupByFacet": "self_consciousness",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    }
+  ],
+  "scoringRules": {
+    "openness": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    },
+    "conscientiousness": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    },
+    "extraversion": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    },
+    "agreeableness": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    },
+    "neuroticism": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    }
+  },
+  "compositeRules": {
+    "legacy_portrait_personality": {
+      "sources": [
+        {
+          "testId": "ipip-neo-60",
+          "domain": "openness"
+        },
+        {
+          "testId": "ipip-neo-60",
+          "domain": "conscientiousness"
+        },
+        {
+          "testId": "ipip-neo-60",
+          "domain": "extraversion"
+        },
+        {
+          "testId": "ipip-neo-60",
+          "domain": "agreeableness"
+        },
+        {
+          "testId": "ipip-neo-60",
+          "domain": "neuroticism"
+        },
+        {
+          "testId": "oejts",
+          "domain": "EI"
+        },
+        {
+          "testId": "personality-ei",
+          "domain": "self_awareness"
+        }
+      ],
+      "formula": "mean"
+    }
+  },
+  "interpretationTemplates": {
+    "openness": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Openness score is low, suggesting you prefer practical, conventional approaches and are comfortable with familiar routines rather than seeking out novel experiences."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Openness score is average, indicating a balanced mix of curiosity and practicality. You appreciate new ideas while also valuing tried-and-true methods."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Openness score is high, reflecting a strong intellectual curiosity, vivid imagination, and appreciation for art, ideas, and unconventional perspectives."
+      }
+    ],
+    "conscientiousness": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Conscientiousness score is low, suggesting a flexible, spontaneous approach to life. You may prefer to keep your options open rather than follow strict plans."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Conscientiousness score is average, indicating a reasonable balance between organization and flexibility in your daily life."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Conscientiousness score is high, reflecting strong self-discipline, organization, and a goal-oriented approach to life."
+      }
+    ],
+    "extraversion": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Extraversion score is low, suggesting you prefer quieter, more solitary activities and may find large social gatherings draining."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Extraversion score is average, indicating comfort in both social and solitary settings."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Extraversion score is high, reflecting an energetic, sociable nature. You thrive in social situations and draw energy from interacting with others."
+      }
+    ],
+    "agreeableness": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Agreeableness score is low, suggesting you tend to be more competitive and skeptical in your interactions with others."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Agreeableness score is average, indicating a balance between cooperation and assertiveness."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Agreeableness score is high, reflecting a compassionate, cooperative nature. You value harmony and are considerate of others' feelings."
+      }
+    ],
+    "neuroticism": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Neuroticism score is low, suggesting strong emotional stability. You tend to remain calm under pressure."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Neuroticism score is average, indicating a typical range of emotional responses to life's challenges."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Neuroticism score is high, reflecting a tendency to experience stress and mood fluctuations more intensely."
+      }
+    ]
+  },
+  "bedrockConfig": {
+    "useBedrock": true,
+    "maxTokens": 1024,
+    "temperature": 0.7,
+    "cacheResultsForDays": 30
+  },
+  "videoPromptTrigger": "Take a moment to reflect on the questions you just answered. Record a brief video sharing your thoughts about how these traits show up in your daily life.",
+  "saveProgressEnabled": true,
+  "analyticsEnabled": true,
+  "exportFormats": [
+    "PDF",
+    "JSON",
+    "CSV"
+  ]
+}

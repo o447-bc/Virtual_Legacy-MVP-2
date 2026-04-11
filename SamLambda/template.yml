@@ -42,6 +42,9 @@ Globals:
         # Set to 'true' to enable server-side persona enforcement (Phase 2 rollout)
         ENFORCE_PERSONA_VALIDATION: 'false'
         TABLE_DATA_RETENTION: !Ref DataRetentionTable
+        TABLE_PSYCH_TESTS: !Ref PsychTestsTable
+        TABLE_USER_TEST_PROGRESS: !Ref UserTestProgressTable
+        TABLE_USER_TEST_RESULTS: !Ref UserTestResultsTable
   Api:
     Cors:
       AllowMethods: '''GET,POST,PUT,OPTIONS'''
@@ -278,6 +281,9 @@ Resources:
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionStatusDB
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userQuestionLevelProgressDB
                 - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+                - !GetAtt PsychTestsTable.Arn
+                - !GetAtt UserTestProgressTable.Arn
+                - !GetAtt UserTestResultsTable.Arn
 
   # Data Retention Lifecycle — Audit log bucket with Object Lock for regulatory compliance (3-year retention)
   RetentionAuditBucket:
@@ -695,6 +701,104 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: expiresAt
         Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Psychological Testing Framework — Test metadata table
+  PsychTestsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: PsychTestsDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: testId
+          AttributeType: S
+        - AttributeName: version
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: testId
+          KeyType: HASH
+        - AttributeName: version
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: status-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Psychological Testing Framework — In-progress test responses with TTL
+  UserTestProgressTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserTestProgressDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: testId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: testId
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Psychological Testing Framework — Completed test results
+  UserTestResultsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: UserTestResultsDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: testIdVersionTimestamp
+          AttributeType: S
+        - AttributeName: testId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: testIdVersionTimestamp
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: testId-index
+          KeySchema:
+            - AttributeName: testId
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       SSESpecification:
         SSEEnabled: true
         SSEType: KMS
@@ -4197,6 +4301,337 @@ Resources:
             Schedule: 'rate(1 day)'
             Description: Send win-back emails to users 3-4 days post-trial-expiry
             Enabled: true
+
+  # ============================================================
+  # ScorePsychTest Function (Cognito Auth) — Core Scoring Engine
+  # ============================================================
+
+  ScorePsychTestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/psychTestFunctions/scorePsychTest/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy/psych-tests/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource:
+                - !GetAtt PsychTestsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt UserTestResultsTable.Arn
+                - !Sub ${UserTestResultsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:DeleteItem
+              Resource:
+                - !GetAtt UserTestProgressTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource:
+                - arn:aws:bedrock:*::foundation-model/anthropic.*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ScoreTest:
+          Type: Api
+          Properties:
+            Path: /psych-tests/score
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ScoreTestOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/score
+            Method: OPTIONS
+
+  # ============================================================
+  # ListPsychTests Function (Cognito Auth)
+  # ============================================================
+
+  ListPsychTestsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/psychTestFunctions/listPsychTests/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Layers:
+        - !Ref SharedUtilsLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt PsychTestsTable.Arn
+                - !Sub ${PsychTestsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource:
+                - !GetAtt UserTestResultsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy/psych-tests/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ListTests:
+          Type: Api
+          Properties:
+            Path: /psych-tests/list
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ListTestsOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/list
+            Method: OPTIONS
+        GetTestDefinition:
+          Type: Api
+          Properties:
+            Path: /psych-tests/{testId}
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetTestDefinitionOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/{testId}
+            Method: OPTIONS
+
+  # ============================================================
+  # SaveTestProgress Function (Cognito Auth)
+  # ============================================================
+
+  SaveTestProgressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/psychTestFunctions/saveTestProgress/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Layers:
+        - !Ref SharedUtilsLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource:
+                - !GetAtt UserTestProgressTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        SaveProgress:
+          Type: Api
+          Properties:
+            Path: /psych-tests/progress/save
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SaveProgressOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/progress/save
+            Method: OPTIONS
+
+  # ============================================================
+  # GetTestProgress Function (Cognito Auth)
+  # ============================================================
+
+  GetTestProgressFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/psychTestFunctions/getTestProgress/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Layers:
+        - !Ref SharedUtilsLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt UserTestProgressTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetProgress:
+          Type: Api
+          Properties:
+            Path: /psych-tests/progress/{testId}
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetProgressOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/progress/{testId}
+            Method: OPTIONS
+
+  # ============================================================
+  # ExportTestResults Function (Cognito Auth)
+  # ============================================================
+
+  ExportTestResultsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/psychTestFunctions/exportTestResults/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource:
+                - !GetAtt UserTestResultsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy/psych-exports/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        ExportResults:
+          Type: Api
+          Properties:
+            Path: /psych-tests/export
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        ExportResultsOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/export
+            Method: OPTIONS
+
+  # ============================================================
+  # AdminImportTest Function (Cognito Auth, Admin-only)
+  # ============================================================
+
+  AdminImportTestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/psychTestFunctions/adminImportTest/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 30
+      Layers:
+        - !Ref SharedUtilsLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+              Resource:
+                - arn:aws:s3:::virtual-legacy/psych-tests/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt PsychTestsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminImport:
+          Type: Api
+          Properties:
+            Path: /psych-tests/admin/import
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminImportOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/admin/import
+            Method: OPTIONS
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

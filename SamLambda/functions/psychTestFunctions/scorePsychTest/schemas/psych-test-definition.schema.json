@@ -1,0 +1,207 @@
+{
+  "title": "Psychological Test Definition",
+  "description": "Schema for defining a psychological test in the Soul Reel framework.",
+  "type": "object",
+  "required": [
+    "testId",
+    "testName",
+    "description",
+    "version",
+    "estimatedMinutes",
+    "consentBlock",
+    "disclaimerText",
+    "questions",
+    "scoringRules",
+    "compositeRules",
+    "interpretationTemplates",
+    "videoPromptTrigger",
+    "saveProgressEnabled",
+    "analyticsEnabled",
+    "exportFormats"
+  ],
+  "properties": {
+    "testId": {
+      "type": "string",
+      "description": "Unique identifier for the test"
+    },
+    "testName": {
+      "type": "string",
+      "description": "Human-readable display name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of what the test measures"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version string"
+    },
+    "previousVersionMapping": {
+      "type": "object",
+      "description": "Maps old questionIds to new questionIds for version migration",
+      "additionalProperties": { "type": "string" }
+    },
+    "estimatedMinutes": {
+      "type": "number",
+      "description": "Estimated completion time in minutes",
+      "minimum": 1
+    },
+    "consentBlock": {
+      "type": "object",
+      "description": "Required consent screen shown before test questions",
+      "required": ["title", "bodyText", "requiredCheckboxLabel"],
+      "properties": {
+        "title": { "type": "string", "description": "Title of the consent screen" },
+        "bodyText": { "type": "string", "description": "Body text explaining consent requirements" },
+        "requiredCheckboxLabel": { "type": "string", "description": "Label for the required consent checkbox" }
+      },
+      "additionalProperties": false
+    },
+    "disclaimerText": {
+      "type": "string",
+      "description": "Disclaimer text displayed with the test"
+    },
+    "questions": {
+      "type": "array",
+      "description": "Array of question objects",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "questionId", "text", "responseType", "options",
+          "reverseScored", "scoringKey", "groupByFacet",
+          "pageBreakAfter", "accessibilityHint"
+        ],
+        "properties": {
+          "questionId": { "type": "string", "description": "Unique question identifier" },
+          "text": { "type": "string", "description": "Question text displayed to the user" },
+          "responseType": {
+            "type": "string",
+            "enum": ["likert5", "bipolar5", "multipleChoice"],
+            "description": "Type of response control to render"
+          },
+          "options": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Response options or scale endpoint labels"
+          },
+          "reverseScored": { "type": "boolean", "description": "Whether score is reversed" },
+          "scoringKey": { "type": "string", "description": "Domain key for scoring grouping" },
+          "groupByFacet": { "type": "string", "description": "Facet key for facet scoring and UI grouping" },
+          "pageBreakAfter": { "type": "boolean", "description": "Show page transition after this question" },
+          "accessibilityHint": { "type": "string", "description": "Screen reader hint (aria-describedby)" },
+          "videoPromptFrequency": {
+            "type": "number",
+            "description": "Show video prompt every N questions (optional)",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scoringRules": {
+      "type": "object",
+      "description": "Scoring rules keyed by domain or facet name",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["formula", "thresholds"],
+        "properties": {
+          "formula": { "type": "string", "description": "Scoring formula (e.g. 'mean', 'sum')" },
+          "thresholds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["min", "max", "label"],
+              "properties": {
+                "min": { "type": "number", "description": "Minimum score (inclusive)" },
+                "max": { "type": "number", "description": "Maximum score (inclusive)" },
+                "label": { "type": "string", "description": "Classification label" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "lookupTables": {
+            "type": "object",
+            "description": "Optional lookup tables for score normalization",
+            "additionalProperties": {
+              "type": "array",
+              "items": { "type": "number" }
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "compositeRules": {
+      "type": "object",
+      "description": "Rules for combining scores across domains or tests",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["sources", "formula"],
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["testId", "domain"],
+              "properties": {
+                "testId": { "type": "string", "description": "Source test identifier" },
+                "domain": { "type": "string", "description": "Source domain name" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "formula": { "type": "string", "description": "Formula for combining source scores" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "interpretationTemplates": {
+      "type": "object",
+      "description": "Score-range-to-narrative mappings keyed by domain or facet name",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["min", "max", "text"],
+          "properties": {
+            "min": { "type": "number", "description": "Minimum score (inclusive)" },
+            "max": { "type": "number", "description": "Maximum score (inclusive)" },
+            "text": { "type": "string", "description": "Narrative text for this score range" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "bedrockConfig": {
+      "type": "object",
+      "description": "Optional AI narrative generation configuration",
+      "required": ["useBedrock", "maxTokens", "temperature", "cacheResultsForDays"],
+      "properties": {
+        "useBedrock": { "type": "boolean", "description": "Whether to use Bedrock" },
+        "maxTokens": { "type": "number", "description": "Maximum tokens for response", "minimum": 1 },
+        "temperature": { "type": "number", "description": "Generation temperature", "minimum": 0, "maximum": 1 },
+        "cacheResultsForDays": { "type": "number", "description": "Days to cache narratives (0 to disable)", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "videoPromptTrigger": {
+      "type": "string",
+      "description": "Template string for video recording prompts"
+    },
+    "saveProgressEnabled": {
+      "type": "boolean",
+      "description": "Whether auto-save of in-progress responses is enabled"
+    },
+    "analyticsEnabled": {
+      "type": "boolean",
+      "description": "Whether analytics tracking is enabled"
+    },
+    "exportFormats": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Supported export formats (e.g. ['PDF', 'JSON', 'CSV'])"
+    }
+  },
+  "additionalProperties": false
+}

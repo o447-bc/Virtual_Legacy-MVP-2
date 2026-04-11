@@ -1,0 +1,894 @@
+{
+  "testId": "personality-ei",
+  "testName": "Personality-Based Emotional Intelligence Test",
+  "description": "A 40-item assessment measuring four dimensions of emotional intelligence: Self-Awareness, Self-Management, Social Awareness, and Relationship Management.",
+  "version": "1.0.0",
+  "estimatedMinutes": 10,
+  "consentBlock": {
+    "title": "Personality-Based Emotional Intelligence Test",
+    "bodyText": "This assessment contains 40 statements about how you perceive and manage emotions. For each statement, indicate how accurately it describes you. There are no right or wrong answers. Your responses will be used to generate an emotional intelligence profile as part of your Legacy Portrait. Your data is stored securely and encrypted. This instrument is based on open-source items from the Open Source Psychometrics Project.",
+    "requiredCheckboxLabel": "I understand this is a self-report emotional intelligence assessment and consent to my responses being stored and scored."
+  },
+  "disclaimerText": "This assessment is for personal insight and legacy-building purposes only. It is not a clinical diagnostic tool. Based on open-source items from the Open Source Psychometrics Project (openpsychometrics.org).",
+  "questions": [
+    {
+      "questionId": "pei-q1",
+      "text": "I am aware of my emotions as I experience them.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "emotional_recognition",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q2",
+      "text": "I know why my emotions change.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "emotional_recognition",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q3",
+      "text": "I can accurately identify what I am feeling at any given moment.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "emotional_recognition",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q4",
+      "text": "I understand what makes me feel the way I do.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "emotional_recognition",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q5",
+      "text": "I recognize how my feelings affect my performance.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "emotional_recognition",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q6",
+      "text": "I have trouble figuring out my own feelings.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "self_assessment",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q7",
+      "text": "I am often confused about what emotion I am feeling.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "self_assessment",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q8",
+      "text": "I find it hard to describe how I feel to others.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "self_assessment",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q9",
+      "text": "I am surprised by my emotional reactions.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "self_assessment",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q10",
+      "text": "I don't pay much attention to my emotions.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_awareness",
+      "groupByFacet": "self_assessment",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q11",
+      "text": "I can calm myself down when I feel anxious or upset.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_management",
+      "groupByFacet": "emotional_regulation",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q12",
+      "text": "I can control my temper and handle difficulties rationally.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_management",
+      "groupByFacet": "emotional_regulation",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q13",
+      "text": "I think before I act when I am angry.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_management",
+      "groupByFacet": "emotional_regulation",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q14",
+      "text": "I can pull myself together quickly after a setback.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_management",
+      "groupByFacet": "emotional_regulation",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q15",
+      "text": "I stay composed under pressure.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "self_management",
+      "groupByFacet": "emotional_regulation",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q16",
+      "text": "I have difficulty controlling my emotions.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_management",
+      "groupByFacet": "adaptability",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q17",
+      "text": "I tend to overreact to minor problems.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_management",
+      "groupByFacet": "adaptability",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q18",
+      "text": "I find it hard to let go of negative feelings.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_management",
+      "groupByFacet": "adaptability",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q19",
+      "text": "I get overwhelmed by strong emotions.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_management",
+      "groupByFacet": "adaptability",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q20",
+      "text": "I act impulsively when I am emotional.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "self_management",
+      "groupByFacet": "adaptability",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale.",
+      "videoPromptFrequency": 20
+    },
+    {
+      "questionId": "pei-q21",
+      "text": "I can tell when someone is feeling sad even if they don't say so.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "empathy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q22",
+      "text": "I am good at reading other people's body language.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "empathy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q23",
+      "text": "I can sense the mood of a group when I walk into a room.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "empathy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q24",
+      "text": "I notice when someone is uncomfortable in a social situation.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "empathy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q25",
+      "text": "I understand why people feel the way they do.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "empathy",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q26",
+      "text": "I find it hard to understand why people react the way they do.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "organizational_awareness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q27",
+      "text": "I often miss emotional cues from others.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "organizational_awareness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q28",
+      "text": "I have difficulty seeing things from another person's perspective.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "organizational_awareness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q29",
+      "text": "I am not very good at sensing what others are feeling.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "organizational_awareness",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q30",
+      "text": "I tend to focus on my own feelings rather than noticing others'.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "social_awareness",
+      "groupByFacet": "organizational_awareness",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q31",
+      "text": "I am good at resolving conflicts between people.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "influence",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q32",
+      "text": "I can inspire and motivate others.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "influence",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q33",
+      "text": "I help others feel better when they are upset.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "influence",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q34",
+      "text": "I am effective at building rapport with new people.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "influence",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q35",
+      "text": "I can express my emotions in a way that others understand.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": false,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "influence",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q36",
+      "text": "I find it difficult to maintain close relationships.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "conflict_management",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q37",
+      "text": "I struggle to express my feelings to others.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "conflict_management",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q38",
+      "text": "I have trouble working through disagreements constructively.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "conflict_management",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q39",
+      "text": "I find it hard to comfort someone who is upset.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "conflict_management",
+      "pageBreakAfter": false,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
+    },
+    {
+      "questionId": "pei-q40",
+      "text": "I tend to avoid emotional conversations.",
+      "responseType": "likert5",
+      "options": [
+        "Very Inaccurate",
+        "Moderately Inaccurate",
+        "Neither",
+        "Moderately Accurate",
+        "Very Accurate"
+      ],
+      "reverseScored": true,
+      "scoringKey": "relationship_management",
+      "groupByFacet": "conflict_management",
+      "pageBreakAfter": true,
+      "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale.",
+      "videoPromptFrequency": 20
+    }
+  ],
+  "scoringRules": {
+    "self_awareness": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    },
+    "self_management": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    },
+    "social_awareness": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    },
+    "relationship_management": {
+      "formula": "mean",
+      "thresholds": [
+        {
+          "min": 1.0,
+          "max": 2.5,
+          "label": "Low"
+        },
+        {
+          "min": 2.5,
+          "max": 3.5,
+          "label": "Average"
+        },
+        {
+          "min": 3.5,
+          "max": 5.0,
+          "label": "High"
+        }
+      ]
+    }
+  },
+  "compositeRules": {
+    "legacy_portrait_emotional": {
+      "sources": [
+        {
+          "testId": "personality-ei",
+          "domain": "self_awareness"
+        },
+        {
+          "testId": "personality-ei",
+          "domain": "self_management"
+        },
+        {
+          "testId": "personality-ei",
+          "domain": "social_awareness"
+        },
+        {
+          "testId": "personality-ei",
+          "domain": "relationship_management"
+        },
+        {
+          "testId": "ipip-neo-60",
+          "domain": "agreeableness"
+        },
+        {
+          "testId": "oejts",
+          "domain": "TF"
+        }
+      ],
+      "formula": "mean"
+    }
+  },
+  "interpretationTemplates": {
+    "self_awareness": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Self-Awareness score is low, suggesting you may benefit from paying more attention to your emotional states and what triggers them."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Self-Awareness score is average, indicating a reasonable understanding of your own emotions and their causes."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Self-Awareness score is high, reflecting a strong ability to recognize and understand your own emotions as they occur."
+      }
+    ],
+    "self_management": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Self-Management score is low, suggesting you may find it challenging to regulate your emotional responses in difficult situations."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Self-Management score is average, indicating a reasonable ability to manage your emotions in most situations."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Self-Management score is high, reflecting strong emotional regulation skills and the ability to stay composed under pressure."
+      }
+    ],
+    "social_awareness": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Social Awareness score is low, suggesting you may sometimes miss emotional cues from others or find it hard to read social situations."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Social Awareness score is average, indicating a reasonable ability to perceive and understand others' emotions."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Social Awareness score is high, reflecting strong empathy and an ability to read social dynamics and others' emotional states."
+      }
+    ],
+    "relationship_management": [
+      {
+        "min": 1.0,
+        "max": 2.5,
+        "text": "Your Relationship Management score is low, suggesting you may find it challenging to navigate emotional aspects of relationships and conflicts."
+      },
+      {
+        "min": 2.5,
+        "max": 3.5,
+        "text": "Your Relationship Management score is average, indicating a reasonable ability to manage relationships and handle emotional interactions."
+      },
+      {
+        "min": 3.5,
+        "max": 5.0,
+        "text": "Your Relationship Management score is high, reflecting strong skills in building rapport, resolving conflicts, and inspiring others."
+      }
+    ]
+  },
+  "bedrockConfig": {
+    "useBedrock": true,
+    "maxTokens": 1024,
+    "temperature": 0.7,
+    "cacheResultsForDays": 30
+  },
+  "videoPromptTrigger": "Reflect on the emotional situations described in the questions you just answered. Record a brief video sharing how you typically handle emotions in your relationships.",
+  "saveProgressEnabled": true,
+  "analyticsEnabled": true,
+  "exportFormats": [
+    "PDF",
+    "JSON",
+    "CSV"
+  ]
+}
