@@ -4245,4 +4245,4 @@ Outputs:
     Value: !Ref PersonaRelationshipsTable
   WebSocketApiEndpoint:
     Description: WebSocket API endpoint URL for conversation feature
-    Value: !Sub wss://${ConversationWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod
+    Value: !Sub wss://${ConversationWebSocketApi}.execute-api.${AWS::Region}.amazonaws.com/prod# KMS CreateGrant added to OIDC role for DynamoDB/S3 encryption
