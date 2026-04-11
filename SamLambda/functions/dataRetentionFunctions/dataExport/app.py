@@ -356,8 +356,9 @@ def _build_and_upload_export(event, user_id, content_objects, now, retention_tab
                 destination=user_email,
                 subject='Your SoulReel Legacy — Export Ready',
                 html_body=_build_export_ready_email_html(download_url, expiry_hours),
-                text_body=f'Your SoulReel export is ready! Download it here: {download_url}\n'
-                          f'This link expires in {expiry_hours} hours.',
+                text_body=f'Your SoulReel export is ready! Visit your Data & Privacy page to download:\n'
+                          f'{_FRONTEND_URL}/your-data\n'
+                          f'The export is available for {expiry_hours} hours.',
                 sender_email=_SENDER_EMAIL,
             )
 
@@ -481,8 +482,9 @@ def handle_gdpr_export(event, user_id):
                 destination=user_email,
                 subject='Your SoulReel Data Export — Ready',
                 html_body=_build_gdpr_export_email_html(download_url, expiry_hours),
-                text_body=f'Your SoulReel data export is ready! Download it here: {download_url}\n'
-                          f'This link expires in {expiry_hours} hours.',
+                text_body=f'Your SoulReel data export is ready! Visit your Data & Privacy page to download:\n'
+                          f'{_FRONTEND_URL}/your-data\n'
+                          f'Your export contains your profile, responses, and text data in JSON format.',
                 sender_email=_SENDER_EMAIL,
             )
 
@@ -514,7 +516,13 @@ def handle_gdpr_export(event, user_id):
 # ===================================================================
 
 def handle_export_status(event, user_id):
-    """Return the current export status for the user."""
+    """Return the current export status for the user.
+
+    When status is 'ready', generates a fresh presigned URL on every call
+    instead of returning the stale URL from DynamoDB. This avoids the
+    Lambda session-token expiry issue where presigned URLs stop working
+    after the original Lambda execution context ends.
+    """
     retention_table = _dynamodb.Table(_TABLE_DATA_RETENTION)
 
     resp = retention_table.get_item(
@@ -535,8 +543,24 @@ def handle_export_status(event, user_id):
         'updatedAt': item.get('updatedAt', ''),
     }
 
-    if item.get('downloadUrl'):
+    # Generate a fresh presigned URL if export is ready and we have the S3 key
+    if item.get('status') == 'ready' and item.get('exportKey'):
+        try:
+            expiry_hours = get_config('export-link-expiry-hours')
+            fresh_url = _s3.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': _EXPORTS_BUCKET, 'Key': item['exportKey']},
+                ExpiresIn=expiry_hours * 3600,
+            )
+            result['downloadUrl'] = fresh_url
+        except Exception as e:
+            logger.warning('Failed to generate fresh presigned URL: %s', e)
+            # Fall back to stored URL if fresh generation fails
+            if item.get('downloadUrl'):
+                result['downloadUrl'] = item['downloadUrl']
+    elif item.get('downloadUrl'):
         result['downloadUrl'] = item['downloadUrl']
+
     if item.get('glacierObjectCount'):
         result['glacierObjectCount'] = item['glacierObjectCount']
 
@@ -723,8 +747,9 @@ def _build_and_upload_auto_export(user_id, content_objects, now, retention_table
                 subject='Your SoulReel Legacy — Download Your Stories',
                 html_body=_build_cancellation_export_email_html(download_url, expiry_hours),
                 text_body=(
-                    f'Your SoulReel content export is ready! Download it here: {download_url}\n'
-                    f'This link expires in {expiry_hours} hours.\n\n'
+                    f'Your SoulReel content export is ready! Visit your Data & Privacy page to download:\n'
+                    f'{_FRONTEND_URL}/your-data\n\n'
+                    f'The export is available for {expiry_hours} hours.\n\n'
                     f'All your content remains accessible on the platform.\n'
                     f'Ready to come back? {_FRONTEND_URL}/pricing'
                 ),
@@ -962,10 +987,10 @@ def _build_export_ready_email_html(download_url, expiry_hours):
 <html><body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
 <h2 style="color: #333;">Your SoulReel Export Is Ready</h2>
 <p>Your content export has been prepared and is ready to download.</p>
-<p><a href="{download_url}" style="display: inline-block; padding: 12px 24px;
+<p><a href="{_FRONTEND_URL}/your-data" style="display: inline-block; padding: 12px 24px;
 background-color: #4A90D9; color: white; text-decoration: none; border-radius: 6px;">
 Download Your Export</a></p>
-<p style="color: #666;">This link expires in {expiry_hours} hours.</p>
+<p style="color: #666;">Visit your Data &amp; Privacy page to download. The export is available for {expiry_hours} hours.</p>
 <p style="color: #666; font-size: 14px;">— The SoulReel Team</p>
 </body></html>
 """
@@ -977,10 +1002,10 @@ def _build_gdpr_export_email_html(download_url, expiry_hours):
 <html><body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
 <h2 style="color: #333;">Your Data Export Is Ready</h2>
 <p>Your data portability export has been prepared and is ready to download.</p>
-<p><a href="{download_url}" style="display: inline-block; padding: 12px 24px;
+<p><a href="{_FRONTEND_URL}/your-data" style="display: inline-block; padding: 12px 24px;
 background-color: #4A90D9; color: white; text-decoration: none; border-radius: 6px;">
 Download Your Data</a></p>
-<p style="color: #666;">This link expires in {expiry_hours} hours.
+<p style="color: #666;">Visit your Data &amp; Privacy page to download.
 Your export contains your profile, responses, and text data in JSON format.</p>
 <p style="color: #666; font-size: 14px;">— The SoulReel Team</p>
 </body></html>
@@ -993,10 +1018,10 @@ def _build_cancellation_export_email_html(download_url, expiry_hours):
 <html><body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
 <h2 style="color: #333;">Your SoulReel Legacy — Download Your Stories</h2>
 <p>We've prepared a complete export of your SoulReel content as a courtesy.</p>
-<p><a href="{download_url}" style="display: inline-block; padding: 12px 24px;
+<p><a href="{_FRONTEND_URL}/your-data" style="display: inline-block; padding: 12px 24px;
 background-color: #4A90D9; color: white; text-decoration: none; border-radius: 6px;">
 Download Your Stories</a></p>
-<p style="color: #666;">This link expires in {expiry_hours} hours.</p>
+<p style="color: #666;">Visit your Data &amp; Privacy page to download. The export is available for {expiry_hours} hours.</p>
 <p><strong>Your content remains safe.</strong> All your recordings and stories
 are still accessible on SoulReel. Your benefactors can continue viewing
 your shared content.</p>
