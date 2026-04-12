@@ -95,6 +95,35 @@ export function isSaveVisible(
   );
 }
 
+// Known Polly voices for the dropdown
+const POLLY_VOICES = [
+  { id: "Joanna", label: "Joanna (US English, Female)" },
+  { id: "Matthew", label: "Matthew (US English, Male)" },
+  { id: "Ivy", label: "Ivy (US English, Female, Child)" },
+  { id: "Kendra", label: "Kendra (US English, Female)" },
+  { id: "Kimberly", label: "Kimberly (US English, Female)" },
+  { id: "Salli", label: "Salli (US English, Female)" },
+  { id: "Joey", label: "Joey (US English, Male)" },
+  { id: "Justin", label: "Justin (US English, Male, Child)" },
+  { id: "Ruth", label: "Ruth (US English, Female)" },
+  { id: "Stephen", label: "Stephen (US English, Male)" },
+  { id: "Amy", label: "Amy (British English, Female)" },
+  { id: "Brian", label: "Brian (British English, Male)" },
+  { id: "Emma", label: "Emma (British English, Female)" },
+  { id: "Arthur", label: "Arthur (British English, Male)" },
+];
+
+// Settings that should render as a dropdown instead of a text input
+const DROPDOWN_SETTINGS: Record<string, { options: { id: string; label: string }[] }> = {
+  POLLY_VOICE_ID: { options: POLLY_VOICES },
+  POLLY_ENGINE: { options: [
+    { id: "neural", label: "Neural (higher quality)" },
+    { id: "standard", label: "Standard" },
+    { id: "long-form", label: "Long-form" },
+    { id: "generative", label: "Generative" },
+  ]},
+};
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -109,6 +138,7 @@ const SystemSettings = () => {
   const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
   const [bedrockModels, setBedrockModels] = useState<BedrockModel[]>([]);
   const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const [expandedTextKeys, setExpandedTextKeys] = useState<Set<string>>(new Set());
   const fetchedRef = useRef(false);
 
   // ---- Data fetching ----
@@ -123,7 +153,7 @@ const SystemSettings = () => {
           fetchBedrockModels(),
         ]);
         setSettings(settingsRes.settings);
-        setOpenSections(new Set(Object.keys(settingsRes.settings)));
+        setOpenSections(new Set()); // default collapsed
         setBedrockModels(models);
       } catch (err: unknown) {
         const msg =
@@ -281,6 +311,42 @@ const SystemSettings = () => {
     const saving = savingKeys.has(key);
     const changed = isSaveVisible(editedValues, key, setting.value);
 
+    // Check if this setting has a custom dropdown
+    const dropdownConfig = DROPDOWN_SETTINGS[key];
+    if (dropdownConfig && setting.valueType === "string") {
+      return (
+        <div className="flex items-center gap-2">
+          <Select
+            value={currentValue}
+            onValueChange={(v) => handleEdit(key, v, setting.valueType)}
+          >
+            <SelectTrigger className="w-64 text-sm">
+              <SelectValue placeholder="Select…" />
+            </SelectTrigger>
+            <SelectContent>
+              {dropdownConfig.options.map((opt) => (
+                <SelectItem key={opt.id} value={opt.id} className="text-sm">
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {changed && !saving && (
+            <button
+              onClick={() => handleSave(setting)}
+              className="p-1.5 rounded-md hover:bg-gray-100 text-legacy-purple transition-colors shrink-0"
+              title="Save"
+            >
+              <Save className="h-4 w-4" />
+            </button>
+          )}
+          {saving && (
+            <Loader2 className="h-4 w-4 animate-spin text-gray-400 shrink-0" />
+          )}
+        </div>
+      );
+    }
+
     switch (setting.valueType) {
       case "boolean":
         return (
@@ -356,30 +422,8 @@ const SystemSettings = () => {
       }
 
       case "text":
-        return (
-          <div className="flex items-start gap-2 w-full">
-            <Textarea
-              rows={4}
-              value={currentValue}
-              onChange={(e) =>
-                handleEdit(key, e.target.value, setting.valueType)
-              }
-              className="flex-1 text-sm font-mono"
-            />
-            {changed && !saving && (
-              <button
-                onClick={() => handleSave(setting)}
-                className="p-1.5 rounded-md hover:bg-gray-100 text-legacy-purple transition-colors shrink-0 mt-1"
-                title="Save"
-              >
-                <Save className="h-4 w-4" />
-              </button>
-            )}
-            {saving && (
-              <Loader2 className="h-4 w-4 animate-spin text-gray-400 shrink-0 mt-2" />
-            )}
-          </div>
-        );
+        // Text fields use a click-to-expand pattern — rendered separately below the label row
+        return null;
 
       case "integer":
         return (
@@ -534,7 +578,15 @@ const SystemSettings = () => {
 
               <CollapsibleContent>
                 <CardContent className="p-0">
-                  {items.map((setting, idx) => (
+                  {items.map((setting, idx) => {
+                    const key = setting.settingKey;
+                    const isTextType = setting.valueType === "text";
+                    const isTextExpanded = expandedTextKeys.has(key);
+                    const textCurrentValue = editedValues[key] ?? setting.value;
+                    const textChanged = isSaveVisible(editedValues, key, setting.value);
+                    const textSaving = savingKeys.has(key);
+
+                    return (
                     <div
                       key={setting.settingKey}
                       className={`px-6 py-4 ${
@@ -552,9 +604,70 @@ const SystemSettings = () => {
                           </p>
                         </div>
 
-                        {/* Input control */}
-                        <div className="shrink-0">{renderControl(setting)}</div>
+                        {/* Input control (non-text types) */}
+                        {!isTextType && (
+                          <div className="shrink-0">{renderControl(setting)}</div>
+                        )}
+
+                        {/* Text type: show preview / expand button */}
+                        {isTextType && !isTextExpanded && (
+                          <button
+                            onClick={() => setExpandedTextKeys((prev) => new Set(prev).add(key))}
+                            className="text-left shrink-0 max-w-xs lg:max-w-sm"
+                          >
+                            <span className="text-xs font-mono text-gray-500 bg-gray-50 border border-gray-200 rounded px-3 py-1.5 block truncate hover:bg-gray-100 transition-colors cursor-pointer">
+                              {setting.value ? (setting.value.length > 60 ? setting.value.slice(0, 60) + "…" : setting.value) : "Click to edit…"}
+                            </span>
+                          </button>
+                        )}
                       </div>
+
+                      {/* Text type: expanded full-width textarea */}
+                      {isTextType && isTextExpanded && (
+                        <div className="mt-3">
+                          <Textarea
+                            rows={8}
+                            value={textCurrentValue}
+                            onChange={(e) =>
+                              handleEdit(key, e.target.value, setting.valueType)
+                            }
+                            className="w-full text-sm font-mono"
+                            autoFocus
+                          />
+                          <div className="flex items-center gap-2 mt-2">
+                            {textChanged && !textSaving && (
+                              <button
+                                onClick={() => handleSave(setting)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-legacy-purple text-white text-xs hover:bg-legacy-navy transition-colors"
+                              >
+                                <Save className="h-3.5 w-3.5" />
+                                Save
+                              </button>
+                            )}
+                            {textSaving && (
+                              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                            )}
+                            <button
+                              onClick={() => {
+                                setExpandedTextKeys((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(key);
+                                  return next;
+                                });
+                                // Discard unsaved edits
+                                setEditedValues((prev) => {
+                                  const next = { ...prev };
+                                  delete next[key];
+                                  return next;
+                                });
+                              }}
+                              className="px-3 py-1.5 rounded-md text-xs text-gray-500 hover:bg-gray-100 transition-colors"
+                            >
+                              Collapse
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Validation error */}
                       {validationErrors[setting.settingKey] && (
@@ -569,7 +682,8 @@ const SystemSettings = () => {
                         {formatDate(setting.updatedAt)}
                       </p>
                     </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </CollapsibleContent>
             </Card>
