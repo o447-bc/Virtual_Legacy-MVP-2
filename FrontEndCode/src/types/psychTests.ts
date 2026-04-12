@@ -79,6 +79,7 @@ export interface TestDefinition {
   scoringRules: Record<string, ScoringRule>;
   compositeRules: Record<string, CompositeRule>;
   interpretationTemplates: Record<string, InterpretationEntry[]>;
+  domainDescriptions?: Record<string, string>;
   bedrockConfig?: BedrockConfig;
   videoPromptTrigger: string;
   saveProgressEnabled: boolean;

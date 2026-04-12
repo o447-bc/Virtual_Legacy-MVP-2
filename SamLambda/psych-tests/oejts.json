@@ -1231,5 +1231,19 @@
     "PDF",
     "JSON",
     "CSV"
-  ]
+  ],
+  "domainDescriptions": {
+    "ei": "The Extraversion-Introversion dimension describes where you direct your energy. Extraverts are energized by the outer world of people and activity, while Introverts draw energy from their inner world of ideas and reflection. This dimension, central to Jung's theory of psychological types, influences communication style, social preferences, and how you process experiences.",
+    "ei_extraversion": "Extraversion in Jungian typology reflects orientation toward the external world. High scorers are energized by social interaction, think out loud, and prefer breadth of experience. They tend to act first and reflect later, and are often described as outgoing and expressive.",
+    "ei_introversion": "Introversion reflects orientation toward the inner world of thoughts and ideas. High scorers prefer depth over breadth, think before speaking, and need solitude to recharge. They tend to be reflective, reserved, and focused on internal experiences.",
+    "sn": "The Sensing-Intuition dimension describes how you take in information. Sensors focus on concrete facts, details, and present realities, while Intuitives focus on patterns, possibilities, and future potential. This dimension shapes learning style, problem-solving approach, and what kind of information you naturally notice and trust.",
+    "sn_sensing": "Sensing reflects a preference for concrete, tangible information gathered through the five senses. High scorers are practical, detail-oriented, and grounded in present reality. They trust direct experience and prefer step-by-step instructions over abstract theories.",
+    "sn_intuition": "Intuition reflects a preference for abstract patterns, meanings, and future possibilities. High scorers are imaginative, conceptual thinkers who see the big picture and connections between ideas. They trust hunches and are drawn to innovation and theoretical frameworks.",
+    "tf": "The Thinking-Feeling dimension describes how you make decisions. Thinkers prioritize logic, consistency, and objective analysis, while Feelers prioritize values, harmony, and the impact on people. This dimension influences conflict resolution style, leadership approach, and how you evaluate choices.",
+    "tf_thinking": "Thinking reflects a preference for making decisions based on logical analysis and objective criteria. High scorers value fairness, consistency, and truth. They tend to be direct in communication and may prioritize task completion over interpersonal harmony.",
+    "tf_feeling": "Feeling reflects a preference for making decisions based on personal values and the impact on others. High scorers value harmony, empathy, and compassion. They are attuned to others' emotions and prioritize maintaining positive relationships.",
+    "jp": "The Judging-Perceiving dimension describes how you orient to the outer world. Judgers prefer structure, planning, and closure, while Perceivers prefer flexibility, spontaneity, and keeping options open. This dimension influences work style, time management, and how comfortable you are with ambiguity.",
+    "jp_judging": "Judging reflects a preference for structure, organization, and decisiveness. High scorers like to plan ahead, meet deadlines, and bring things to closure. They feel most comfortable when decisions are made and plans are in place.",
+    "jp_perceiving": "Perceiving reflects a preference for flexibility, adaptability, and openness to new information. High scorers prefer to keep their options open, adapt to changing circumstances, and may find rigid schedules constraining. They are often energized by last-minute challenges."
+  }
 }

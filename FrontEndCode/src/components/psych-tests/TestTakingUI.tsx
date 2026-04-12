@@ -389,15 +389,18 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
       return;
     }
     setCurrentPage((p) => Math.min(p + 1, pages.length - 1));
+    window.scrollTo(0, 0);
   };
 
   const handlePrevPage = () => {
     setCurrentPage((p) => Math.max(p - 1, 0));
+    window.scrollTo(0, 0);
   };
 
   const handleVideoComplete = () => {
     setShowVideoPrompt(false);
     setCurrentPage((p) => Math.min(p + 1, pages.length - 1));
+    window.scrollTo(0, 0);
   };
 
   const handleSubmit = async () => {

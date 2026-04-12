@@ -46,35 +46,56 @@ function barColor(label: string): string {
   return 'bg-gray-400';
 }
 
+/** Convert a raw score on a 1-5 Likert scale to a 0-100 percentage */
+function normalizeScore(raw: number, min = 1, max = 5): number {
+  if (max === min) return 50;
+  return Math.round(((raw - min) / (max - min)) * 100);
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-const ScoreBar: React.FC<{ entry: ScoreEntry; name: string }> = ({
-  entry,
-  name,
-}) => (
-  <div className="space-y-1">
-    <div className="flex justify-between items-baseline">
-      <span className="text-sm font-medium capitalize">
-        {name.replace(/_/g, ' ')}
-      </span>
-      <span className={`text-xs font-semibold ${thresholdColor(entry.label)}`}>
-        {entry.label}
-      </span>
+const ScoreBar: React.FC<{
+  entry: ScoreEntry;
+  name: string;
+  description?: string;
+}> = ({ entry, name, description }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const pct = normalizeScore(entry.raw);
+
+  return (
+    <div
+      className="space-y-1 relative"
+      onMouseEnter={() => description && setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      <div className="flex justify-between items-baseline">
+        <span className="text-sm font-medium capitalize cursor-default">
+          {name.replace(/_/g, ' ')}
+        </span>
+        <span className={`text-xs font-semibold ${thresholdColor(entry.label)}`}>
+          {entry.label}
+        </span>
+      </div>
+      <div className="relative h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className={`absolute inset-y-0 left-0 rounded-full transition-all ${barColor(entry.label)}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="flex justify-between text-xs text-gray-400">
+        <span>{entry.raw.toFixed(1)} / 5.0</span>
+        <span>{pct}%</span>
+      </div>
+      {showTooltip && description && (
+        <div className="absolute z-10 left-0 right-0 top-full mt-2 p-3 bg-white border border-gray-200 rounded-lg shadow-lg text-xs text-gray-700 leading-relaxed">
+          {description}
+        </div>
+      )}
     </div>
-    <div className="relative h-2 w-full rounded-full bg-gray-100 overflow-hidden">
-      <div
-        className={`absolute inset-y-0 left-0 rounded-full transition-all ${barColor(entry.label)}`}
-        style={{ width: `${Math.min(entry.normalized, 100)}%` }}
-      />
-    </div>
-    <div className="flex justify-between text-xs text-gray-400">
-      <span>Raw: {entry.raw}</span>
-      <span>{entry.normalized}%</span>
-    </div>
-  </div>
-);
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -149,7 +170,13 @@ const TestResultsView: React.FC<TestResultsViewProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {domainScore && <ScoreBar entry={domainScore} name={domain} />}
+              {domainScore && (
+                <ScoreBar
+                  entry={domainScore}
+                  name={domain}
+                  description={testDefinition.domainDescriptions?.[domain]}
+                />
+              )}
 
               {facetEntries.length > 0 && (
                 <div className="pl-4 border-l-2 border-gray-100 space-y-3 mt-3">
@@ -157,7 +184,12 @@ const TestResultsView: React.FC<TestResultsViewProps> = ({
                     Facets
                   </p>
                   {facetEntries.map(({ name, entry }) => (
-                    <ScoreBar key={name} entry={entry} name={name} />
+                    <ScoreBar
+                      key={name}
+                      entry={entry}
+                      name={name}
+                      description={testDefinition.domainDescriptions?.[name]}
+                    />
                   ))}
                 </div>
               )}
