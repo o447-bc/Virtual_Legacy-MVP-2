@@ -3297,6 +3297,7 @@ Resources:
                 - dynamodb:Scan
                 - dynamodb:GetItem
                 - dynamodb:PutItem
+                - dynamodb:UpdateItem
               Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SystemSettingsTable}
         - Statement:
             - Effect: Allow
