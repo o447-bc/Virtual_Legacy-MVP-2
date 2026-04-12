@@ -21,6 +21,8 @@ import LifeEventsSurvey from "@/components/LifeEventsSurvey";
 import { getSurveyStatus, type LifeEventInstanceGroup } from "@/services/surveyService";
 import { BookOpen, Calendar, Sparkles, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { listPsychTests } from "@/services/psychTestService";
+import type { PsychTest } from "@/types/psychTests";
 
 const Dashboard = () => {
   const { user, hasCompletedSurvey, refreshSurveyStatus } = useAuth();
@@ -46,6 +48,13 @@ const Dashboard = () => {
   // Progress hooks for content path cards
   const { data: progressData } = useProgress(user?.id);
   const { data: lifeEventsData } = useLifeEventsProgress(user?.id);
+
+  // Psych test progress
+  const [psychTests, setPsychTests] = useState<PsychTest[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    listPsychTests().then(setPsychTests).catch(() => {});
+  }, [user]);
 
   // Compute Life Story progress from useProgress data
   const { total: lifeStoryTotal, completed: lifeStoryCompleted } = progressData
@@ -214,7 +223,7 @@ const Dashboard = () => {
             title="Values & Emotions Deep Dive"
             subtitle="Emotional and psychology-based evaluations"
             icon={<Sparkles className="w-5 h-5 text-amber-500" />}
-            progressLabel="0 out of 0 surveys done"
+            progressLabel={`${psychTests.filter(t => t.completedAt).length} of ${psychTests.length} assessments completed`}
             accentColor="border-amber-500"
             locked={!isPremium}
             onLockedClick={() => {

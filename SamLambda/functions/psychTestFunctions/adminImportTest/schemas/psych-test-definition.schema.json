@@ -39,7 +39,9 @@
     "previousVersionMapping": {
       "type": "object",
       "description": "Maps old questionIds to new questionIds for version migration",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "estimatedMinutes": {
       "type": "number",
@@ -49,11 +51,24 @@
     "consentBlock": {
       "type": "object",
       "description": "Required consent screen shown before test questions",
-      "required": ["title", "bodyText", "requiredCheckboxLabel"],
+      "required": [
+        "title",
+        "bodyText",
+        "requiredCheckboxLabel"
+      ],
       "properties": {
-        "title": { "type": "string", "description": "Title of the consent screen" },
-        "bodyText": { "type": "string", "description": "Body text explaining consent requirements" },
-        "requiredCheckboxLabel": { "type": "string", "description": "Label for the required consent checkbox" }
+        "title": {
+          "type": "string",
+          "description": "Title of the consent screen"
+        },
+        "bodyText": {
+          "type": "string",
+          "description": "Body text explaining consent requirements"
+        },
+        "requiredCheckboxLabel": {
+          "type": "string",
+          "description": "Label for the required consent checkbox"
+        }
       },
       "additionalProperties": false
     },
@@ -68,28 +83,61 @@
       "items": {
         "type": "object",
         "required": [
-          "questionId", "text", "responseType", "options",
-          "reverseScored", "scoringKey", "groupByFacet",
-          "pageBreakAfter", "accessibilityHint"
+          "questionId",
+          "text",
+          "responseType",
+          "options",
+          "reverseScored",
+          "scoringKey",
+          "groupByFacet",
+          "pageBreakAfter",
+          "accessibilityHint"
         ],
         "properties": {
-          "questionId": { "type": "string", "description": "Unique question identifier" },
-          "text": { "type": "string", "description": "Question text displayed to the user" },
+          "questionId": {
+            "type": "string",
+            "description": "Unique question identifier"
+          },
+          "text": {
+            "type": "string",
+            "description": "Question text displayed to the user"
+          },
           "responseType": {
             "type": "string",
-            "enum": ["likert5", "bipolar5", "multipleChoice"],
+            "enum": [
+              "likert5",
+              "bipolar5",
+              "multipleChoice"
+            ],
             "description": "Type of response control to render"
           },
           "options": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Response options or scale endpoint labels"
           },
-          "reverseScored": { "type": "boolean", "description": "Whether score is reversed" },
-          "scoringKey": { "type": "string", "description": "Domain key for scoring grouping" },
-          "groupByFacet": { "type": "string", "description": "Facet key for facet scoring and UI grouping" },
-          "pageBreakAfter": { "type": "boolean", "description": "Show page transition after this question" },
-          "accessibilityHint": { "type": "string", "description": "Screen reader hint (aria-describedby)" },
+          "reverseScored": {
+            "type": "boolean",
+            "description": "Whether score is reversed"
+          },
+          "scoringKey": {
+            "type": "string",
+            "description": "Domain key for scoring grouping"
+          },
+          "groupByFacet": {
+            "type": "string",
+            "description": "Facet key for facet scoring and UI grouping"
+          },
+          "pageBreakAfter": {
+            "type": "boolean",
+            "description": "Show page transition after this question"
+          },
+          "accessibilityHint": {
+            "type": "string",
+            "description": "Screen reader hint (aria-describedby)"
+          },
           "videoPromptFrequency": {
             "type": "number",
             "description": "Show video prompt every N questions (optional)",
@@ -104,18 +152,37 @@
       "description": "Scoring rules keyed by domain or facet name",
       "additionalProperties": {
         "type": "object",
-        "required": ["formula", "thresholds"],
+        "required": [
+          "formula",
+          "thresholds"
+        ],
         "properties": {
-          "formula": { "type": "string", "description": "Scoring formula (e.g. 'mean', 'sum')" },
+          "formula": {
+            "type": "string",
+            "description": "Scoring formula (e.g. 'mean', 'sum')"
+          },
           "thresholds": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["min", "max", "label"],
+              "required": [
+                "min",
+                "max",
+                "label"
+              ],
               "properties": {
-                "min": { "type": "number", "description": "Minimum score (inclusive)" },
-                "max": { "type": "number", "description": "Maximum score (inclusive)" },
-                "label": { "type": "string", "description": "Classification label" }
+                "min": {
+                  "type": "number",
+                  "description": "Minimum score (inclusive)"
+                },
+                "max": {
+                  "type": "number",
+                  "description": "Maximum score (inclusive)"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Classification label"
+                }
               },
               "additionalProperties": false
             }
@@ -125,7 +192,9 @@
             "description": "Optional lookup tables for score normalization",
             "additionalProperties": {
               "type": "array",
-              "items": { "type": "number" }
+              "items": {
+                "type": "number"
+              }
             }
           }
         },
@@ -137,21 +206,36 @@
       "description": "Rules for combining scores across domains or tests",
       "additionalProperties": {
         "type": "object",
-        "required": ["sources", "formula"],
+        "required": [
+          "sources",
+          "formula"
+        ],
         "properties": {
           "sources": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["testId", "domain"],
+              "required": [
+                "testId",
+                "domain"
+              ],
               "properties": {
-                "testId": { "type": "string", "description": "Source test identifier" },
-                "domain": { "type": "string", "description": "Source domain name" }
+                "testId": {
+                  "type": "string",
+                  "description": "Source test identifier"
+                },
+                "domain": {
+                  "type": "string",
+                  "description": "Source domain name"
+                }
               },
               "additionalProperties": false
             }
           },
-          "formula": { "type": "string", "description": "Formula for combining source scores" }
+          "formula": {
+            "type": "string",
+            "description": "Formula for combining source scores"
+          }
         },
         "additionalProperties": false
       }
@@ -163,11 +247,24 @@
         "type": "array",
         "items": {
           "type": "object",
-          "required": ["min", "max", "text"],
+          "required": [
+            "min",
+            "max",
+            "text"
+          ],
           "properties": {
-            "min": { "type": "number", "description": "Minimum score (inclusive)" },
-            "max": { "type": "number", "description": "Maximum score (inclusive)" },
-            "text": { "type": "string", "description": "Narrative text for this score range" }
+            "min": {
+              "type": "number",
+              "description": "Minimum score (inclusive)"
+            },
+            "max": {
+              "type": "number",
+              "description": "Maximum score (inclusive)"
+            },
+            "text": {
+              "type": "string",
+              "description": "Narrative text for this score range"
+            }
           },
           "additionalProperties": false
         }
@@ -176,12 +273,33 @@
     "bedrockConfig": {
       "type": "object",
       "description": "Optional AI narrative generation configuration",
-      "required": ["useBedrock", "maxTokens", "temperature", "cacheResultsForDays"],
+      "required": [
+        "useBedrock",
+        "maxTokens",
+        "temperature",
+        "cacheResultsForDays"
+      ],
       "properties": {
-        "useBedrock": { "type": "boolean", "description": "Whether to use Bedrock" },
-        "maxTokens": { "type": "number", "description": "Maximum tokens for response", "minimum": 1 },
-        "temperature": { "type": "number", "description": "Generation temperature", "minimum": 0, "maximum": 1 },
-        "cacheResultsForDays": { "type": "number", "description": "Days to cache narratives (0 to disable)", "minimum": 0 }
+        "useBedrock": {
+          "type": "boolean",
+          "description": "Whether to use Bedrock"
+        },
+        "maxTokens": {
+          "type": "number",
+          "description": "Maximum tokens for response",
+          "minimum": 1
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Generation temperature",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "cacheResultsForDays": {
+          "type": "number",
+          "description": "Days to cache narratives (0 to disable)",
+          "minimum": 0
+        }
       },
       "additionalProperties": false
     },
@@ -199,8 +317,17 @@
     },
     "exportFormats": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Supported export formats (e.g. ['PDF', 'JSON', 'CSV'])"
+    },
+    "domainDescriptions": {
+      "type": "object",
+      "description": "Hover descriptions for each domain and facet, keyed by name. Shown as tooltips on the results page.",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   },
   "additionalProperties": false
