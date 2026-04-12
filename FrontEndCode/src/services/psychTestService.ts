@@ -146,3 +146,20 @@ export async function exportResults(
     }
   );
 }
+
+/**
+ * Update a test definition (partial update — only changed fields).
+ * Requires admin auth (SoulReelAdmins group).
+ */
+export async function updateTestDefinition(
+  testId: string,
+  updates: Partial<TestDefinition>
+): Promise<TestDefinition> {
+  return authFetch<TestDefinition>(
+    buildApiUrl(`${API_CONFIG.ENDPOINTS.PSYCH_TESTS_ADMIN_UPDATE}/${testId}`),
+    {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }
+  );
+}

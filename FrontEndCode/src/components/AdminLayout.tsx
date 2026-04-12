@@ -12,17 +12,48 @@ import {
   Tags,
   Download,
   LogOut,
+  ClipboardList,
+  Settings,
 } from "lucide-react";
 
-const navItems = [
-  { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/admin/questions", label: "Questions", icon: List },
-  { to: "/admin/create", label: "Create", icon: PlusCircle },
-  { to: "/admin/batch", label: "Batch Import", icon: Upload },
-  { to: "/admin/simulate", label: "Simulator", icon: FlaskConical },
-  { to: "/admin/coverage", label: "Coverage", icon: BarChart3 },
-  { to: "/admin/themes", label: "Themes", icon: Tags },
-  { to: "/admin/export", label: "Export", icon: Download },
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+  end?: boolean;
+}
+
+interface NavSection {
+  header: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    header: "CONTENT",
+    items: [
+      { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
+      { to: "/admin/questions", label: "Questions", icon: List },
+      { to: "/admin/create", label: "Create", icon: PlusCircle },
+      { to: "/admin/batch", label: "Batch Import", icon: Upload },
+    ],
+  },
+  {
+    header: "ASSESSMENTS",
+    items: [
+      { to: "/admin/assessments", label: "Assessments", icon: ClipboardList },
+    ],
+  },
+  {
+    header: "SYSTEM",
+    items: [
+      { to: "/admin/coverage", label: "Coverage", icon: BarChart3 },
+      { to: "/admin/themes", label: "Themes", icon: Tags },
+      { to: "/admin/export", label: "Export", icon: Download },
+      { to: "/admin/simulate", label: "Simulator", icon: FlaskConical },
+      { to: "/admin/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 const AdminLayout: React.FC = () => {
@@ -38,22 +69,29 @@ const AdminLayout: React.FC = () => {
         </div>
 
         <nav className="flex-1 py-2">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                  isActive
-                    ? "bg-legacy-purple text-white"
-                    : "text-gray-300 hover:bg-white/10 hover:text-white"
-                }`
-              }
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
-            </NavLink>
+          {navSections.map((section) => (
+            <div key={section.header}>
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 px-4 pt-4 pb-1">
+                {section.header}
+              </p>
+              {section.items.map(({ to, label, icon: Icon, end }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                      isActive
+                        ? "bg-legacy-purple text-white"
+                        : "text-gray-300 hover:bg-white/10 hover:text-white"
+                    }`
+                  }
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 

@@ -92,7 +92,7 @@ def _load_schema():
 # ===================================================================
 
 def lambda_handler(event, context):
-    """Handle POST /psych-tests/admin/import."""
+    """Handle POST /psych-tests/admin/import and PUT /psych-tests/admin/update/{testId}."""
 
     # Handle OPTIONS preflight
     if event.get('httpMethod') == 'OPTIONS':
@@ -112,8 +112,19 @@ def lambda_handler(event, context):
     if not _is_admin(claims):
         return error_response(403, 'Forbidden: admin access required', event=event)
 
+    path = event.get('path', '')
+    method = event.get('httpMethod', '')
+
     try:
-        return _handle_import(event, user_id)
+        if path == '/psych-tests/admin/import' and method == 'POST':
+            return _handle_import(event, user_id)
+        elif path.startswith('/psych-tests/admin/update/') and method == 'PUT':
+            test_id = (event.get('pathParameters') or {}).get('testId')
+            if not test_id:
+                return cors_response(400, {'error': 'Missing testId parameter'}, event)
+            return _handle_update(event, user_id, test_id)
+        else:
+            return cors_response(404, {'error': 'Not found'}, event)
     except Exception as exc:
         logger.error('[ADMIN_IMPORT_TEST] Unhandled error: %s', exc)
         return error_response(500, 'Internal server error', exception=exc, event=event)
@@ -183,8 +194,56 @@ def _handle_import(event, user_id):
 
 
 # ===================================================================
-# Validation
+# Update handler: PUT /psych-tests/admin/update/{testId}
 # ===================================================================
+
+def _handle_update(event, user_id, test_id):
+    """Partial update flow: fetch → merge → validate → save → return."""
+
+    # --- Parse request body (partial updates) ---
+    body = event.get('body')
+    if not body:
+        return cors_response(400, {'error': 'Missing request body'}, event)
+
+    try:
+        updates = json.loads(body)
+    except (json.JSONDecodeError, TypeError):
+        return cors_response(400, {'error': 'Invalid JSON in request body'}, event)
+
+    if not isinstance(updates, dict) or not updates:
+        return cors_response(400, {'error': 'Request body must be a non-empty JSON object'}, event)
+
+    # Prevent changing testId
+    if 'testId' in updates and updates['testId'] != test_id:
+        return cors_response(400, {'error': 'Cannot change testId'}, event)
+
+    # --- Fetch current test definition from S3 ---
+    s3_key = f'psych-tests/{test_id}.json'
+    try:
+        response = _s3.get_object(Bucket=_S3_BUCKET, Key=s3_key)
+        current_def = json.loads(response['Body'].read().decode('utf-8'))
+    except ClientError as exc:
+        if exc.response['Error']['Code'] == 'NoSuchKey':
+            return cors_response(404, {'error': f'Test definition not found: {test_id}'}, event)
+        raise
+
+    # --- Merge updates into current definition ---
+    merged_def = {**current_def, **updates}
+
+    # --- Validate merged result against JSON Schema ---
+    validation_error = _validate_test_definition(merged_def)
+    if validation_error:
+        return cors_response(400, {'error': f'Invalid test definition after merge: {validation_error}'}, event)
+
+    # --- Save back to S3 ---
+    _upload_to_s3(s3_key, merged_def)
+
+    logger.info(
+        '[ADMIN_IMPORT_TEST] Updated test=%s fields=%s by user=%s',
+        test_id, list(updates.keys()), user_id,
+    )
+
+    return cors_response(200, merged_def, event)
 
 def _validate_test_definition(test_def):
     """Validate Test Definition against JSON Schema. Returns error string or None."""

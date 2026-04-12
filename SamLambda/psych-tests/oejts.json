@@ -1245,5 +1245,6 @@
     "feeling_pole": "Feeling reflects a preference for making decisions based on personal values and the impact on others. High scorers value harmony, empathy, and compassion. They are attuned to others' emotions and prioritize maintaining positive relationships.",
     "judging_pole": "Judging reflects a preference for structure, organization, and decisiveness. High scorers like to plan ahead, meet deadlines, and bring things to closure. They feel most comfortable when decisions are made and plans are in place.",
     "perceiving_pole": "Perceiving reflects a preference for flexibility, adaptability, and openness to new information. High scorers prefer to keep their options open, adapt to changing circumstances, and may find rigid schedules constraining. They are often energized by last-minute challenges."
-  }
+  },
+  "bedrockPromptTemplate": "You are a personality assessment interpreter for the {test_name} test. Based on the following scored results, generate a warm, insightful narrative interpretation for the user. Use the interpretation templates as guidance for score ranges, but write in a personal, encouraging tone.\n\nDomain Scores:\n{domain_scores}\n\nFacet Scores:\n{facet_scores}\n\nInterpretation Templates (use as guidance):\n{interpretation_templates}"
 }

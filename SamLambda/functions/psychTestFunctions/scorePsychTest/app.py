@@ -522,6 +522,7 @@ def _generate_narrative(test_def, domain_scores, facet_scores, user_id, test_id,
             narrative = _call_bedrock(
                 bedrock_config, domain_scores, facet_scores,
                 interpretation_templates, test_def.get('testName', test_id),
+                test_def=test_def,
             )
             # Cache the narrative if caching is enabled
             if cache_days > 0:
@@ -571,38 +572,69 @@ def _check_narrative_cache(user_id, test_id):
 
 
 def _call_bedrock(bedrock_config, domain_scores, facet_scores,
-                  interpretation_templates, test_name):
-    """Call Bedrock InvokeModel to generate a narrative interpretation."""
+                  interpretation_templates, test_name, test_def=None):
+    """Call Bedrock InvokeModel to generate a narrative interpretation.
+
+    If the test definition contains a bedrockPromptTemplate, it is used as the
+    prompt with placeholder substitution. Otherwise the hardcoded default prompt
+    is built.
+    """
     max_tokens = bedrock_config.get('maxTokens', 1024)
     temperature = bedrock_config.get('temperature', 0.7)
 
-    # Build prompt with scored results and templates as context
-    prompt_parts = [
-        f'You are a personality assessment interpreter for the {test_name} test.',
-        'Based on the following scored results, generate a warm, insightful narrative '
-        'interpretation for the user. Use the interpretation templates as guidance.',
-        '',
-        'Domain Scores:',
-    ]
-    for domain, entry in domain_scores.items():
-        prompt_parts.append(f'  {domain}: {entry["raw"]} ({entry["label"]})')
+    # Check for custom prompt template on the test definition
+    custom_template = (test_def or {}).get('bedrockPromptTemplate')
 
-    if facet_scores:
-        prompt_parts.append('')
-        prompt_parts.append('Facet Scores:')
-        for facet, entry in facet_scores.items():
-            prompt_parts.append(f'  {facet}: {entry["raw"]} ({entry["label"]})')
+    if custom_template:
+        # Build substitution values
+        domain_lines = '\n'.join(
+            f'  {d}: {e["raw"]} ({e["label"]})' for d, e in domain_scores.items()
+        )
+        facet_lines = '\n'.join(
+            f'  {f}: {e["raw"]} ({e["label"]})' for f, e in facet_scores.items()
+        ) if facet_scores else '  (none)'
+        template_lines = ''
+        if interpretation_templates:
+            parts = []
+            for key, entries in interpretation_templates.items():
+                for entry in entries:
+                    parts.append(f'  {key} [{entry["min"]}-{entry["max"]}]: {entry["text"]}')
+            template_lines = '\n'.join(parts)
 
-    if interpretation_templates:
-        prompt_parts.append('')
-        prompt_parts.append('Interpretation Templates (use as guidance):')
-        for key, entries in interpretation_templates.items():
-            for entry in entries:
-                prompt_parts.append(
-                    f'  {key} [{entry["min"]}-{entry["max"]}]: {entry["text"]}'
-                )
+        prompt_text = custom_template.format(
+            test_name=test_name,
+            domain_scores=domain_lines,
+            facet_scores=facet_lines,
+            interpretation_templates=template_lines,
+        )
+    else:
+        # Default hardcoded prompt
+        prompt_parts = [
+            f'You are a personality assessment interpreter for the {test_name} test.',
+            'Based on the following scored results, generate a warm, insightful narrative '
+            'interpretation for the user. Use the interpretation templates as guidance.',
+            '',
+            'Domain Scores:',
+        ]
+        for domain, entry in domain_scores.items():
+            prompt_parts.append(f'  {domain}: {entry["raw"]} ({entry["label"]})')
 
-    prompt_text = '\n'.join(prompt_parts)
+        if facet_scores:
+            prompt_parts.append('')
+            prompt_parts.append('Facet Scores:')
+            for facet, entry in facet_scores.items():
+                prompt_parts.append(f'  {facet}: {entry["raw"]} ({entry["label"]})')
+
+        if interpretation_templates:
+            prompt_parts.append('')
+            prompt_parts.append('Interpretation Templates (use as guidance):')
+            for key, entries in interpretation_templates.items():
+                for entry in entries:
+                    prompt_parts.append(
+                        f'  {key} [{entry["min"]}-{entry["max"]}]: {entry["text"]}'
+                    )
+
+        prompt_text = '\n'.join(prompt_parts)
 
     request_body = json.dumps({
         'anthropic_version': 'bedrock-2023-05-31',

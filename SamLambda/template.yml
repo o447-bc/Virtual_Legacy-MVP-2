@@ -4642,6 +4642,18 @@ Resources:
           Properties:
             Path: /psych-tests/admin/import
             Method: OPTIONS
+        AdminUpdate:
+          Type: Api
+          Properties:
+            Path: /psych-tests/admin/update/{testId}
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminUpdateOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/admin/update/{testId}
+            Method: OPTIONS
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

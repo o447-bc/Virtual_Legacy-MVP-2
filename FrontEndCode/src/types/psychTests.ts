@@ -80,6 +80,7 @@ export interface TestDefinition {
   compositeRules: Record<string, CompositeRule>;
   interpretationTemplates: Record<string, InterpretationEntry[]>;
   domainDescriptions?: Record<string, string>;
+  bedrockPromptTemplate?: string;
   bedrockConfig?: BedrockConfig;
   videoPromptTrigger: string;
   saveProgressEnabled: boolean;

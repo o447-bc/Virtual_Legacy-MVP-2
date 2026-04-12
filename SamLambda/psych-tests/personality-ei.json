@@ -904,5 +904,6 @@
     "organizational_awareness": "Social Cues awareness reflects the ability to read nonverbal communication, group dynamics, and unspoken social norms. High scorers pick up on body language, tone of voice, and contextual signals that others might miss. This skill supports effective navigation of complex social situations.",
     "influence": "Influence captures the ability to have a positive impact on others through persuasion, inspiration, and effective communication. High scorers can articulate a compelling vision, build consensus, and motivate others toward shared goals. This skill is central to leadership, negotiation, and collaborative problem-solving.",
     "conflict_management": "Conflict Resolution reflects the ability to navigate disagreements constructively and find mutually beneficial solutions. High scorers can de-escalate tensions, facilitate difficult conversations, and help parties find common ground. Research links this skill to team effectiveness, relationship longevity, and organizational health."
-  }
+  },
+  "bedrockPromptTemplate": "You are a personality assessment interpreter for the {test_name} test. Based on the following scored results, generate a warm, insightful narrative interpretation for the user. Use the interpretation templates as guidance for score ranges, but write in a personal, encouraging tone.\n\nDomain Scores:\n{domain_scores}\n\nFacet Scores:\n{facet_scores}\n\nInterpretation Templates (use as guidance):\n{interpretation_templates}"
 }

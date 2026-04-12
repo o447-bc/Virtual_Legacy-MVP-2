@@ -43,6 +43,8 @@ import AssignmentSimulator from "./pages/admin/AssignmentSimulator";
 import CoverageReport from "./pages/admin/CoverageReport";
 import ThemeSettings from "./pages/admin/ThemeSettings";
 import ExportView from "./pages/admin/ExportView";
+import AssessmentManager from "./pages/admin/AssessmentManager";
+import SystemSettings from "./pages/admin/SystemSettings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,6 +101,8 @@ const App = () => (
               <Route path="coverage" element={<CoverageReport />} />
               <Route path="themes" element={<ThemeSettings />} />
               <Route path="export" element={<ExportView />} />
+              <Route path="assessments" element={<AssessmentManager />} />
+              <Route path="settings" element={<SystemSettings />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
