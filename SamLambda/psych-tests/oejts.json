@@ -1030,7 +1030,7 @@
       "reverseScored": true,
       "scoringKey": "JP",
       "groupByFacet": "perceiving_pole",
-      "pageBreakAfter": true,
+      "pageBreakAfter": false,
       "accessibilityHint": "Select the point on the scale that best represents your preference.",
       "videoPromptFrequency": 20
     }

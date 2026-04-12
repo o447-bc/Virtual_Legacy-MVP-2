@@ -1031,7 +1031,7 @@
       "reverseScored": true,
       "scoringKey": "neuroticism",
       "groupByFacet": "self_consciousness",
-      "pageBreakAfter": true,
+      "pageBreakAfter": false,
       "accessibilityHint": "Rate how accurately this statement describes you on a 5-point scale."
     }
   ],

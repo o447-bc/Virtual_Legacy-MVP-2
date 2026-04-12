@@ -269,6 +269,10 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
     if (result.length === 0) {
       result.push([]);
     }
+    // Filter out any empty trailing pages (e.g. from pageBreakAfter on the last question)
+    while (result.length > 1 && result[result.length - 1].length === 0) {
+      result.pop();
+    }
     return result;
   }, [testDefinition.questions]);
 
