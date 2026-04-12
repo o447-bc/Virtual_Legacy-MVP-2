@@ -30,27 +30,27 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    header: "CONTENT",
+    header: "QUESTIONS",
     items: [
       { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
-      { to: "/admin/questions", label: "Questions", icon: List },
+      { to: "/admin/questions", label: "Browse", icon: List },
       { to: "/admin/create", label: "Create", icon: PlusCircle },
       { to: "/admin/batch", label: "Batch Import", icon: Upload },
+      { to: "/admin/coverage", label: "Coverage", icon: BarChart3 },
+      { to: "/admin/themes", label: "Themes", icon: Tags },
+      { to: "/admin/simulate", label: "Simulator", icon: FlaskConical },
+      { to: "/admin/export", label: "Export", icon: Download },
     ],
   },
   {
     header: "ASSESSMENTS",
     items: [
-      { to: "/admin/assessments", label: "Assessments", icon: ClipboardList },
+      { to: "/admin/assessments", label: "Manage", icon: ClipboardList },
     ],
   },
   {
     header: "SYSTEM",
     items: [
-      { to: "/admin/coverage", label: "Coverage", icon: BarChart3 },
-      { to: "/admin/themes", label: "Themes", icon: Tags },
-      { to: "/admin/export", label: "Export", icon: Download },
-      { to: "/admin/simulate", label: "Simulator", icon: FlaskConical },
       { to: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },

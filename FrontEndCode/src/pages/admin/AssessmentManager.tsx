@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
-import { listPsychTests, getTestDefinition, updateTestDefinition } from "@/services/psychTestService";
+import { listPsychTests, getTestDefinition, updateTestDefinition, importTestDefinition } from "@/services/psychTestService";
 import type { PsychTest, TestDefinition } from "@/types/psychTests";
-import { ClipboardList, X, Save, Loader2 } from "lucide-react";
+import { ClipboardList, X, Save, Loader2, Plus } from "lucide-react";
 
 type Tab = "general" | "bedrock" | "domains" | "templates";
 
@@ -17,6 +17,7 @@ const AssessmentManager = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("general");
   const [loadingDef, setLoadingDef] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     loadTests();
@@ -55,6 +56,25 @@ const AssessmentManager = () => {
     setSelectedTest(null);
     setEditFields({});
     setDomainEdits({});
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setImporting(true);
+      const text = await file.text();
+      const testDef = JSON.parse(text);
+      const result = await importTestDefinition(testDef);
+      toast.success(`Imported ${result.testId} v${result.version} (${result.questionCount} questions)`);
+      loadTests();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Import failed";
+      toast.error(msg);
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
   };
 
   const updateField = <K extends keyof TestDefinition>(key: K, value: TestDefinition[K]) => {
@@ -119,7 +139,22 @@ const AssessmentManager = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-legacy-navy">Assessment Manager</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-legacy-navy">Assessment Manager</h1>
+        <label className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors ${
+          importing ? "bg-gray-200 text-gray-500" : "bg-legacy-purple text-white hover:bg-legacy-navy"
+        }`}>
+          {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {importing ? "Importing…" : "Add Assessment"}
+          <input
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportFile}
+            disabled={importing}
+          />
+        </label>
+      </div>
 
       {/* Test list table */}
       <Card>

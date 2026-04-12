@@ -163,3 +163,18 @@ export async function updateTestDefinition(
     }
   );
 }
+
+/**
+ * Import a new test definition (admin only).
+ */
+export async function importTestDefinition(
+  testDef: TestDefinition
+): Promise<{ testId: string; version: string; questionCount: number }> {
+  return authFetch<{ testId: string; version: string; questionCount: number }>(
+    buildApiUrl(API_CONFIG.ENDPOINTS.PSYCH_TESTS_ADMIN_IMPORT),
+    {
+      method: 'POST',
+      body: JSON.stringify(testDef),
+    }
+  );
+}
