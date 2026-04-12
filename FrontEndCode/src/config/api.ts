@@ -1,5 +1,6 @@
 // API Configuration
 // Environment variables are loaded from .env file (see .env.example for template)
+// Build-time env vars are injected by GitHub Actions CI workflow
 
 // Validate API base URL
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
