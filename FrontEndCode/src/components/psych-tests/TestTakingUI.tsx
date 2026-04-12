@@ -550,7 +550,7 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
         {isLastPage ? (
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || answeredCount < totalQuestions}
+            disabled={isSubmitting}
             className="flex-1 bg-legacy-purple hover:bg-legacy-navy"
           >
             {isSubmitting ? (
