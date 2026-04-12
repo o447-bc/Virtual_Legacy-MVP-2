@@ -97,8 +97,8 @@ def lambda_handler(event, context):
         item = response.get('Item')
         if not item:
             return cors_response(
-                404,
-                {'error': f'No saved progress for test: {test_id}'},
+                200,
+                {'responses': [], 'currentQuestionIndex': 0, 'updatedAt': '', 'found': False},
                 event,
             )
 
@@ -107,6 +107,7 @@ def lambda_handler(event, context):
             'responses': item.get('responses', []),
             'currentQuestionIndex': item.get('currentQuestionIndex', 0),
             'updatedAt': item.get('updatedAt', ''),
+            'found': True,
         }, event)
 
     except Exception as exc:

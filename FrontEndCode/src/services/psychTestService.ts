@@ -87,17 +87,14 @@ export async function saveTestProgress(
  * Get saved progress for a test. Returns null if no progress exists (404).
  */
 export async function getTestProgress(testId: string): Promise<TestProgress | null> {
-  try {
-    return await authFetch<TestProgress>(
-      buildApiUrl(`${API_CONFIG.ENDPOINTS.PSYCH_TESTS_PROGRESS_GET}/${testId}`)
-    );
-  } catch (error: unknown) {
-    // Return null on 404 (no saved progress) — expected for new tests
-    if (error instanceof Error && (error.message.includes('404') || error.message.includes('No saved progress'))) {
-      return null;
-    }
-    throw error;
+  const data = await authFetch<TestProgress & { found?: boolean }>(
+    buildApiUrl(`${API_CONFIG.ENDPOINTS.PSYCH_TESTS_PROGRESS_GET}/${testId}`)
+  );
+  // Backend returns found: false when no progress exists (200, not 404)
+  if (data.found === false) {
+    return null;
   }
+  return data;
 }
 
 /**
