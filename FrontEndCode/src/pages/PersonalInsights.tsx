@@ -315,24 +315,35 @@ const PersonalInsights: React.FC = () => {
                           ~{test.estimatedMinutes} min
                         </div>
 
-                        {isCompleted && hasResult ? (
-                          <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => handleViewResults(test.testId)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Results
-                          </Button>
-                        ) : isCompleted ? (
-                          <Button
-                            className="w-full bg-legacy-purple hover:bg-legacy-navy"
-                            onClick={() => handleStartTest(test.testId)}
-                          >
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            Retake Test
-                          </Button>
-                        ) : hasProgress ? (
+                        {isCompleted ? (() => {
+                          const completedDate = new Date(test.completedAt!);
+                          const daysSince = Math.floor((Date.now() - completedDate.getTime()) / (1000 * 60 * 60 * 24));
+                          const canRetake = daysSince >= 30;
+                          const daysLeft = 30 - daysSince;
+
+                          return (
+                            <div className="space-y-2">
+                              <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => handleViewResults(test.testId)}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Results
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className="w-full text-xs text-gray-500"
+                                disabled={!canRetake}
+                                onClick={() => handleStartTest(test.testId)}
+                                title={canRetake ? 'Retake this assessment' : `Available in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                {canRetake ? 'Retake' : `Retake in ${daysLeft}d`}
+                              </Button>
+                            </div>
+                          );
+                        })() : hasProgress ? (
                           <Button
                             className="w-full bg-legacy-purple hover:bg-legacy-navy"
                             onClick={() => handleStartTest(test.testId)}

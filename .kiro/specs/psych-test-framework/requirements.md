@@ -186,3 +186,15 @@ Soul Reel's Section 3 ("Values and Emotions Deep Dive") introduces a scalable ps
 3. THE system SHALL include a Test_Definition JSON file for the Personality-Based Emotional Intelligence Test from Open Source Psychometrics.
 4. WHEN all three tests are scored for a user, THE ScorePsychTest_Lambda SHALL apply compositeRules to generate a unified Legacy_Portrait combining Big Five traits, Jungian type, and emotional intelligence scores.
 5. THE three Test_Definition JSON files SHALL be stored in the repository at `SamLambda/psych-tests/` and deployed to S3 during the SAM deployment process.
+
+### Requirement 13: Retake Cooldown and Results Review
+
+**User Story:** As a legacy maker, I want to review my previous test results and retake assessments after a 30-day cooldown period, so that I can track my growth over time without over-testing.
+
+#### Acceptance Criteria
+
+1. WHEN a user has completed a test, THE Test_Taking_UI SHALL display both a "View Results" button and a "Retake" button on the test card.
+2. WHEN a user's most recent completion of a test is less than 30 days ago, THE "Retake" button SHALL be disabled and display the number of days remaining until retake is available.
+3. WHEN a user's most recent completion of a test is 30 or more days ago, THE "Retake" button SHALL be enabled and allow the user to start the test again.
+4. WHEN a user clicks "View Results" on a completed test, THE Test_Taking_UI SHALL fetch and display the most recent scored results for that test.
+5. THE test card layout SHALL remain clean and uncluttered, with the two action buttons arranged compactly below the test description.
