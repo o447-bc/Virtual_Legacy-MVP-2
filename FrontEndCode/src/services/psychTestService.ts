@@ -114,6 +114,22 @@ export async function scoreTest(
 }
 
 /**
+ * Fetch the user's most recent result for a test.
+ */
+export async function getTestResults(testId: string): Promise<TestResult | null> {
+  try {
+    return await authFetch<TestResult>(
+      buildApiUrl(`${API_CONFIG.ENDPOINTS.PSYCH_TESTS_RESULTS}/${testId}`)
+    );
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('404')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
  * Generate an export file and get a pre-signed download URL.
  */
 export async function exportResults(

@@ -91,6 +91,13 @@ def lambda_handler(event, context):
     try:
         if path == '/psych-tests/list' and method == 'GET':
             return handle_list_tests(event, user_id)
+        elif path.startswith('/psych-tests/results/') and method == 'GET':
+            # Extract testId from path: /psych-tests/results/{testId}
+            parts = path.rstrip('/').split('/')
+            test_id = parts[-1] if len(parts) >= 4 else None
+            if not test_id:
+                return cors_response(400, {'error': 'Missing testId parameter'}, event)
+            return handle_get_results(event, user_id, test_id)
         elif path.startswith('/psych-tests/') and method == 'GET':
             # Extract testId from path: /psych-tests/{testId}
             test_id = (event.get('pathParameters') or {}).get('testId')
@@ -183,3 +190,31 @@ def handle_get_test_definition(event, test_id):
             return cors_response(404, {'error': f'Test definition not found: {test_id}'}, event)
         logger.error('[LIST_PSYCH_TESTS] S3 error fetching %s: %s', s3_key, exc)
         return error_response(500, 'Failed to retrieve test definition', exception=exc, event=event)
+
+
+# ===================================================================
+# Handler: GET /psych-tests/results/{testId}
+# ===================================================================
+
+def handle_get_results(event, user_id, test_id):
+    """Fetch the user's most recent result for a test."""
+    results_table = _dynamodb.Table(_TABLE_USER_TEST_RESULTS)
+
+    try:
+        response = results_table.query(
+            KeyConditionExpression=Key('userId').eq(user_id),
+            FilterExpression='testId = :tid',
+            ExpressionAttributeValues={':tid': test_id},
+            ScanIndexForward=False,
+        )
+        items = response.get('Items', [])
+        if not items:
+            return cors_response(404, {'error': f'No results found for test: {test_id}'}, event)
+
+        # Return the most recent result (exclude rawResponses for size)
+        result = items[0]
+        result.pop('rawResponses', None)
+        return cors_response(200, result, event)
+    except ClientError as exc:
+        logger.error('[LIST_PSYCH_TESTS] Error fetching results for %s: %s', test_id, exc)
+        return error_response(500, 'Failed to retrieve results', exception=exc, event=event)

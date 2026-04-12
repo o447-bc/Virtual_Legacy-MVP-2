@@ -4438,6 +4438,18 @@ Resources:
           Properties:
             Path: /psych-tests/{testId}
             Method: OPTIONS
+        GetTestResults:
+          Type: Api
+          Properties:
+            Path: /psych-tests/results/{testId}
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetTestResultsOptions:
+          Type: Api
+          Properties:
+            Path: /psych-tests/results/{testId}
+            Method: OPTIONS
 
   # ============================================================
   # SaveTestProgress Function (Cognito Auth)

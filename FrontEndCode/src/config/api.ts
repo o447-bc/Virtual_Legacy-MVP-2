@@ -57,6 +57,7 @@ export const API_CONFIG = {
     PSYCH_TESTS_PROGRESS_SAVE: '/psych-tests/progress/save',
     PSYCH_TESTS_PROGRESS_GET: '/psych-tests/progress',
     PSYCH_TESTS_EXPORT: '/psych-tests/export',
+    PSYCH_TESTS_RESULTS: '/psych-tests/results',
   }
 };
 

@@ -12,6 +12,7 @@ import {
   listPsychTests,
   getTestDefinition,
   getTestProgress,
+  getTestResults,
   scoreTest,
   saveTestProgress,
   exportResults,
@@ -128,41 +129,40 @@ const PersonalInsights: React.FC = () => {
   // View results for a completed test
   const handleViewResults = useCallback(
     async (testId: string) => {
-      const cached = completedResults.get(testId);
-      if (cached && testDefinition?.testId === testId) {
-        setTestResult(cached);
-        setSelectedTestId(testId);
-        setView("results");
-        return;
-      }
-      // Need the definition to render results
+      setSelectedTestId(testId);
       setIsLoadingDefinition(true);
       try {
-        const definition = await getTestDefinition(testId);
+        const [definition, result] = await Promise.all([
+          getTestDefinition(testId),
+          completedResults.get(testId) ?? getTestResults(testId),
+        ]);
         setTestDefinition(definition);
-        const cachedResult = completedResults.get(testId);
-        if (cachedResult) {
-          setTestResult(cachedResult);
-          setSelectedTestId(testId);
+        if (result) {
+          setTestResult(result);
+          setCompletedResults((prev) => {
+            const next = new Map(prev);
+            next.set(testId, result);
+            return next;
+          });
           setView("results");
         } else {
           toast({
             title: "Results not available",
-            description: "Please retake the test to view updated results.",
+            description: "No scored results found for this assessment.",
             variant: "destructive",
           });
         }
       } catch {
         toast({
-          title: "Failed to load test",
-          description: "Could not fetch the test definition.",
+          title: "Failed to load results",
+          description: "Please try again.",
           variant: "destructive",
         });
       } finally {
         setIsLoadingDefinition(false);
       }
     },
-    [completedResults, testDefinition],
+    [completedResults],
   );
 
   // Handle test completion (scoring)
@@ -322,43 +322,57 @@ const PersonalInsights: React.FC = () => {
                           const daysLeft = 30 - daysSince;
 
                           return (
-                            <div className="space-y-2">
+                            <>
+                              <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
+                                <div className="flex items-center">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  ~{test.estimatedMinutes} min
+                                </div>
+                                <button
+                                  className="text-legacy-purple hover:underline font-medium"
+                                  onClick={() => handleViewResults(test.testId)}
+                                >
+                                  View Results
+                                </button>
+                              </div>
                               <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => handleViewResults(test.testId)}
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Results
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                className="w-full text-xs text-gray-500"
+                                className={canRetake
+                                  ? "w-full bg-legacy-purple hover:bg-legacy-navy"
+                                  : "w-full bg-legacy-purple/40 cursor-not-allowed"
+                                }
                                 disabled={!canRetake}
                                 onClick={() => handleStartTest(test.testId)}
                                 title={canRetake ? 'Retake this assessment' : `Available in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`}
                               >
-                                <RotateCcw className="h-3 w-3 mr-1" />
-                                {canRetake ? 'Retake' : `Retake in ${daysLeft}d`}
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                {canRetake ? 'Retake Assessment' : `Retake in ${daysLeft}d`}
                               </Button>
-                            </div>
+                            </>
                           );
-                        })() : hasProgress ? (
-                          <Button
-                            className="w-full bg-legacy-purple hover:bg-legacy-navy"
-                            onClick={() => handleStartTest(test.testId)}
-                          >
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            Resume
-                          </Button>
-                        ) : (
-                          <Button
-                            className="w-full bg-legacy-purple hover:bg-legacy-navy"
-                            onClick={() => handleStartTest(test.testId)}
-                          >
-                            <Play className="h-4 w-4 mr-2" />
-                            Start Test
-                          </Button>
+                        })() : (
+                          <>
+                            <div className="flex items-center text-xs text-gray-400 mb-4">
+                              <Clock className="h-3 w-3 mr-1" />
+                              ~{test.estimatedMinutes} min
+                            </div>
+                            {hasProgress ? (
+                              <Button
+                                className="w-full bg-legacy-purple hover:bg-legacy-navy"
+                                onClick={() => handleStartTest(test.testId)}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Resume
+                              </Button>
+                            ) : (
+                              <Button
+                                className="w-full bg-legacy-purple hover:bg-legacy-navy"
+                                onClick={() => handleStartTest(test.testId)}
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Start Assessment
+                              </Button>
+                            )}
+                          </>
                         )}
                       </CardContent>
                     </Card>
