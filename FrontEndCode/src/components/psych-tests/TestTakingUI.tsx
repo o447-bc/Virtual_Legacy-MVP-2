@@ -94,7 +94,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
       {kind === 'likert' && (
         <RadioGroup
-          value={value !== undefined ? String(value) : undefined}
+          value={value !== undefined ? String(value) : ""}
           onValueChange={(v) => onChange(question.questionId, Number(v))}
           className="flex flex-wrap gap-2 sm:gap-3"
         >
@@ -132,7 +132,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
             <span>{question.options[question.options.length - 1] ?? ''}</span>
           </div>
           <RadioGroup
-            value={value !== undefined ? String(value) : undefined}
+            value={value !== undefined ? String(value) : ""}
             onValueChange={(v) => onChange(question.questionId, Number(v))}
             className="flex justify-between gap-2"
           >
@@ -160,7 +160,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
       {kind === 'radio' && (
         <RadioGroup
-          value={value !== undefined ? String(value) : undefined}
+          value={value !== undefined ? String(value) : ""}
           onValueChange={(v) => onChange(question.questionId, Number(v))}
           className="space-y-2"
         >
