@@ -43,6 +43,7 @@ _TABLE_PSYCH_TESTS = os.environ.get('TABLE_PSYCH_TESTS', 'PsychTestsDB')
 _TABLE_USER_TEST_RESULTS = os.environ.get('TABLE_USER_TEST_RESULTS', 'UserTestResultsDB')
 _TABLE_USER_TEST_PROGRESS = os.environ.get('TABLE_USER_TEST_PROGRESS', 'UserTestProgressDB')
 _S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
+_BEDROCK_MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-3-haiku-20240307-v1:0')
 
 # Path to bundled JSON Schema (inside Lambda CodeUri)
 _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), 'schemas',
@@ -613,7 +614,7 @@ def _call_bedrock(bedrock_config, domain_scores, facet_scores,
     })
 
     response = _bedrock.invoke_model(
-        modelId='anthropic.claude-3-haiku-20240307-v1:0',
+        modelId=_BEDROCK_MODEL_ID,
         contentType='application/json',
         accept='application/json',
         body=request_body,

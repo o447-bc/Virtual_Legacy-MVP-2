@@ -45,6 +45,7 @@ Globals:
         TABLE_PSYCH_TESTS: !Ref PsychTestsTable
         TABLE_USER_TEST_PROGRESS: !Ref UserTestProgressTable
         TABLE_USER_TEST_RESULTS: !Ref UserTestResultsTable
+        BEDROCK_MODEL_ID: anthropic.claude-3-haiku-20240307-v1:0
   Api:
     Cors:
       AllowMethods: '''GET,POST,PUT,OPTIONS'''
