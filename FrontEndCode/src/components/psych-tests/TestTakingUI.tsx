@@ -367,7 +367,6 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
       setResponses((prev) => {
         const next = new Map(prev);
         next.set(questionId, answer);
-        console.log(`[PsychTest] Answer: ${questionId}=${answer}, total=${next.size}`);
         return next;
       });
     },
@@ -552,36 +551,20 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
         </Button>
 
         {isLastPage ? (
-          <>
-            {(() => {
-              // Debug: log which questions are missing
-              const allQids = testDefinition.questions.map(q => q.questionId);
-              const missing = allQids.filter(qid => !responses.has(qid));
-              if (missing.length > 0) {
-                console.log(`[PsychTest] Missing ${missing.length} answers:`, missing);
-              }
-              return null;
-            })()}
-            {answeredCount < totalQuestions && (
-              <p className="text-xs text-amber-600 text-center w-full mb-2">
-                {totalQuestions - answeredCount} question{totalQuestions - answeredCount !== 1 ? 's' : ''} unanswered — go back to complete them before submitting.
-              </p>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-1 bg-legacy-purple hover:bg-legacy-navy"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Scoring…
+              </>
+            ) : (
+              'Submit'
             )}
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || answeredCount < totalQuestions}
-              className="flex-1 bg-legacy-purple hover:bg-legacy-navy"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Scoring…
-                </>
-              ) : (
-                `Submit (${answeredCount}/${totalQuestions})`
-              )}
-            </Button>
-          </>
+          </Button>
         ) : (
           <Button
             onClick={handleNextPage}
