@@ -184,8 +184,10 @@ def _handle_score(event, user_id):
 
     # --- Validate all required questionIds have responses ---
     response_map = {r['questionId']: r['answer'] for r in responses}
+    logger.info('[SCORE_PSYCH_TEST] Received %d responses, test has %d questions', len(response_map), len(question_ids))
     missing_qids = [qid for qid in question_ids if qid not in response_map]
     if missing_qids:
+        logger.warning('[SCORE_PSYCH_TEST] Missing responses for %d questions: %s', len(missing_qids), sorted(missing_qids))
         return cors_response(400, {
             'error': f'Missing responses for questions: {sorted(missing_qids)}'
         }, event)
