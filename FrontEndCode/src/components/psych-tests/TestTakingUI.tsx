@@ -409,10 +409,13 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
       );
       const result = await onSubmit(responseArray);
       onComplete(result);
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
       toast({
         title: 'Scoring failed',
-        description: 'Something went wrong. Please try again.',
+        description: message.includes('Missing responses')
+          ? 'Please answer all questions before submitting.'
+          : message,
         variant: 'destructive',
       });
       setIsSubmitting(false);
@@ -548,20 +551,27 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
         </Button>
 
         {isLastPage ? (
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex-1 bg-legacy-purple hover:bg-legacy-navy"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Scoring…
-              </>
-            ) : (
-              'Submit'
+          <>
+            {answeredCount < totalQuestions && (
+              <p className="text-xs text-amber-600 text-center w-full mb-2">
+                {totalQuestions - answeredCount} question{totalQuestions - answeredCount !== 1 ? 's' : ''} unanswered — go back to complete them before submitting.
+              </p>
             )}
-          </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || answeredCount < totalQuestions}
+              className="flex-1 bg-legacy-purple hover:bg-legacy-navy"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Scoring…
+                </>
+              ) : (
+                `Submit (${answeredCount}/${totalQuestions})`
+              )}
+            </Button>
+          </>
         ) : (
           <Button
             onClick={handleNextPage}
