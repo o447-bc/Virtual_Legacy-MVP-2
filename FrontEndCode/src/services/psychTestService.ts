@@ -35,9 +35,8 @@ async function authFetch<T>(url: string, options: RequestInit = {}): Promise<T> 
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `HTTP ${response.status}: ${response.statusText}`
-    );
+    const msg = errorData.error || response.statusText;
+    throw new Error(`HTTP ${response.status}: ${msg}`);
   }
 
   return response.json();
@@ -93,8 +92,8 @@ export async function getTestProgress(testId: string): Promise<TestProgress | nu
       buildApiUrl(`${API_CONFIG.ENDPOINTS.PSYCH_TESTS_PROGRESS_GET}/${testId}`)
     );
   } catch (error: unknown) {
-    // Return null on 404 (no saved progress)
-    if (error instanceof Error && error.message.includes('404')) {
+    // Return null on 404 (no saved progress) — expected for new tests
+    if (error instanceof Error && (error.message.includes('404') || error.message.includes('No saved progress'))) {
       return null;
     }
     throw error;
