@@ -32,7 +32,9 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null);
   const [showRetakeSurvey, setShowRetakeSurvey] = useState(false);
-  const [surveyDismissed, setSurveyDismissed] = useState(false);
+  const [surveyDismissed, setSurveyDismissed] = useState(() => {
+    try { return sessionStorage.getItem('surveyDismissed') === 'true'; } catch { return false; }
+  });
   const [retakeSelections, setRetakeSelections] = useState<string[]>([]);
   const [retakeInstances, setRetakeInstances] = useState<LifeEventInstanceGroup[]>([]);
   const [streakData, setStreakData] = useState<StreakData | null>(null);
@@ -246,6 +248,7 @@ const Dashboard = () => {
               refreshSurveyStatus();
             } else {
               setSurveyDismissed(true);
+              try { sessionStorage.setItem('surveyDismissed', 'true'); } catch {}
             }
             setShowRetakeSurvey(false);
           }}
