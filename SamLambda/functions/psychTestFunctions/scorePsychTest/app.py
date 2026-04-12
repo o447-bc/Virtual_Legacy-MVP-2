@@ -63,6 +63,17 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+def _float_to_decimal(obj):
+    """Recursively convert float values to Decimal for DynamoDB storage."""
+    if isinstance(obj, float):
+        return Decimal(str(round(obj, 6)))
+    if isinstance(obj, dict):
+        return {k: _float_to_decimal(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_float_to_decimal(i) for i in obj]
+    return obj
+
+
 # ===================================================================
 # Helper: CORS response
 # ===================================================================
@@ -656,11 +667,12 @@ def _store_results(user_id, test_id, version, timestamp, result_record):
     """Store complete results in UserTestResults table.
 
     Sort key is {testId}#{version}#{timestamp}.
+    DynamoDB requires Decimal instead of float, so we convert recursively.
     """
     table = _dynamodb.Table(_TABLE_USER_TEST_RESULTS)
     sk = f'{test_id}#{version}#{timestamp}'
 
-    item = {
+    item = _float_to_decimal({
         'userId': user_id,
         'testIdVersionTimestamp': sk,
         'testId': test_id,
@@ -673,7 +685,7 @@ def _store_results(user_id, test_id, version, timestamp, result_record):
         'narrativeText': result_record.get('narrativeText', ''),
         'narrativeSource': result_record.get('narrativeSource', 'template'),
         'rawResponses': result_record.get('rawResponses', []),
-    }
+    })
 
     table.put_item(Item=item)
     logger.info(
