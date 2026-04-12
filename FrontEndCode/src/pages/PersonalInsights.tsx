@@ -310,10 +310,6 @@ const PersonalInsights: React.FC = () => {
                         <p className="text-sm text-gray-600 mb-4 flex-1">
                           {test.description}
                         </p>
-                        <div className="flex items-center text-xs text-gray-400 mb-4">
-                          <Clock className="h-3 w-3 mr-1" />
-                          ~{test.estimatedMinutes} min
-                        </div>
 
                         {isCompleted ? (() => {
                           const completedDate = new Date(test.completedAt!);
