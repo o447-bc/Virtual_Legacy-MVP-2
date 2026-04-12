@@ -3309,7 +3309,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:ListFoundationModels
-              Resource: !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/*
+              Resource: '*'
       Events:
         AdminGetSettingsApi:
           Type: Api
