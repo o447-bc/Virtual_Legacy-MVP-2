@@ -21,6 +21,7 @@ sys.path.insert(0, '/opt/python')
 
 from cors import cors_headers
 from responses import error_response
+from settings import get_setting
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -32,8 +33,9 @@ _dynamodb = boto3.resource('dynamodb')
 
 _TABLE_USER_TEST_PROGRESS = os.environ.get('TABLE_USER_TEST_PROGRESS', 'UserTestProgressDB')
 
-# 30 days in seconds
-_TTL_SECONDS = 2_592_000
+# Configurable TTL via Settings_Table (default 30 days)
+_TTL_DAYS = int(get_setting('ASSESSMENT_PROGRESS_TTL_DAYS', '30'))
+_TTL_SECONDS = _TTL_DAYS * 86400
 
 
 # ===================================================================

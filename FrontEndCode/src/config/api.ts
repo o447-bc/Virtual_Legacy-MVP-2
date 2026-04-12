@@ -60,6 +60,10 @@ export const API_CONFIG = {
     PSYCH_TESTS_RESULTS: '/psych-tests/results',
     PSYCH_TESTS_ADMIN_UPDATE: '/psych-tests/admin/update',
     PSYCH_TESTS_ADMIN_IMPORT: '/psych-tests/admin/import',
+
+    // Admin System Settings
+    ADMIN_SETTINGS: '/admin/settings',
+    ADMIN_BEDROCK_MODELS: '/admin/bedrock-models',
   }
 };
 

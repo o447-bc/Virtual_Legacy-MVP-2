@@ -28,6 +28,7 @@ sys.path.insert(0, '/opt/python')
 
 from cors import cors_headers
 from responses import error_response
+from settings import get_setting
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -43,7 +44,7 @@ _TABLE_PSYCH_TESTS = os.environ.get('TABLE_PSYCH_TESTS', 'PsychTestsDB')
 _TABLE_USER_TEST_RESULTS = os.environ.get('TABLE_USER_TEST_RESULTS', 'UserTestResultsDB')
 _TABLE_USER_TEST_PROGRESS = os.environ.get('TABLE_USER_TEST_PROGRESS', 'UserTestProgressDB')
 _S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
-_BEDROCK_MODEL_ID = os.environ.get('PSYCH_PROFILE_BEDROCK_MODEL', 'anthropic.claude-3-haiku-20240307-v1:0')
+_BEDROCK_MODEL_ID = get_setting('PSYCH_PROFILE_BEDROCK_MODEL', 'anthropic.claude-3-haiku-20240307-v1:0')
 
 # Path to bundled JSON Schema (inside Lambda CodeUri)
 _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), 'schemas',

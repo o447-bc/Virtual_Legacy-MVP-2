@@ -45,6 +45,7 @@ Globals:
         TABLE_PSYCH_TESTS: !Ref PsychTestsTable
         TABLE_USER_TEST_PROGRESS: !Ref UserTestProgressTable
         TABLE_USER_TEST_RESULTS: !Ref UserTestResultsTable
+        TABLE_SYSTEM_SETTINGS: !Ref SystemSettingsTable
         PSYCH_PROFILE_BEDROCK_MODEL: anthropic.claude-3-haiku-20240307-v1:0
   Api:
     Cors:
@@ -797,6 +798,25 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Admin System Settings — Key-value configuration store
+  SystemSettingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: SystemSettingsDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: settingKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: settingKey
+          KeyType: HASH
       SSESpecification:
         SSEEnabled: true
         SSEType: KMS
@@ -3257,6 +3277,75 @@ Resources:
           Type: Api
           Properties:
             Path: /admin/migrate
+            Method: OPTIONS
+
+  AdminSettingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminSettings/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SystemSettingsTable}
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:ListFoundationModels
+              Resource: !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/*
+      Events:
+        AdminGetSettingsApi:
+          Type: Api
+          Properties:
+            Path: /admin/settings
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminGetSettingsOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/settings
+            Method: OPTIONS
+        AdminPutSettingApi:
+          Type: Api
+          Properties:
+            Path: /admin/settings/{settingKey}
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminPutSettingOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/settings/{settingKey}
+            Method: OPTIONS
+        AdminGetBedrockModelsApi:
+          Type: Api
+          Properties:
+            Path: /admin/bedrock-models
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminGetBedrockModelsOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/bedrock-models
             Method: OPTIONS
 
   # ============================================================

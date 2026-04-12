@@ -1,7 +1,7 @@
 /**
  * Admin API service — typed functions for all admin tool API calls.
  */
-import { buildApiUrl } from "@/config/api";
+import { API_CONFIG, buildApiUrl } from "@/config/api";
 import { fetchAuthSession } from "aws-amplify/auth";
 
 // Admin endpoint paths
@@ -251,4 +251,77 @@ export async function runMigration(): Promise<{
     throw new Error(err.error || `Migration failed (${res.status})`);
   }
   return res.json();
+}
+
+// --- Settings Types ---
+
+export interface SettingItem {
+  settingKey: string;
+  value: string;
+  valueType: 'string' | 'integer' | 'float' | 'boolean' | 'text' | 'model';
+  section: string;
+  label: string;
+  description: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface SettingsResponse {
+  settings: Record<string, SettingItem[]>;
+}
+
+export interface UpdateSettingResponse {
+  message: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface BedrockModel {
+  modelId: string;
+  modelName: string;
+  providerName: string;
+  inputPricePerKToken: number | null;
+  outputPricePerKToken: number | null;
+}
+
+// --- Settings CRUD ---
+
+export async function fetchSettings(): Promise<SettingsResponse> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_SETTINGS), { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to fetch settings (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function updateSetting(settingKey: string, value: string): Promise<UpdateSettingResponse> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    buildApiUrl(`${API_CONFIG.ENDPOINTS.ADMIN_SETTINGS}/${encodeURIComponent(settingKey)}`),
+    {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ value }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to update setting (${res.status})`);
+  }
+  return res.json();
+}
+
+// --- Bedrock Models ---
+
+export async function fetchBedrockModels(): Promise<BedrockModel[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_BEDROCK_MODELS), { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to fetch Bedrock models (${res.status})`);
+  }
+  const data = await res.json();
+  return data.models;
 }
