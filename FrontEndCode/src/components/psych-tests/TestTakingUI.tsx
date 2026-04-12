@@ -553,6 +553,15 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
 
         {isLastPage ? (
           <>
+            {(() => {
+              // Debug: log which questions are missing
+              const allQids = testDefinition.questions.map(q => q.questionId);
+              const missing = allQids.filter(qid => !responses.has(qid));
+              if (missing.length > 0) {
+                console.log(`[PsychTest] Missing ${missing.length} answers:`, missing);
+              }
+              return null;
+            })()}
             {answeredCount < totalQuestions && (
               <p className="text-xs text-amber-600 text-center w-full mb-2">
                 {totalQuestions - answeredCount} question{totalQuestions - answeredCount !== 1 ? 's' : ''} unanswered — go back to complete them before submitting.
