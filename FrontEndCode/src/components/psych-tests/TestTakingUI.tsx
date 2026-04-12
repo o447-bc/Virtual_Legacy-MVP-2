@@ -367,6 +367,7 @@ const TestTakingUI: React.FC<TestTakingUIProps> = ({
       setResponses((prev) => {
         const next = new Map(prev);
         next.set(questionId, answer);
+        console.log(`[PsychTest] Answer: ${questionId}=${answer}, total=${next.size}`);
         return next;
       });
     },
