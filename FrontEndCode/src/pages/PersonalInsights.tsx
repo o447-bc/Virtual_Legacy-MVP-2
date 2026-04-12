@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserProgress, ProgressData } from "@/services/progressService";
 import { Header } from "@/components/Header";
-import { OverallProgressSection } from "@/components/OverallProgressSection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Clock, Play, RotateCcw, Eye, Loader2 } from "lucide-react";
@@ -45,9 +43,6 @@ const PersonalInsights: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Existing progress
-  const [overallProgress, setOverallProgress] = useState<ProgressData | null>(null);
-
   // View navigation
   const [view, setView] = useState<ViewState>("list");
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
@@ -70,16 +65,6 @@ const PersonalInsights: React.FC = () => {
       navigate("/login");
     }
   }, [user, navigate]);
-
-  // Fetch overall progress
-  useEffect(() => {
-    const fetchProgress = async () => {
-      if (!user?.id) return;
-      const data = await getUserProgress(user.id);
-      setOverallProgress(data);
-    };
-    fetchProgress();
-  }, [user?.id]);
 
   // Fetch available tests on mount
   useEffect(() => {
@@ -276,11 +261,14 @@ const PersonalInsights: React.FC = () => {
           Back to Dashboard
         </Button>
 
-        {/* Overall Progress — always visible */}
-        <OverallProgressSection
-          completed={overallProgress?.completed ?? 0}
-          total={overallProgress?.total ?? 0}
-        />
+        {/* Psych Test Progress */}
+        {!isLoadingTests && availableTests.length > 0 && (
+          <div className="mb-6 p-4 bg-white rounded-lg border">
+            <p className="text-sm text-gray-600">
+              {availableTests.filter((t) => t.completedAt).length} of {availableTests.length} assessments completed
+            </p>
+          </div>
+        )}
 
         {/* Loading overlay for definition fetch */}
         {isLoadingDefinition && (
