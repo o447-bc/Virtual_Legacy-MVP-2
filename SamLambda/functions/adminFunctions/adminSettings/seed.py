@@ -46,6 +46,7 @@ SEED_SETTINGS = [
         'section': 'AI & Models',
         'label': 'Psych Profile Bedrock Model',
         'description': 'AI model used for psychological assessment narrative generation.',
+        'ssm_path': '/soulreel/settings/psych-profile-bedrock-model',
     },
     {
         'settingKey': 'CONVERSATION_BEDROCK_MODEL',
@@ -81,6 +82,7 @@ SEED_SETTINGS = [
         'section': 'AI & Models',
         'label': 'Max Tokens for AI Responses',
         'description': 'Maximum number of tokens the AI model can generate per response.',
+        'ssm_path': '/soulreel/settings/bedrock-max-tokens',
     },
     {
         'settingKey': 'BEDROCK_TEMPERATURE',
@@ -89,6 +91,7 @@ SEED_SETTINGS = [
         'section': 'AI & Models',
         'label': 'Temperature for AI Generation',
         'description': 'Controls randomness in AI responses. Lower values are more deterministic.',
+        'ssm_path': '/soulreel/settings/bedrock-temperature',
     },
     {
         'settingKey': 'SUMMARIZE_MAX_TOKENS',
@@ -97,6 +100,7 @@ SEED_SETTINGS = [
         'section': 'AI & Models',
         'label': 'Max Tokens for Transcript Summarization',
         'description': 'Maximum number of tokens for transcript summarization output.',
+        'ssm_path': '/soulreel/settings/summarize-max-tokens',
     },
     {
         'settingKey': 'SUMMARIZE_TEMPERATURE',
@@ -105,6 +109,7 @@ SEED_SETTINGS = [
         'section': 'AI & Models',
         'label': 'Temperature for Transcript Summarization',
         'description': 'Controls randomness in transcript summarization output.',
+        'ssm_path': '/soulreel/settings/summarize-temperature',
     },
 
     # ── Assessments ──────────────────────────────────────────────────────
@@ -123,6 +128,7 @@ SEED_SETTINGS = [
         'section': 'Assessments',
         'label': 'In-Progress Assessment Expiry (days)',
         'description': 'Number of days before an in-progress assessment expires.',
+        'ssm_path': '/soulreel/settings/assessment-progress-ttl-days',
     },
     {
         'settingKey': 'ASSESSMENT_AUTO_SAVE_INTERVAL_MS',
@@ -139,6 +145,7 @@ SEED_SETTINGS = [
         'section': 'Assessments',
         'label': 'Test Export Download Link Expiry (seconds)',
         'description': 'How long a presigned URL for test export downloads remains valid.',
+        'ssm_path': '/soulreel/settings/export-presigned-expiry-seconds',
     },
 
     # ── Conversations ────────────────────────────────────────────────────
@@ -238,6 +245,7 @@ SEED_SETTINGS = [
         'section': 'Video & Media',
         'label': 'Max Transcript Size (bytes)',
         'description': 'Maximum allowed size in bytes for a video transcript.',
+        'ssm_path': '/soulreel/settings/max-transcript-size',
     },
 
     # ── Engagement & Notifications ───────────────────────────────────────

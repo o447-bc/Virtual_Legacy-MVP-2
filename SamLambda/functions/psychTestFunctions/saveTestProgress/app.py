@@ -21,7 +21,6 @@ sys.path.insert(0, '/opt/python')
 
 from cors import cors_headers
 from responses import error_response
-from settings import get_setting
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -30,11 +29,22 @@ logger.setLevel(logging.INFO)
 # AWS clients (module-level — reused across warm invocations)
 # ---------------------------------------------------------------------------
 _dynamodb = boto3.resource('dynamodb')
+_ssm = boto3.client('ssm')
 
 _TABLE_USER_TEST_PROGRESS = os.environ.get('TABLE_USER_TEST_PROGRESS', 'UserTestProgressDB')
 
-# Configurable TTL via Settings_Table (default 30 days)
-_TTL_DAYS = int(get_setting('ASSESSMENT_PROGRESS_TTL_DAYS', '30'))
+
+def _get_ssm_setting(path, default):
+    """Read an SSM parameter with fallback to default."""
+    try:
+        resp = _ssm.get_parameter(Name=path)
+        return resp['Parameter']['Value']
+    except Exception:
+        return default
+
+
+# Configurable TTL via SSM (default 30 days)
+_TTL_DAYS = int(_get_ssm_setting('/soulreel/settings/assessment-progress-ttl-days', '30'))
 _TTL_SECONDS = _TTL_DAYS * 86400
 
 

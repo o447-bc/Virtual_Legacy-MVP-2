@@ -7,10 +7,22 @@ transcribe_client = boto3.client('transcribe')
 s3_client = boto3.client('s3')
 lambda_client = boto3.client('lambda')
 dynamodb = boto3.resource('dynamodb')
+_ssm = boto3.client('ssm')
 
 S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 SUMMARIZE_FUNCTION_NAME = os.environ.get('SUMMARIZE_FUNCTION_NAME', '')
-MAX_TRANSCRIPT_SIZE = 300000  # 300KB limit for DynamoDB storage
+
+
+def _get_ssm_setting(path, default):
+    """Read an SSM parameter with fallback to default."""
+    try:
+        resp = _ssm.get_parameter(Name=path)
+        return resp['Parameter']['Value']
+    except Exception:
+        return default
+
+
+MAX_TRANSCRIPT_SIZE = int(_get_ssm_setting('/soulreel/settings/max-transcript-size', '300000'))
 
 def lambda_handler(event, context):
     """

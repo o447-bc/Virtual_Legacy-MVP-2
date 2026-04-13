@@ -138,10 +138,13 @@ def check_enable_transcript_flag(user_id, question_id):
 
 def invoke_bedrock(model_id, prompt):
     """Call Amazon Bedrock with Claude model."""
+    max_tokens = int(get_ssm_parameter('/soulreel/settings/summarize-max-tokens') or '2048')
+    temperature = float(get_ssm_parameter('/soulreel/settings/summarize-temperature') or '0.7')
+
     request_body = {
         "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 2048,
-        "temperature": 0.7,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
         "messages": [
             {
                 "role": "user",

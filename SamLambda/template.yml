@@ -2840,6 +2840,12 @@ Resources:
                 - kms:Decrypt
                 - kms:DescribeKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/settings/*
       Events:
         TranscribeComplete:
           Type: EventBridgeRule
@@ -2888,6 +2894,11 @@ Resources:
               Action:
                 - ssm:GetParameter
               Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/life-story-app/llm-prompts/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/settings/*
         - Statement:
             - Effect: Allow
               Action:
@@ -4459,6 +4470,12 @@ Resources:
                 - kms:DescribeKey
                 - kms:GenerateDataKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/settings/*
       Events:
         ScoreTest:
           Type: Api
@@ -4579,6 +4596,12 @@ Resources:
                 - kms:DescribeKey
                 - kms:GenerateDataKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/settings/*
       Events:
         SaveProgress:
           Type: Api
@@ -4672,6 +4695,12 @@ Resources:
                 - kms:DescribeKey
                 - kms:GenerateDataKey
               Resource: !GetAtt DataEncryptionKey.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/settings/*
       Events:
         ExportResults:
           Type: Api

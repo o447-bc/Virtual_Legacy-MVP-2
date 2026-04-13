@@ -33,12 +33,24 @@ logger.setLevel(logging.INFO)
 # ---------------------------------------------------------------------------
 _dynamodb = boto3.resource('dynamodb')
 _s3 = boto3.client('s3')
+_ssm = boto3.client('ssm')
 
 _TABLE_USER_TEST_RESULTS = os.environ.get('TABLE_USER_TEST_RESULTS', 'UserTestResultsDB')
 _S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 
 _SUPPORTED_FORMATS = {'PDF', 'JSON', 'CSV'}
-_PRESIGNED_EXPIRY = 86400  # 24 hours
+
+
+def _get_ssm_setting(path, default):
+    """Read an SSM parameter with fallback to default."""
+    try:
+        resp = _ssm.get_parameter(Name=path)
+        return resp['Parameter']['Value']
+    except Exception:
+        return default
+
+
+_PRESIGNED_EXPIRY = int(_get_ssm_setting('/soulreel/settings/export-presigned-expiry-seconds', '86400'))
 
 
 # ===================================================================

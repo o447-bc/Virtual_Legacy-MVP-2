@@ -55,6 +55,15 @@ SSM_PATH_MAP = {
     'EXPORT_RATE_LIMIT_DAYS': '/soulreel/data-retention/export-rate-limit-days',
     'EXPORT_LINK_EXPIRY_HOURS': '/soulreel/data-retention/export-link-expiry-hours',
     'DATA_RETENTION_TESTING_MODE': '/soulreel/data-retention/testing-mode',
+    # Formerly hardcoded settings — now in SSM
+    'PSYCH_PROFILE_BEDROCK_MODEL': '/soulreel/settings/psych-profile-bedrock-model',
+    'BEDROCK_MAX_TOKENS': '/soulreel/settings/bedrock-max-tokens',
+    'BEDROCK_TEMPERATURE': '/soulreel/settings/bedrock-temperature',
+    'SUMMARIZE_MAX_TOKENS': '/soulreel/settings/summarize-max-tokens',
+    'SUMMARIZE_TEMPERATURE': '/soulreel/settings/summarize-temperature',
+    'ASSESSMENT_PROGRESS_TTL_DAYS': '/soulreel/settings/assessment-progress-ttl-days',
+    'EXPORT_PRESIGNED_EXPIRY_SECONDS': '/soulreel/settings/export-presigned-expiry-seconds',
+    'MAX_TRANSCRIPT_SIZE': '/soulreel/settings/max-transcript-size',
 }
 
 _ssm = boto3.client('ssm')

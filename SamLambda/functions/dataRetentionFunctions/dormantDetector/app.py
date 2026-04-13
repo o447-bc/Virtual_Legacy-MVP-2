@@ -29,7 +29,6 @@ from responses import error_response
 from email_utils import send_email_with_retry
 from audit_logger import log_audit_event
 from retention_config import get_config, get_current_time
-from settings import get_setting
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +88,11 @@ def handle_dormancy_scan(event):
     user_status_table = _dynamodb.Table(_TABLE_USER_STATUS)
     subscriptions_table = _dynamodb.Table(_TABLE_SUBSCRIPTIONS)
 
-    # Get configurable thresholds from Settings_Table
-    threshold_1 = int(get_setting('DORMANCY_THRESHOLD_1_DAYS', '180'))
-    threshold_2 = int(get_setting('DORMANCY_THRESHOLD_2_DAYS', '365'))
-    threshold_3 = int(get_setting('DORMANCY_THRESHOLD_3_DAYS', '730'))
-    lapse_days = int(get_setting('LEGACY_PROTECTION_LAPSE_DAYS', '365'))
+    # Get configurable thresholds from SSM via retention_config
+    threshold_1 = get_config('dormancy-threshold-1')  # 180 days (6 months)
+    threshold_2 = get_config('dormancy-threshold-2')  # 365 days (12 months)
+    threshold_3 = get_config('dormancy-threshold-3')  # 730 days (24 months)
+    lapse_days = get_config('legacy-protection-lapse-days')  # 365 days
 
     # Scan all users
     users = _scan_all_items(user_status_table)
