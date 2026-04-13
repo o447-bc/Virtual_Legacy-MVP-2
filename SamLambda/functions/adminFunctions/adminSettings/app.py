@@ -30,6 +30,36 @@ class DecimalEncoder(json.JSONEncoder):
 TABLE_NAME = os.environ.get('TABLE_SYSTEM_SETTINGS', 'SystemSettingsDB')
 
 # ---------------------------------------------------------------------------
+# SSM path mapping — settings that must be synced back to SSM on save
+# ---------------------------------------------------------------------------
+SSM_PATH_MAP = {
+    'CONVERSATION_BEDROCK_MODEL': '/virtuallegacy/conversation/llm-conversation-model',
+    'CONVERSATION_SCORING_MODEL': '/virtuallegacy/conversation/llm-scoring-model',
+    'SUMMARIZE_TRANSCRIPT_MODEL': '/life-story-app/llm-prompts/model-id',
+    'MAX_CONVERSATION_TURNS': '/virtuallegacy/conversation/max-turns',
+    'CONVERSATION_SCORE_GOAL': '/virtuallegacy/conversation/score-goal',
+    'CONVERSATION_SYSTEM_PROMPT': '/virtuallegacy/conversation/system-prompt',
+    'CONVERSATION_SCORING_PROMPT': '/virtuallegacy/conversation/scoring-prompt',
+    'SUMMARIZE_TRANSCRIPT_PROMPT': '/life-story-app/llm-prompts/combined-prompt',
+    'POLLY_VOICE_ID': '/virtuallegacy/conversation/polly-voice-id',
+    'POLLY_ENGINE': '/virtuallegacy/conversation/polly-engine',
+    'DORMANCY_THRESHOLD_1_DAYS': '/soulreel/data-retention/dormancy-threshold-1',
+    'DORMANCY_THRESHOLD_2_DAYS': '/soulreel/data-retention/dormancy-threshold-2',
+    'DORMANCY_THRESHOLD_3_DAYS': '/soulreel/data-retention/dormancy-threshold-3',
+    'DELETION_GRACE_PERIOD_DAYS': '/soulreel/data-retention/deletion-grace-period',
+    'LEGACY_PROTECTION_DORMANCY_DAYS': '/soulreel/data-retention/legacy-protection-dormancy-days',
+    'LEGACY_PROTECTION_LAPSE_DAYS': '/soulreel/data-retention/legacy-protection-lapse-days',
+    'GLACIER_TRANSITION_DAYS': '/soulreel/data-retention/glacier-transition-days',
+    'GLACIER_NO_ACCESS_DAYS': '/soulreel/data-retention/glacier-no-access-days',
+    'INTELLIGENT_TIERING_DAYS': '/soulreel/data-retention/intelligent-tiering-days',
+    'EXPORT_RATE_LIMIT_DAYS': '/soulreel/data-retention/export-rate-limit-days',
+    'EXPORT_LINK_EXPIRY_HOURS': '/soulreel/data-retention/export-link-expiry-hours',
+    'DATA_RETENTION_TESTING_MODE': '/soulreel/data-retention/testing-mode',
+}
+
+_ssm = boto3.client('ssm')
+
+# ---------------------------------------------------------------------------
 # Bedrock pricing lookup (static, maintained manually)
 # ---------------------------------------------------------------------------
 BEDROCK_PRICING = {
@@ -115,7 +145,11 @@ def lambda_handler(event, context):
 # GET /admin/settings — List all settings grouped by section
 # ---------------------------------------------------------------------------
 def handle_get_settings(event):
-    """Scan SystemSettingsTable and return all settings grouped by section."""
+    """Scan SystemSettingsTable and return all settings grouped by section.
+    
+    For SSM-backed settings, reads the live value from SSM so the admin UI
+    always shows what the app is actually using.
+    """
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(TABLE_NAME)
 
@@ -127,6 +161,16 @@ def handle_get_settings(event):
     while 'LastEvaluatedKey' in response:
         response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
         items.extend(response.get('Items', []))
+
+    # For SSM-backed settings, override the value with the live SSM value
+    for item in items:
+        ssm_path = SSM_PATH_MAP.get(item.get('settingKey'))
+        if ssm_path:
+            try:
+                resp = _ssm.get_parameter(Name=ssm_path)
+                item['value'] = resp['Parameter']['Value']
+            except Exception:
+                pass  # Keep DynamoDB value as fallback
 
     # Group by section
     grouped = {}
@@ -205,6 +249,21 @@ def handle_put_setting(event, admin_email):
             ':ub': admin_email,
         },
     )
+
+    # Sync to SSM if this setting has an SSM path
+    ssm_path = SSM_PATH_MAP.get(setting_key)
+    if ssm_path:
+        try:
+            _ssm.put_parameter(
+                Name=ssm_path,
+                Value=str(value),
+                Type='String',
+                Overwrite=True,
+            )
+            print(f"[AdminSettings] Synced {setting_key} to SSM: {ssm_path}")
+        except Exception as ssm_err:
+            # Log but don't fail the request — DynamoDB is already updated
+            print(f"[AdminSettings] WARNING: Failed to sync {setting_key} to SSM {ssm_path}: {ssm_err}")
 
     return {
         'statusCode': 200,

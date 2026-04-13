@@ -3311,6 +3311,16 @@ Resources:
               Action:
                 - bedrock:ListFoundationModels
               Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+                - ssm:PutParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/virtuallegacy/*
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/*
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/life-story-app/*
       Events:
         AdminGetSettingsApi:
           Type: Api
