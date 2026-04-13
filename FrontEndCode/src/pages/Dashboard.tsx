@@ -248,7 +248,7 @@ const Dashboard = () => {
               refreshSurveyStatus();
             } else {
               setSurveyDismissed(true);
-              try { sessionStorage.setItem('surveyDismissed', 'true'); } catch {}
+              try { sessionStorage.setItem('surveyDismissed', 'true'); } catch { /* sessionStorage unavailable */ }
             }
             setShowRetakeSurvey(false);
           }}
