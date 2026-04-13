@@ -27,10 +27,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPerso
   }
 
   // Redirect legacy makers to dashboard (which shows survey overlay) if survey not completed
-  // Skip for the dashboard itself and admin routes
+  // Skip for the dashboard itself, admin routes, and if the user dismissed the survey this session
+  const surveyDismissedThisSession = (() => {
+    try { return sessionStorage.getItem('surveyDismissed') === 'true'; } catch { return false; }
+  })();
+
   if (
     user.personaType === 'legacy_maker' &&
     hasCompletedSurvey === false &&
+    !surveyDismissedThisSession &&
     location.pathname !== '/dashboard' &&
     !location.pathname.startsWith('/admin')
   ) {
