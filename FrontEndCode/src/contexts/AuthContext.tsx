@@ -343,6 +343,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const statisticsCacheKey = `user_statistics_${user.id}`;
         localStorage.removeItem(statisticsCacheKey);
       }
+      // Clear survey dismiss flag so it shows again on next login
+      try { sessionStorage.removeItem('surveyDismissed'); } catch { /* ignore */ }
       
       setUser(null);
       setHasCompletedSurvey(null);
