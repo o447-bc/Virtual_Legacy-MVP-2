@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import {
   Settings,
   Save,
@@ -144,7 +145,7 @@ const SystemSettings = () => {
         setOpenSections(new Set());
         setBedrockModels(models);
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Failed to load settings");
+        toastError(err instanceof Error ? err.message : "Failed to load settings", 'SystemSettings');
       } finally {
         setLoading(false);
       }
@@ -188,7 +189,7 @@ const SystemSettings = () => {
         return next;
       });
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update setting");
+      toastError(err instanceof Error ? err.message : "Failed to update setting", 'SystemSettings');
     } finally {
       setSavingKeys((prev) => { const next = new Set(prev); next.delete(key); return next; });
     }
@@ -216,7 +217,7 @@ const SystemSettings = () => {
         hasErr = true;
       }
     }
-    if (hasErr) { toast.error("Fix validation errors before saving"); return; }
+    if (hasErr) { toastError("Fix validation errors before saving", 'SystemSettings'); return; }
 
     setSavingAll(true);
     let saved = 0;
@@ -240,7 +241,7 @@ const SystemSettings = () => {
         setValidationErrors((prev) => { const next = { ...prev }; delete next[key]; return next; });
         saved++;
       } catch (err: unknown) {
-        toast.error(`Failed to save ${setting.label}: ${err instanceof Error ? err.message : "Unknown error"}`);
+        toastError(`Failed to save ${setting.label}: ${err instanceof Error ? err.message : "Unknown error"}`, 'SystemSettings');
       } finally {
         setSavingKeys((prev) => { const next = new Set(prev); next.delete(key); return next; });
       }
@@ -339,10 +340,10 @@ const SystemSettings = () => {
   const sections = Object.keys(settings);
 
   return (
-    <div className="relative">
-      {/* Sticky save bar */}
+    <>
+      {/* Sticky save bar — fixed to top of main content area */}
       {pendingCount > 0 && (
-        <div className="sticky top-0 z-20 bg-legacy-navy/95 backdrop-blur-sm text-white px-6 py-3 flex items-center justify-between shadow-lg">
+        <div className="sticky top-0 z-30 bg-legacy-navy/95 backdrop-blur-sm text-white px-6 py-3 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-2">
             <Save className="h-4 w-4" />
             <span className="text-sm font-medium">
@@ -455,7 +456,7 @@ const SystemSettings = () => {
           );
         })}
       </div>
-    </div>
+    </>
   );
 };
 
