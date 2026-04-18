@@ -4813,6 +4813,46 @@ Resources:
             Method: OPTIONS
 
   # ============================================================
+  # Daily Metrics Collector (EventBridge — daily)
+  # ============================================================
+
+  MetricsCollectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/metricsCollector/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 128
+      Layers:
+        - !Ref SharedUtilsLayer
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/userStatusDB
+                - !GetAtt UserSubscriptionsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cloudwatch:PutMetricData
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  cloudwatch:namespace: 'SoulReel/BusinessMetrics'
+      Events:
+        DailyMetrics:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(1 day)'
+            Description: Collect daily business metrics and publish to CloudWatch
+            Enabled: true
+
+  # ============================================================
   # Error Logging & Monitoring — CloudWatch Infrastructure
   # ============================================================
 
@@ -4894,11 +4934,263 @@ Resources:
       OKActions:
         - !Ref ErrorAlertTopic
 
-  # CloudWatch Dashboard
-  ErrorMonitoringDashboard:
+  # CloudWatch Dashboard — Metrics
+  MetricsDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
-      DashboardName: SoulReel-ErrorMonitoring
+      DashboardName: SoulReel-Metrics
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "log",
+              "x": 0, "y": 0, "width": 6, "height": 6,
+              "properties": {
+                "title": "Active Users Per Day",
+                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' | filter source = \"backend\" | stats count_distinct(userId) as activeUsers by bin(1d)",
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "log",
+              "x": 6, "y": 0, "width": 6, "height": 6,
+              "properties": {
+                "title": "Tests Scored Per Day",
+                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' | filter operation = \"TestScored\" | stats count(*) as tests by bin(1d)",
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 0, "width": 6, "height": 6,
+              "properties": {
+                "title": "Conversation Sessions Per Day",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "${WebSocketDefaultFunction}", {"stat": "Sum", "period": 86400}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            },
+            {
+              "type": "metric",
+              "x": 18, "y": 0, "width": 6, "height": 6,
+              "properties": {
+                "title": "Video Uploads Per Day",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "${UploadVideoResponseFunction}", {"stat": "Sum", "period": 86400}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 6, "width": 6, "height": 4,
+              "properties": {
+                "title": "Registered Legacy Makers",
+                "metrics": [
+                  ["SoulReel/BusinessMetrics", "RegisteredLegacyMakers", {"stat": "Maximum", "period": 86400}]
+                ],
+                "view": "singleValue",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            },
+            {
+              "type": "metric",
+              "x": 6, "y": 6, "width": 6, "height": 4,
+              "properties": {
+                "title": "Registered Legacy Benefactors",
+                "metrics": [
+                  ["SoulReel/BusinessMetrics", "RegisteredLegacyBenefactors", {"stat": "Maximum", "period": 86400}]
+                ],
+                "view": "singleValue",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 6, "width": 6, "height": 4,
+              "properties": {
+                "title": "Trial Subscriptions",
+                "metrics": [
+                  ["SoulReel/BusinessMetrics", "TrialSubscriptions", {"stat": "Maximum", "period": 86400}]
+                ],
+                "view": "singleValue",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            },
+            {
+              "type": "metric",
+              "x": 18, "y": 6, "width": 6, "height": 4,
+              "properties": {
+                "title": "Paid Subscriptions",
+                "metrics": [
+                  ["SoulReel/BusinessMetrics", "PaidSubscriptions", {"stat": "Maximum", "period": 86400}]
+                ],
+                "view": "singleValue",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 10, "width": 24, "height": 6,
+              "properties": {
+                "title": "Operations By Type",
+                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' '/aws/lambda/${ErrorIngestionFunction}' | filter source = \"backend\" | stats count(*) as count by operation | sort count desc | limit 15",
+                "region": "${AWS::Region}",
+                "view": "table"
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 16, "width": 8, "height": 6,
+              "properties": {
+                "title": "Average Scoring Duration",
+                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' | filter operation = \"TestScored\" | stats avg(durationMs) as avgMs, max(durationMs) as maxMs by bin(1d)",
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "log",
+              "x": 8, "y": 16, "width": 8, "height": 6,
+              "properties": {
+                "title": "Bedrock Narrative Generation Time",
+                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' | filter operation = \"TestScored\" and details.narrativeSource = \"bedrock\" | stats avg(durationMs) as avgMs, max(durationMs) as maxMs by bin(1d)",
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16, "y": 16, "width": 8, "height": 6,
+              "properties": {
+                "title": "API Gateway Latency",
+                "metrics": [
+                  ["AWS/ApiGateway", "Latency", "ApiName", "Virtual-Legacy-MVP-1", {"stat": "p50", "period": 300}],
+                  ["AWS/ApiGateway", "Latency", "ApiName", "Virtual-Legacy-MVP-1", {"stat": "p90", "period": 300}],
+                  ["AWS/ApiGateway", "Latency", "ApiName", "Virtual-Legacy-MVP-1", {"stat": "p99", "period": 300}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 22, "width": 8, "height": 6,
+              "properties": {
+                "title": "Lambda Invocations & Errors",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", "FunctionName", "${ScorePsychTestFunction}", {"stat": "Sum", "period": 300}],
+                  ["AWS/Lambda", "Errors", "FunctionName", "${ScorePsychTestFunction}", {"stat": "Sum", "period": 300}],
+                  ["AWS/Lambda", "Invocations", "FunctionName", "${BillingFunction}", {"stat": "Sum", "period": 300}],
+                  ["AWS/Lambda", "Errors", "FunctionName", "${BillingFunction}", {"stat": "Sum", "period": 300}],
+                  ["AWS/Lambda", "Invocations", "FunctionName", "${WebSocketDefaultFunction}", {"stat": "Sum", "period": 300}],
+                  ["AWS/Lambda", "Errors", "FunctionName", "${WebSocketDefaultFunction}", {"stat": "Sum", "period": 300}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8, "y": 22, "width": 8, "height": 6,
+              "properties": {
+                "title": "Lambda Concurrent Executions",
+                "metrics": [
+                  ["AWS/Lambda", "ConcurrentExecutions", {"stat": "Maximum", "period": 300}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16, "y": 22, "width": 8, "height": 6,
+              "properties": {
+                "title": "Cold Start Rate",
+                "metrics": [
+                  ["AWS/Lambda", "Duration", "FunctionName", "${ScorePsychTestFunction}", {"stat": "SampleCount", "period": 300, "label": "Total Invocations"}],
+                  [{"expression": "SEARCH('{AWS/Lambda,FunctionName} FunctionName=${ScorePsychTestFunction} MetricName=InitDuration', 'SampleCount', 300)", "id": "coldStarts", "label": "Cold Starts"}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 300
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 28, "width": 24, "height": 6,
+              "properties": {
+                "title": "Success/Failure Rate By Operation",
+                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' '/aws/lambda/${ErrorIngestionFunction}' | filter source = \"backend\" | stats count(*) as total, sum(level=\"ERROR\") as errors by operation | sort errors desc | limit 15",
+                "region": "${AWS::Region}",
+                "view": "table"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 34, "width": 8, "height": 6,
+              "properties": {
+                "title": "S3 Storage Used",
+                "metrics": [
+                  ["AWS/S3", "BucketSizeBytes", "BucketName", "virtual-legacy", "StorageType", "StandardStorage", {"stat": "Average", "period": 86400}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            },
+            {
+              "type": "metric",
+              "x": 8, "y": 34, "width": 8, "height": 6,
+              "properties": {
+                "title": "DynamoDB Read/Write Capacity",
+                "metrics": [
+                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "userStatusDB", {"stat": "Sum", "period": 300}],
+                  ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "userStatusDB", {"stat": "Sum", "period": 300}],
+                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "UserSubscriptionsDB", {"stat": "Sum", "period": 300}],
+                  ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", "TableName", "UserSubscriptionsDB", {"stat": "Sum", "period": 300}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 16, "y": 34, "width": 8, "height": 6,
+              "properties": {
+                "title": "Bedrock Token Usage",
+                "metrics": [
+                  ["AWS/Bedrock", "InputTokenCount", {"stat": "Sum", "period": 86400}],
+                  ["AWS/Bedrock", "OutputTokenCount", {"stat": "Sum", "period": 86400}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 86400
+              }
+            }
+          ]
+        }
+
+  # CloudWatch Dashboard — Errors
+  ErrorsDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: SoulReel-Errors
       DashboardBody: !Sub |
         {
           "widgets": [
@@ -4906,54 +5198,63 @@ Resources:
               "type": "metric",
               "x": 0, "y": 0, "width": 12, "height": 6,
               "properties": {
-                "title": "Frontend Errors (5-min intervals)",
+                "title": "Error Rate Over Time",
                 "metrics": [
-                  ["SoulReel/Errors", "FrontendErrorCount", {"stat": "Sum", "period": 300}]
+                  ["SoulReel/Errors", "FrontendErrorCount", {"stat": "Sum", "period": 300, "label": "Frontend Errors"}],
+                  ["AWS/Lambda", "Errors", "FunctionName", "${ErrorIngestionFunction}", {"stat": "Sum", "period": 300, "label": "Backend Lambda Errors"}]
                 ],
                 "view": "timeSeries",
+                "stacked": true,
                 "region": "${AWS::Region}",
                 "period": 300
               }
             },
             {
-              "type": "metric",
+              "type": "log",
               "x": 12, "y": 0, "width": 12, "height": 6,
               "properties": {
-                "title": "Backend Lambda Errors (5-min intervals)",
-                "metrics": [
-                  ["AWS/Lambda", "Errors", "FunctionName", "${ErrorIngestionFunction}", {"stat": "Sum", "period": 300}]
-                ],
-                "view": "timeSeries",
-                "region": "${AWS::Region}",
-                "period": 300
-              }
-            },
-            {
-              "type": "log",
-              "x": 0, "y": 6, "width": 24, "height": 8,
-              "properties": {
-                "title": "Recent Errors (All Sources)",
-                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | fields @timestamp, source, component, errorMessage, userId, correlationId | filter level = 'ERROR' | sort @timestamp desc | limit 50",
+                "title": "Frontend vs Backend Error Split",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | filter level = \"ERROR\" | stats count(*) as errors by source | sort errors desc",
                 "region": "${AWS::Region}",
                 "view": "table"
               }
             },
             {
               "type": "log",
-              "x": 0, "y": 14, "width": 12, "height": 6,
+              "x": 0, "y": 6, "width": 12, "height": 6,
               "properties": {
-                "title": "Top Error Types",
-                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | filter level = 'ERROR' | stats count(*) as errorCount by errorType | sort errorCount desc | limit 10",
+                "title": "Top 10 Failing Components",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | filter level = \"ERROR\" | stats count(*) as errors by coalesce(component, operation) as source | sort errors desc | limit 10",
                 "region": "${AWS::Region}",
                 "view": "table"
               }
             },
             {
               "type": "log",
-              "x": 12, "y": 14, "width": 12, "height": 6,
+              "x": 12, "y": 6, "width": 12, "height": 6,
               "properties": {
-                "title": "Errors by Component/Operation",
-                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | filter level = 'ERROR' | stats count(*) as errorCount by coalesce(component, operation) as source | sort errorCount desc | limit 10",
+                "title": "Errors Per User",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | filter level = \"ERROR\" | stats count(*) as errors by userId | sort errors desc | limit 10",
+                "region": "${AWS::Region}",
+                "view": "table"
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 12, "width": 24, "height": 8,
+              "properties": {
+                "title": "Recent Error Log Entries",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | fields @timestamp, source, component, errorMessage, userId, correlationId | filter level = \"ERROR\" | sort @timestamp desc | limit 50",
+                "region": "${AWS::Region}",
+                "view": "table"
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 20, "width": 24, "height": 8,
+              "properties": {
+                "title": "Correlation ID Trace Lookup",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' '/aws/lambda/${ScorePsychTestFunction}' | fields @timestamp, level, source, operation, component, errorMessage, message, userId | filter correlationId = \"PASTE_ID_HERE\" | sort @timestamp asc",
                 "region": "${AWS::Region}",
                 "view": "table"
               }
