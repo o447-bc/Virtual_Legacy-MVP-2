@@ -328,6 +328,10 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "bedrockPromptTemplate": {
+      "type": "string",
+      "description": "Custom prompt template for Bedrock narrative generation. Supports placeholders: {test_name}, {domain_scores}, {facet_scores}, {interpretation_templates}"
     }
   },
   "additionalProperties": false
