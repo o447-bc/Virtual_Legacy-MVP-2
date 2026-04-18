@@ -1,0 +1,7 @@
+# Top error types by frequency
+# Run against: all SoulReel log groups
+
+filter level = "ERROR"
+| stats count(*) as errorCount by errorType, source
+| sort errorCount desc
+| limit 20

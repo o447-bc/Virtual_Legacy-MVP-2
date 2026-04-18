@@ -64,6 +64,9 @@ export const API_CONFIG = {
     // Admin System Settings
     ADMIN_SETTINGS: '/admin/settings',
     ADMIN_BEDROCK_MODELS: '/admin/bedrock-models',
+
+    // Error Logging
+    LOG_ERROR: '/log-error',
   }
 };
 

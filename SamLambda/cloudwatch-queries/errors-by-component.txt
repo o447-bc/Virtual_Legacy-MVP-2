@@ -1,0 +1,8 @@
+# Error frequency grouped by component (frontend) or operation (backend)
+# Run against: all SoulReel log groups
+
+fields coalesce(component, operation) as errorSource
+| filter level = "ERROR"
+| stats count(*) as errorCount by errorSource, source
+| sort errorCount desc
+| limit 20

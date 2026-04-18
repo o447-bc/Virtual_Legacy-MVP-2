@@ -1,0 +1,7 @@
+# Errors for a specific user — replace USER_ID_HERE with the Cognito sub
+# Run against: all SoulReel log groups
+
+fields @timestamp, level, source, operation, component, errorMessage, message, correlationId
+| filter level = "ERROR" and userId = "USER_ID_HERE"
+| sort @timestamp desc
+| limit 100

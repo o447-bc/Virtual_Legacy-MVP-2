@@ -50,7 +50,7 @@ Globals:
   Api:
     Cors:
       AllowMethods: '''GET,POST,PUT,OPTIONS'''
-      AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'''
+      AllowHeaders: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Correlation-ID'''
       # Restrict to known origins. Add localhost variants for local dev via ALLOWED_ORIGIN env var.
       AllowOrigin: '''https://www.soulreel.net'''
     Auth:
@@ -3371,6 +3371,34 @@ Resources:
             Method: OPTIONS
 
   # ============================================================
+  # Error Logging & Monitoring
+  # ============================================================
+
+  ErrorIngestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/errorIngestion/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 10
+      Events:
+        LogErrorApi:
+          Type: Api
+          Properties:
+            Path: /log-error
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        LogErrorOptionsApi:
+          Type: Api
+          Properties:
+            Path: /log-error
+            Method: OPTIONS
+
+  # ============================================================
   # Billing Lambda Functions
   # ============================================================
 
@@ -4783,6 +4811,155 @@ Resources:
           Properties:
             Path: /psych-tests/admin/update/{testId}
             Method: OPTIONS
+
+  # ============================================================
+  # Error Logging & Monitoring — CloudWatch Infrastructure
+  # ============================================================
+
+  # SNS Topic for error alerts (separate from security alerts)
+  ErrorAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: soulreel-error-alerts
+      DisplayName: SoulReel Error Alerts
+      Tags:
+        - Key: Project
+          Value: SoulReel
+
+  ErrorAlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasSecurityAlertEmail
+    Properties:
+      Protocol: email
+      TopicArn: !Ref ErrorAlertTopic
+      Endpoint: !Ref SecurityAlertEmail
+
+  # Metric filter: count frontend errors from the ErrorIngestion log group
+  ErrorIngestionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ErrorIngestionFunction}
+      RetentionInDays: 30
+
+  FrontendErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: ErrorIngestionLogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ErrorIngestionFunction}
+      FilterPattern: '{ $.source = "frontend" && $.level = "ERROR" }'
+      MetricTransformations:
+        - MetricNamespace: SoulReel/Errors
+          MetricName: FrontendErrorCount
+          MetricValue: '1'
+          DefaultValue: 0
+
+  # Alarm: frontend errors spike
+  FrontendErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: SoulReel-FrontendErrors-High
+      AlarmDescription: Frontend error rate exceeds 20 errors in 5 minutes
+      Namespace: SoulReel/Errors
+      MetricName: FrontendErrorCount
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 20
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref ErrorAlertTopic
+      OKActions:
+        - !Ref ErrorAlertTopic
+
+  # Alarm: backend errors spike (uses Lambda Errors metric as a starting point)
+  BackendErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: SoulReel-BackendErrors-High
+      AlarmDescription: Backend error rate exceeds 10 errors in 5 minutes
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ErrorIngestionFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref ErrorAlertTopic
+      OKActions:
+        - !Ref ErrorAlertTopic
+
+  # CloudWatch Dashboard
+  ErrorMonitoringDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: SoulReel-ErrorMonitoring
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "Frontend Errors (5-min intervals)",
+                "metrics": [
+                  ["SoulReel/Errors", "FrontendErrorCount", {"stat": "Sum", "period": 300}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "Backend Lambda Errors (5-min intervals)",
+                "metrics": [
+                  ["AWS/Lambda", "Errors", "FunctionName", "${ErrorIngestionFunction}", {"stat": "Sum", "period": 300}]
+                ],
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "period": 300
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 6, "width": 24, "height": 8,
+              "properties": {
+                "title": "Recent Errors (All Sources)",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | fields @timestamp, source, component, errorMessage, userId, correlationId | filter level = 'ERROR' | sort @timestamp desc | limit 50",
+                "region": "${AWS::Region}",
+                "view": "table"
+              }
+            },
+            {
+              "type": "log",
+              "x": 0, "y": 14, "width": 12, "height": 6,
+              "properties": {
+                "title": "Top Error Types",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | filter level = 'ERROR' | stats count(*) as errorCount by errorType | sort errorCount desc | limit 10",
+                "region": "${AWS::Region}",
+                "view": "table"
+              }
+            },
+            {
+              "type": "log",
+              "x": 12, "y": 14, "width": 12, "height": 6,
+              "properties": {
+                "title": "Errors by Component/Operation",
+                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' | filter level = 'ERROR' | stats count(*) as errorCount by coalesce(component, operation) as source | sort errorCount desc | limit 10",
+                "region": "${AWS::Region}",
+                "view": "table"
+              }
+            }
+          ]
+        }
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

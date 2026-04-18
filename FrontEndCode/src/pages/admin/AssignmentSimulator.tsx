@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { simulate, type SimulateResult } from "@/services/adminService";
 import {
   LIFE_EVENT_REGISTRY,
@@ -29,7 +29,7 @@ const AssignmentSimulator = () => {
       setResult(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Simulation failed";
-      toast.error(msg);
+      toastError(msg, 'AssignmentSimulator');
     } finally {
       setLoading(false);
     }

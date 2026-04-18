@@ -28,6 +28,7 @@ sys.path.insert(0, '/opt/python')
 
 from cors import cors_headers
 from responses import error_response
+from structured_logger import StructuredLog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -125,6 +126,7 @@ def _load_schema():
 
 def lambda_handler(event, context):
     """Route POST /psych-tests/score requests."""
+    log = StructuredLog(event, context)
 
     # Handle OPTIONS preflight
     if event.get('httpMethod') == 'OPTIONS':
@@ -138,17 +140,19 @@ def lambda_handler(event, context):
         .get('sub')
     )
     if not user_id:
-        return error_response(401, 'Unauthorized', event=event)
+        return error_response(401, 'Unauthorized', event=event, log=log)
 
     try:
-        return _handle_score(event, user_id)
+        return _handle_score(event, user_id, log)
     except Exception as exc:
         logger.error('[SCORE_PSYCH_TEST] Unhandled error: %s', exc)
-        return error_response(500, 'Internal server error', exception=exc, event=event)
+        log.error('UnexpectedFailure', exc)
+        return error_response(500, 'Internal server error', exception=exc, event=event, log=log)
 
 
-def _handle_score(event, user_id):
+def _handle_score(event, user_id, log):
     """Core scoring flow: validate → score → narrative → store → cleanup."""
+    score_start = time.time()
 
     # --- Parse request body ---
     body = event.get('body')
@@ -262,6 +266,15 @@ def _handle_score(event, user_id):
         '[SCORE_PSYCH_TEST] Scored test=%s for user=%s domains=%d facets=%d',
         test_id, user_id, len(domain_scores), len(facet_scores),
     )
+
+    elapsed = (time.time() - score_start) * 1000
+    log.info('TestScored', details={
+        'testId': test_id,
+        'domains': len(domain_scores),
+        'facets': len(facet_scores),
+        'composites': len(composite_scores),
+        'narrativeSource': narrative_source,
+    }, duration_ms=elapsed)
 
     return cors_response(200, response_body, event)
 

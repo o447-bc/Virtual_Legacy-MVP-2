@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { fetchQuestions, updateQuestion, type QuestionRecord } from "@/services/adminService";
 import { Search, ChevronUp, ChevronDown, X } from "lucide-react";
 import LifeEventTagEditor from "@/components/admin/LifeEventTagEditor";
@@ -43,7 +44,7 @@ const QuestionBrowse = () => {
       setQuestions(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load questions";
-      toast.error(msg);
+      toastError(msg, 'QuestionBrowse');
     } finally {
       setLoading(false);
     }
@@ -140,7 +141,7 @@ const QuestionBrowse = () => {
       loadQuestions();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Update failed";
-      toast.error(msg);
+      toastError(msg, 'QuestionBrowse');
     } finally {
       setSaving(false);
     }
@@ -153,7 +154,7 @@ const QuestionBrowse = () => {
       loadQuestions();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Update failed";
-      toast.error(msg);
+      toastError(msg, 'QuestionBrowse');
     }
   };
 

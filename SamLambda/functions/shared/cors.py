@@ -35,7 +35,7 @@ def cors_headers(event: dict = None) -> dict:
         'Access-Control-Allow-Origin': origin,
         'Access-Control-Allow-Headers': (
             'Content-Type,X-Amz-Date,Authorization,'
-            'X-Api-Key,X-Amz-Security-Token'
+            'X-Api-Key,X-Amz-Security-Token,X-Correlation-ID'
         ),
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     }

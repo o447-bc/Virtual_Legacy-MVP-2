@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { signIn, signUp, signOut, getCurrentUser, confirmSignUp, resendSignUpCode, fetchUserAttributes, resetPassword as amplifyResetPassword, confirmResetPassword } from 'aws-amplify/auth';
 import { getSurveyStatus } from '@/services/surveyService';
 
@@ -163,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Handle all other errors
-      toast.error(error.message || "Login failed. Please try again.");
+      toastError(error.message || "Login failed. Please try again.", 'AuthContext');
     } finally {
       setIsLoading(false);
     }
@@ -189,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("Account created! Please check your email for verification.");
       navigate(`/confirm-signup?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
-      toast.error(error.message || "Signup failed. Please try again.");
+      toastError(error.message || "Signup failed. Please try again.", 'AuthContext');
     } finally {
       setIsLoading(false);
     }
@@ -268,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("Account created! Please check your email for verification.");
       navigate(`/confirm-signup?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
-      toast.error(error.message || "Signup failed. Please try again.");
+      toastError(error.message || "Signup failed. Please try again.", 'AuthContext');
     } finally {
       setIsLoading(false);
     }
@@ -289,7 +290,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("Email verified! You can now sign in.");
       navigate("/login");
     } catch (error: any) {
-      toast.error(error.message || "Verification failed. Please try again.");
+      toastError(error.message || "Verification failed. Please try again.", 'AuthContext');
     } finally {
       setIsLoading(false);
     }
@@ -301,7 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await resendSignUpCode({ username: email.toLowerCase() });
       toast.success("Verification code sent! Check your email.");
     } catch (error: any) {
-      toast.error(error.message || "Failed to resend code. Please try again.");
+      toastError(error.message || "Failed to resend code. Please try again.", 'AuthContext');
     } finally {
       setIsLoading(false);
     }
@@ -314,7 +315,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("Reset code sent! Check your email.");
       navigate(`/reset-password?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
-      toast.error(error.message || "Failed to send reset code. Please try again.");
+      toastError(error.message || "Failed to send reset code. Please try again.", 'AuthContext');
     } finally {
       setIsLoading(false);
     }
@@ -327,7 +328,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("Password reset! You can now sign in.");
       navigate("/login");
     } catch (error: any) {
-      toast.error(error.message || "Failed to reset password. Please try again.");
+      toastError(error.message || "Failed to reset password. Please try again.", 'AuthContext');
     } finally {
       setIsLoading(false);
     }
@@ -356,12 +357,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Display user-friendly error message without sensitive information (Requirements 13.4, 13.6, 13.7)
       const errorMessage = "Failed to log out. Please try again.";
-      toast.error(errorMessage, {
-        action: {
-          label: "Retry",
-          onClick: () => logout(),
-        },
-      });
+      toastError(errorMessage, 'AuthContext');
     }
   };
 

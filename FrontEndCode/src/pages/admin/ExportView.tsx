@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { exportQuestions } from "@/services/adminService";
 import { Download } from "lucide-react";
 
@@ -33,7 +34,7 @@ const ExportView = () => {
       toast.success(`Exported as ${format.toUpperCase()}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Export failed";
-      toast.error(msg);
+      toastError(msg, 'ExportView');
     } finally {
       setExporting(false);
     }

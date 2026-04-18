@@ -1,0 +1,7 @@
+# Cross-source trace by correlation ID — replace CORRELATION_ID_HERE
+# Run against: all SoulReel log groups (select multiple log groups)
+# Shows both frontend and backend entries for the same session in chronological order
+
+fields @timestamp, level, source, operation, component, errorMessage, message, userId
+| filter correlationId = "CORRELATION_ID_HERE"
+| sort @timestamp asc

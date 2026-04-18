@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { fetchCoverage, type CoverageData } from "@/services/adminService";
 import { LIFE_EVENT_REGISTRY, LIFE_EVENT_CATEGORIES } from "@/constants/lifeEventRegistry";
 
@@ -11,7 +11,7 @@ const CoverageReport = () => {
   useEffect(() => {
     fetchCoverage()
       .then(setData)
-      .catch((err) => toast.error(err.message || "Failed to load coverage"))
+      .catch((err) => toastError(err.message || "Failed to load coverage", 'CoverageReport'))
       .finally(() => setLoading(false));
   }, []);
 

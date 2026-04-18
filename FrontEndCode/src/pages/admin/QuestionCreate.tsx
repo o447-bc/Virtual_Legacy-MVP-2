@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import LifeEventTagEditor from "@/components/admin/LifeEventTagEditor";
 import QuestionValidationWarnings from "@/components/admin/QuestionValidationWarnings";
 import { createQuestion, fetchQuestions, type QuestionRecord } from "@/services/adminService";
@@ -34,7 +35,7 @@ const QuestionCreate = () => {
 
   const handleSubmit = async () => {
     if (!questionText.trim() || !questionType.trim()) {
-      toast.error("Question text and question type are required");
+      toastError("Question text and question type are required", 'QuestionCreate');
       return;
     }
     try {
@@ -52,7 +53,7 @@ const QuestionCreate = () => {
       navigate("/admin/questions");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create question";
-      toast.error(msg);
+      toastError(msg, 'QuestionCreate');
     } finally {
       setSaving(false);
     }

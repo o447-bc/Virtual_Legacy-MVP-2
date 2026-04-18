@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { updatePassword } from "aws-amplify/auth";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import {
   Dialog,
   DialogContent,
@@ -170,7 +171,7 @@ export const PasswordDialog: React.FC<PasswordDialogProps> = ({
       }
       // Don't expose raw error messages that might contain sensitive info
       
-      toast.error(errorMessage);
+      toastError(errorMessage, 'PasswordDialog');
 
       // Keep dialog open to allow retry
     } finally {

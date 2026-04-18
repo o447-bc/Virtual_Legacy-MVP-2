@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { listPsychTests, getTestDefinition, updateTestDefinition, importTestDefinition } from "@/services/psychTestService";
 import type { PsychTest, TestDefinition } from "@/types/psychTests";
 import { ClipboardList, X, Save, Loader2, Plus } from "lucide-react";
@@ -30,7 +31,7 @@ const AssessmentManager = () => {
       setTests(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load tests";
-      toast.error(msg);
+      toastError(msg, 'AssessmentManager');
     } finally {
       setLoading(false);
     }
@@ -46,7 +47,7 @@ const AssessmentManager = () => {
       setActiveTab("general");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load test definition";
-      toast.error(msg);
+      toastError(msg, 'AssessmentManager');
     } finally {
       setLoadingDef(false);
     }
@@ -70,7 +71,7 @@ const AssessmentManager = () => {
       loadTests();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Import failed";
-      toast.error(msg);
+      toastError(msg, 'AssessmentManager');
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -111,7 +112,7 @@ const AssessmentManager = () => {
       toast.success("Test definition updated");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save";
-      toast.error(msg);
+      toastError(msg, 'AssessmentManager');
     } finally {
       setSaving(false);
     }

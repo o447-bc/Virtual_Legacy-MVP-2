@@ -27,6 +27,7 @@ sys.path.append('/opt/python')
 
 from cors import cors_headers
 from responses import error_response
+from structured_logger import StructuredLog
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,7 @@ def _increment_coupon_redemptions(code: str, coupon_data: dict) -> None:
 
 def lambda_handler(event, context):
     """Route requests by path + httpMethod."""
+    log = StructuredLog(event, context)
 
     # Handle OPTIONS preflight
     if event.get('httpMethod') == 'OPTIONS':
@@ -158,29 +160,30 @@ def lambda_handler(event, context):
         .get('sub')
     )
     if not user_id:
-        return error_response(401, 'Unauthorized', event=event)
+        return error_response(401, 'Unauthorized', event=event, log=log)
 
     try:
         if path == '/billing/create-checkout-session' and method == 'POST':
-            return handle_create_checkout(event, user_id)
+            return handle_create_checkout(event, user_id, log)
         elif path == '/billing/status' and method == 'GET':
             return handle_status(event, user_id)
         elif path == '/billing/portal' and method == 'GET':
             return handle_portal(event, user_id)
         elif path == '/billing/apply-coupon' and method == 'POST':
-            return handle_apply_coupon(event, user_id)
+            return handle_apply_coupon(event, user_id, log)
         else:
             return cors_response(404, {'error': 'Not found'}, event)
     except Exception as exc:
         logger.error('[BILLING] Unhandled error on %s %s: %s', method, path, exc)
-        return error_response(500, 'Internal server error', exception=exc, event=event)
+        log.error('UnexpectedFailure', exc)
+        return error_response(500, 'Internal server error', exception=exc, event=event, log=log)
 
 
 # ===================================================================
 # Handler: POST /billing/create-checkout-session
 # ===================================================================
 
-def handle_create_checkout(event, user_id):
+def handle_create_checkout(event, user_id, log):
     """Create a Stripe Checkout Session for subscription upgrade."""
     try:
         body = json.loads(event.get('body') or '{}')
@@ -226,6 +229,8 @@ def handle_create_checkout(event, user_id):
         metadata={'userId': user_id},
         allow_promotion_codes=True,
     )
+
+    log.info('CheckoutSessionCreated', details={'priceId': price_id})
 
     return cors_response(200, {'sessionUrl': session.url}, event)
 
@@ -301,7 +306,7 @@ def handle_portal(event, user_id):
 # Handler: POST /billing/apply-coupon
 # ===================================================================
 
-def handle_apply_coupon(event, user_id):
+def handle_apply_coupon(event, user_id, log):
     """Validate and apply a coupon code."""
     try:
         body = json.loads(event.get('body') or '{}')
@@ -358,6 +363,7 @@ def handle_apply_coupon(event, user_id):
             **({k: item[k] for k in ('stripeCustomerId', 'stripeSubscriptionId') if k in item}),
         })
         _increment_coupon_redemptions(code, coupon)
+        log.info('CouponApplied', details={'code': code, 'type': 'forever_free'})
         return cors_response(200, {
             'success': True,
             'type': 'forever_free',
@@ -383,6 +389,7 @@ def handle_apply_coupon(event, user_id):
             **({k: item[k] for k in ('stripeCustomerId', 'stripeSubscriptionId') if k in item}),
         })
         _increment_coupon_redemptions(code, coupon)
+        log.info('CouponApplied', details={'code': code, 'type': 'time_limited', 'durationDays': duration_days})
         return cors_response(200, {
             'success': True,
             'type': 'time_limited',

@@ -18,6 +18,7 @@ from botocore.exceptions import ClientError
 from cors import cors_headers
 from responses import error_response
 from admin_auth import verify_admin
+from structured_logger import StructuredLog
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -104,7 +105,11 @@ def _get_known_model_ids():
 
 
 def lambda_handler(event, context):
-    print(f"[AdminSettings] Event: {json.dumps(event, default=str)}")
+    log = StructuredLog(event, context)
+    log.info('AdminSettingsRequest', details={
+        'httpMethod': event.get('httpMethod', ''),
+        'resource': event.get('resource', ''),
+    })
 
     # OPTIONS preflight
     if event.get('httpMethod') == 'OPTIONS':
@@ -132,7 +137,7 @@ def lambda_handler(event, context):
             return handle_get_settings(event)
 
         elif method == 'PUT' and '/admin/settings/' in resource:
-            return handle_put_setting(event, admin_email)
+            return handle_put_setting(event, admin_email, log)
 
         elif method == 'GET' and resource == '/admin/bedrock-models':
             return handle_get_bedrock_models(event)
@@ -145,9 +150,11 @@ def lambda_handler(event, context):
             }
 
     except ClientError as e:
-        return error_response(500, 'A server error occurred. Please try again.', e, event)
+        log.log_aws_error('DynamoDB', 'AdminSettings', e)
+        return error_response(500, 'A server error occurred. Please try again.', e, event, log=log)
     except Exception as e:
-        return error_response(500, 'An unexpected error occurred. Please try again.', e, event)
+        log.error('UnexpectedFailure', e)
+        return error_response(500, 'An unexpected error occurred. Please try again.', e, event, log=log)
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +206,7 @@ def handle_get_settings(event):
 # ---------------------------------------------------------------------------
 # PUT /admin/settings/{settingKey} — Update a setting value
 # ---------------------------------------------------------------------------
-def handle_put_setting(event, admin_email):
+def handle_put_setting(event, admin_email, log):
     """Validate type and update a setting in SystemSettingsTable."""
     setting_key = (event.get('pathParameters') or {}).get('settingKey')
     if not setting_key:
@@ -259,6 +266,8 @@ def handle_put_setting(event, admin_email):
         },
     )
 
+    log.info('AdminSettingUpdated', details={'settingKey': setting_key, 'updatedBy': admin_email})
+
     # Sync to SSM if this setting has an SSM path
     ssm_path = SSM_PATH_MAP.get(setting_key)
     if ssm_path:
@@ -269,10 +278,11 @@ def handle_put_setting(event, admin_email):
                 Type='String',
                 Overwrite=True,
             )
-            print(f"[AdminSettings] Synced {setting_key} to SSM: {ssm_path}")
+            log.info('SettingSyncedToSSM', details={'settingKey': setting_key, 'ssmPath': ssm_path})
         except Exception as ssm_err:
             # Log but don't fail the request — DynamoDB is already updated
-            print(f"[AdminSettings] WARNING: Failed to sync {setting_key} to SSM {ssm_path}: {ssm_err}")
+            log.warning('SSMSyncFailed', f'Failed to sync {setting_key} to SSM {ssm_path}: {ssm_err}',
+                        details={'settingKey': setting_key, 'ssmPath': ssm_path})
 
     return {
         'statusCode': 200,

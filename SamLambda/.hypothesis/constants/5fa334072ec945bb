@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/conftest.py
+# hypothesis_version: 6.151.12
+
+['.py', 'app', 'app.', 'test_']

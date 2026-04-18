@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import LifeEventTagEditor from "@/components/admin/LifeEventTagEditor";
 import { batchImport, fetchQuestions, type QuestionRecord } from "@/services/adminService";
 import { VALID_PLACEHOLDERS } from "@/constants/lifeEventRegistry";
@@ -33,7 +34,7 @@ const BatchImport = () => {
 
   const handlePreview = () => {
     const text = rawInput.trim();
-    if (!text) { toast.error("Paste some questions first"); return; }
+    if (!text) { toastError("Paste some questions first", 'BatchImport'); return; }
 
     let questions: string[];
     try {
@@ -43,14 +44,14 @@ const BatchImport = () => {
           typeof item === "string" ? item : item.question || ""
         );
       } else {
-        toast.error("JSON must be an array"); return;
+        toastError("JSON must be an array", 'BatchImport'); return;
       }
     } catch {
       questions = text.split("\n").filter((line) => line.trim() !== "");
     }
 
     questions = questions.map((q) => q.trim()).filter(Boolean);
-    if (questions.length === 0) { toast.error("No questions found"); return; }
+    if (questions.length === 0) { toastError("No questions found", 'BatchImport'); return; }
 
     setParsed(questions);
     setPreviewing(true);
@@ -61,8 +62,8 @@ const BatchImport = () => {
   };
 
   const handleImport = async () => {
-    if (!questionType.trim()) { toast.error("Question type is required"); return; }
-    if (parsed.length === 0) { toast.error("No questions to import"); return; }
+    if (!questionType.trim()) { toastError("Question type is required", 'BatchImport'); return; }
+    if (parsed.length === 0) { toastError("No questions to import", 'BatchImport'); return; }
 
     try {
       setImporting(true);
@@ -80,7 +81,7 @@ const BatchImport = () => {
       setPreviewing(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Import failed";
-      toast.error(msg);
+      toastError(msg, 'BatchImport');
     } finally {
       setImporting(false);
     }

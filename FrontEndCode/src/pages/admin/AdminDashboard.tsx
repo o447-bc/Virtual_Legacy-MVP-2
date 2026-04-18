@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { fetchStats, runMigration, type StatsData } from "@/services/adminService";
 import {
   LayoutDashboard,
@@ -31,7 +32,7 @@ const AdminDashboard = () => {
       setStats(data);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load stats";
-      toast.error(msg);
+      toastError(msg, 'AdminDashboard');
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,7 @@ const AdminDashboard = () => {
       loadStats();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Migration failed";
-      toast.error(msg);
+      toastError(msg, 'AdminDashboard');
     } finally {
       setMigrating(false);
     }

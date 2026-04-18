@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import LifeEventTagEditor from "@/components/admin/LifeEventTagEditor";
 import { fetchQuestions, applyThemeDefaults, type QuestionRecord } from "@/services/adminService";
 import { VALID_PLACEHOLDERS } from "@/constants/lifeEventRegistry";
@@ -46,7 +47,7 @@ const ThemeSettings = () => {
       }
       setThemes(result.sort((a, b) => a.questionType.localeCompare(b.questionType)));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to load themes");
+      toastError(err instanceof Error ? err.message : "Failed to load themes", 'ThemeSettings');
     } finally {
       setLoading(false);
     }
@@ -77,7 +78,7 @@ const ThemeSettings = () => {
       setEditingTheme(null);
       loadThemes();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to apply");
+      toastError(err instanceof Error ? err.message : "Failed to apply", 'ThemeSettings');
     } finally {
       setApplying(false);
     }

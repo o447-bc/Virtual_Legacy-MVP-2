@@ -1,5 +1,6 @@
 import { buildApiUrl, API_CONFIG } from '@/config/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { getCorrelationId } from '@/services/errorReporter';
 import type {
   PsychTest,
   TestDefinition,
@@ -29,6 +30,7 @@ async function authFetch<T>(url: string, options: RequestInit = {}): Promise<T> 
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${idToken}`,
+      'X-Correlation-ID': getCorrelationId(),
       ...options.headers,
     },
   });

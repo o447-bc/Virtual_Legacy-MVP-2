@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import {
@@ -129,7 +130,7 @@ const ManageBenefactors: React.FC = () => {
       } catch (err: any) {
         console.error('Error fetching assignments:', err);
         setError(err.message || 'Failed to load assignments');
-        toast.error('Failed to load assignments');
+        toastError('Failed to load assignments', 'ManageBenefactors');
       } finally {
         setLoading(false);
       }
@@ -254,7 +255,7 @@ const ManageBenefactors: React.FC = () => {
           setAssignments(response.assignments || []);
         } catch (err: any) {
           console.error('Error revoking assignment:', err);
-          toast.error(err.message || 'Failed to revoke assignment');
+          toastError(err.message || 'Failed to revoke assignment', 'ManageBenefactors');
         }
       }
     });
@@ -279,7 +280,7 @@ const ManageBenefactors: React.FC = () => {
           setAssignments(response.assignments || []);
         } catch (err: any) {
           console.error('Error deleting assignment:', err);
-          toast.error(err.message || 'Failed to delete assignment');
+          toastError(err.message || 'Failed to delete assignment', 'ManageBenefactors');
         }
       }
     });
@@ -300,7 +301,7 @@ const ManageBenefactors: React.FC = () => {
           toast.success('Invitation resent successfully');
         } catch (err: any) {
           console.error('Error resending invitation:', err);
-          toast.error(err.message || 'Failed to resend invitation');
+          toastError(err.message || 'Failed to resend invitation', 'ManageBenefactors');
         }
       }
     });

@@ -1,0 +1,12 @@
+# Success vs failure rate per operation
+# Run against: backend Lambda log groups using StructuredLog
+
+fields operation, level
+| filter source = "backend"
+| stats count(*) as total,
+        sum(level = "ERROR") as errors,
+        sum(level = "INFO") as successes
+  by operation
+| display operation, total, successes, errors,
+          (errors / total) * 100 as errorRatePercent
+| sort errorRatePercent desc

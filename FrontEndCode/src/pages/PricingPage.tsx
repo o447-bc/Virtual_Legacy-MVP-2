@@ -16,7 +16,7 @@ import {
   type PlanDefinition,
   type CouponResult,
 } from "@/services/billingService";
-import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { Check, Crown, Loader2 } from "lucide-react";
 
 const STRIPE_MONTHLY_PRICE_ID = import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID || "price_monthly_placeholder";
@@ -98,7 +98,7 @@ const PricingPage: React.FC = () => {
       const { sessionUrl } = await createCheckoutSession(priceId);
       window.location.href = sessionUrl;
     } catch (err: any) {
-      toast.error(err.message || "Failed to start checkout. Please try again.");
+      toastError(err.message || "Failed to start checkout. Please try again.", 'PricingPage');
     } finally {
       setCtaLoading(false);
     }
@@ -110,7 +110,7 @@ const PricingPage: React.FC = () => {
       const { portalUrl } = await getPortalUrl();
       window.location.href = portalUrl;
     } catch (err: any) {
-      toast.error(err.message || "Failed to open billing portal.");
+      toastError(err.message || "Failed to open billing portal.", 'PricingPage');
     } finally {
       setCtaLoading(false);
     }

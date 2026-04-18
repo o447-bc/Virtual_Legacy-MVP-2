@@ -1,4 +1,5 @@
 import React from 'react';
+import { reportError } from '@/services/errorReporter';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -20,6 +21,18 @@ class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
+    reportError({
+      errorMessage: error.message,
+      component: errorInfo.componentStack ?? 'unknown',
+      url: window.location.href,
+      stackTrace: error.stack,
+      errorType: error.name,
+      metadata: {
+        userAgent: navigator.userAgent,
+        buildHash: import.meta.env.VITE_BUILD_HASH ?? 'dev',
+        route: window.location.pathname,
+      },
+    });
   }
 
   render() {

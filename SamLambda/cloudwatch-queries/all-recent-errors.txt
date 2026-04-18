@@ -1,0 +1,8 @@
+# All errors in the last 24 hours across all sources
+# Run against: /aws/lambda/Virtual-Legacy-MVP-1-ErrorIngestionFunction-*
+# and any backend Lambda log groups using StructuredLog
+
+fields @timestamp, level, source, operation, component, errorMessage, message, userId, correlationId
+| filter level = "ERROR"
+| sort @timestamp desc
+| limit 200

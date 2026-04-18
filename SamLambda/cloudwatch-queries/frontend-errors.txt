@@ -1,0 +1,7 @@
+# Frontend-only errors (reported via POST /log-error)
+# Run against: /aws/lambda/Virtual-Legacy-MVP-1-ErrorIngestionFunction-*
+
+fields @timestamp, component, errorMessage, url, userId, correlationId, errorType
+| filter source = "frontend" and level = "ERROR"
+| sort @timestamp desc
+| limit 100

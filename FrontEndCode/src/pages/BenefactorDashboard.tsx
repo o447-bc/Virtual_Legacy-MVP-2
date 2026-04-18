@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
+import { toastError } from "@/utils/toastError";
 import { useAuth } from "@/contexts/AuthContext";
 import { sendInvite } from "@/services/inviteService";
 import { getRelationships, Relationship } from "@/services/relationshipService";
@@ -93,7 +94,7 @@ const BenefactorDashboard: React.FC = () => {
     } catch (error: any) {
       setFormState(prev => ({ ...prev, isLoading: false }));
       const errorMessage = error.message || 'Failed to send invitation. Please try again.';
-      toast.error(errorMessage);
+      toastError(errorMessage, 'BenefactorDashboard');
       console.error('Error sending invite:', error);
     }
   };
@@ -113,7 +114,7 @@ const BenefactorDashboard: React.FC = () => {
           setRelationships(response.relationships || []);
         } catch (error) {
           console.error('Error fetching relationships:', error);
-          toast.error('Failed to load relationships');
+          toastError('Failed to load relationships', 'BenefactorDashboard');
         } finally {
           setRelationshipsLoading(false);
         }
@@ -133,7 +134,7 @@ const BenefactorDashboard: React.FC = () => {
           setAssignments(response.assignments || []);
         } catch (error) {
           console.error('Error fetching assignments:', error);
-          toast.error('Failed to load assignments');
+          toastError('Failed to load assignments', 'BenefactorDashboard');
         } finally {
           setAssignmentsLoading(false);
         }
@@ -218,7 +219,7 @@ const BenefactorDashboard: React.FC = () => {
       toast.success(`Assignment from ${makerName} accepted!`);
       await refreshAssignments();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to accept assignment');
+      toastError(error.message || 'Failed to accept assignment', 'BenefactorDashboard');
       console.error('Error accepting assignment:', error);
     }
   };
@@ -230,7 +231,7 @@ const BenefactorDashboard: React.FC = () => {
       toast.success(`Assignment from ${makerName} declined`);
       await refreshAssignments();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to decline assignment');
+      toastError(error.message || 'Failed to decline assignment', 'BenefactorDashboard');
       console.error('Error declining assignment:', error);
     }
   };

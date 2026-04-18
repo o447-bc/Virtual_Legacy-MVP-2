@@ -1,0 +1,6 @@
+# Error count over time in 5-minute buckets
+# Run against: all SoulReel log groups
+
+filter level = "ERROR"
+| stats count(*) as errorCount by bin(5m) as timeWindow, source
+| sort timeWindow desc
