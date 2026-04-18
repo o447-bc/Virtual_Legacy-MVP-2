@@ -6,6 +6,7 @@ import { Mic, Square, Volume2 } from 'lucide-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { AudioVisualizer } from './AudioVisualizer';
 import { UpgradePromptDialog } from './UpgradePromptDialog';
+import { reportError } from '@/services/errorReporter';
 
 const WS_URL = (import.meta.env.VITE_WS_URL || 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod').trim();
 
@@ -81,6 +82,12 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
           console.error('[WEBSOCKET] Failed to parse message, raw data:', event.data);
           setError('Received unexpected response from server. Please try again.');
           setStatus('ready');
+          reportError({
+            errorMessage: 'Failed to parse WebSocket message',
+            component: 'ConversationInterface',
+            url: window.location.href,
+            errorType: 'WebSocketParseError',
+          });
         }
       };
 
@@ -88,12 +95,25 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
         console.error('WebSocket error:', error);
         setError('WebSocket connection error');
         setStatus('idle');
+        reportError({
+          errorMessage: 'WebSocket connection error',
+          component: 'ConversationInterface',
+          url: window.location.href,
+          errorType: 'WebSocketError',
+        });
       };
 
       websocket.onclose = (event) => {
         setStatus('idle');
         if (event.code !== 1000) {
           setError(`Connection closed unexpectedly (${event.code})`);
+          reportError({
+            errorMessage: `Connection closed unexpectedly (${event.code})`,
+            component: 'ConversationInterface',
+            url: window.location.href,
+            errorType: 'WebSocketClose',
+            metadata: { closeCode: event.code, closeReason: event.reason },
+          });
         }
       };
     } catch (err) {
