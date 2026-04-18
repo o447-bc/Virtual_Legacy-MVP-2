@@ -5045,9 +5045,10 @@ Resources:
               "x": 0, "y": 10, "width": 24, "height": 6,
               "properties": {
                 "title": "Operations By Type",
-                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' '/aws/lambda/${ErrorIngestionFunction}' | filter source = \"backend\" | stats count(*) as count by operation | sort count desc | limit 15",
+                "query": "filter source = \"backend\" | stats count(*) as count by operation | sort count desc | limit 15",
                 "region": "${AWS::Region}",
-                "view": "table"
+                "view": "table",
+                "logGroupNames": ["/aws/lambda/${ScorePsychTestFunction}", "/aws/lambda/${ErrorIngestionFunction}"]
               }
             },
             {
@@ -5135,9 +5136,10 @@ Resources:
               "x": 0, "y": 28, "width": 24, "height": 6,
               "properties": {
                 "title": "Success/Failure Rate By Operation",
-                "query": "SOURCE '/aws/lambda/${ScorePsychTestFunction}' '/aws/lambda/${ErrorIngestionFunction}' | filter source = \"backend\" | stats count(*) as total, sum(level=\"ERROR\") as errors by operation | sort errors desc | limit 15",
+                "query": "filter source = \"backend\" | stats count(*) as total, sum(level=\"ERROR\") as errors by operation | sort errors desc | limit 15",
                 "region": "${AWS::Region}",
-                "view": "table"
+                "view": "table",
+                "logGroupNames": ["/aws/lambda/${ScorePsychTestFunction}", "/aws/lambda/${ErrorIngestionFunction}"]
               }
             },
             {
@@ -5254,9 +5256,10 @@ Resources:
               "x": 0, "y": 20, "width": 24, "height": 8,
               "properties": {
                 "title": "Correlation ID Trace Lookup",
-                "query": "SOURCE '/aws/lambda/${ErrorIngestionFunction}' '/aws/lambda/${ScorePsychTestFunction}' | fields @timestamp, level, source, operation, component, errorMessage, message, userId | filter correlationId = \"PASTE_ID_HERE\" | sort @timestamp asc",
+                "query": "fields @timestamp, level, source, operation, component, errorMessage, message, userId | filter correlationId = \"PASTE_ID_HERE\" | sort @timestamp asc",
                 "region": "${AWS::Region}",
-                "view": "table"
+                "view": "table",
+                "logGroupNames": ["/aws/lambda/${ErrorIngestionFunction}", "/aws/lambda/${ScorePsychTestFunction}"]
               }
             }
           ]
