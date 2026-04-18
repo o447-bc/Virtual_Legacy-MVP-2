@@ -5124,7 +5124,7 @@ Resources:
                 "title": "Cold Start Rate",
                 "metrics": [
                   ["AWS/Lambda", "Duration", "FunctionName", "${ScorePsychTestFunction}", {"stat": "SampleCount", "period": 300, "label": "Total Invocations"}],
-                  [{"expression": "SEARCH('{AWS/Lambda,FunctionName} FunctionName=${ScorePsychTestFunction} MetricName=InitDuration', 'SampleCount', 300)", "id": "coldStarts", "label": "Cold Starts"}]
+                  ["AWS/Lambda", "InitDuration", "FunctionName", "${ScorePsychTestFunction}", {"stat": "SampleCount", "period": 300, "label": "Cold Starts"}]
                 ],
                 "view": "timeSeries",
                 "region": "${AWS::Region}",
