@@ -340,10 +340,13 @@ const SystemSettings = () => {
   const sections = Object.keys(settings);
 
   return (
-    <>
-      {/* Sticky save bar — fixed to top of main content area */}
+    <div>
+      {/* Save bar — fixed to top of viewport, offset for sidebar */}
       {pendingCount > 0 && (
-        <div className="sticky top-0 z-30 bg-legacy-navy/95 backdrop-blur-sm text-white px-6 py-3 flex items-center justify-between shadow-lg">
+        <div
+          className="fixed top-0 right-0 z-50 bg-legacy-navy/95 backdrop-blur-sm text-white px-6 py-3 flex items-center justify-between shadow-lg"
+          style={{ left: '14rem' }}
+        >
           <div className="flex items-center gap-2">
             <Save className="h-4 w-4" />
             <span className="text-sm font-medium">
@@ -456,7 +459,7 @@ const SystemSettings = () => {
           );
         })}
       </div>
-    </>
+    </div>
   );
 };
 
