@@ -66,9 +66,19 @@ const AdminLayout: React.FC = () => {
         <div className="p-4 border-b border-white/10">
           <Logo className="text-white" />
           <p className="text-xs text-gray-300 mt-1">Admin Tool</p>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+            <button
+              onClick={logout}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors shrink-0 ml-2"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Log out
+            </button>
+          </div>
         </div>
 
-        <nav className="flex-1 py-2">
+        <nav className="flex-1 py-2 overflow-y-auto">
           {navSections.map((section) => (
             <div key={section.header}>
               <p className="text-[10px] uppercase tracking-wider text-gray-500 px-4 pt-4 pb-1">
@@ -94,17 +104,6 @@ const AdminLayout: React.FC = () => {
             </div>
           ))}
         </nav>
-
-        <div className="p-4 border-t border-white/10">
-          <p className="text-xs text-gray-400 mb-3">{user?.email}</p>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors w-full"
-          >
-            <LogOut className="h-4 w-4" />
-            Log out
-          </button>
-        </div>
       </aside>
 
       {/* Main content */}
