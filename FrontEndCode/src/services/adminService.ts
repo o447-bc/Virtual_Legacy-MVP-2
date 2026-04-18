@@ -325,3 +325,102 @@ export async function fetchBedrockModels(): Promise<BedrockModel[]> {
   const data = await res.json();
   return data.models;
 }
+
+
+// --- Feedback Report Types ---
+
+export interface FeedbackReport {
+  reportId: string;
+  reportType: 'bug' | 'feature';
+  subject: string;
+  description: string;
+  userEmail: string;
+  userName: string;
+  userId: string;
+  submittedAt: string;
+  status: 'active' | 'archived';
+  aiClassification: 'bug' | 'feature_request' | 'unclassified';
+  aiSummary: string;
+}
+
+// --- Feedback Submission (user-facing, requires auth) ---
+
+export async function submitFeedback(payload: {
+  reportType: 'bug' | 'feature';
+  subject: string;
+  description: string;
+  userEmail: string;
+  userName: string;
+}): Promise<{ status: string }> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.SUBMIT_FEEDBACK), {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to submit feedback (${res.status})`);
+  }
+  return res.json();
+}
+
+// --- Feedback Admin ---
+
+export async function fetchFeedbackReports(): Promise<FeedbackReport[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.ADMIN_FEEDBACK), { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to fetch feedback reports (${res.status})`);
+  }
+  const data = await res.json();
+  return data.reports;
+}
+
+export async function fetchFeedbackReport(reportId: string): Promise<FeedbackReport> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    buildApiUrl(`${API_CONFIG.ENDPOINTS.ADMIN_FEEDBACK}/${encodeURIComponent(reportId)}`),
+    { headers }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to fetch feedback report (${res.status})`);
+  }
+  const data = await res.json();
+  return data.report;
+}
+
+export async function updateFeedbackStatus(
+  reportId: string,
+  status: 'active' | 'archived'
+): Promise<{ message: string }> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    buildApiUrl(`${API_CONFIG.ENDPOINTS.ADMIN_FEEDBACK}/${encodeURIComponent(reportId)}`),
+    {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ status }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to update feedback status (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function deleteFeedbackReport(reportId: string): Promise<{ message: string }> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    buildApiUrl(`${API_CONFIG.ENDPOINTS.ADMIN_FEEDBACK}/${encodeURIComponent(reportId)}`),
+    { method: "DELETE", headers }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Failed to delete feedback report (${res.status})`);
+  }
+  return res.json();
+}

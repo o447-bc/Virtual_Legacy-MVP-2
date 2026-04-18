@@ -46,6 +46,7 @@ Globals:
         TABLE_USER_TEST_PROGRESS: !Ref UserTestProgressTable
         TABLE_USER_TEST_RESULTS: !Ref UserTestResultsTable
         TABLE_SYSTEM_SETTINGS: !Ref SystemSettingsTable
+        TABLE_FEEDBACK_REPORTS: !Ref FeedbackReportsTable
         PSYCH_PROFILE_BEDROCK_MODEL: anthropic.claude-3-haiku-20240307-v1:0
   Api:
     Cors:
@@ -827,6 +828,38 @@ Resources:
   # Note: userStatusDB table is managed outside CloudFormation (created via AWS console)
   # Note: Cognito User Pool, Client, Identity Pool, and IAM roles are managed outside CloudFormation
   # The existing User Pool us-east-1_ZUrIoF6al and related resources are referenced via parameters
+
+  # Feedback Reports — Stores user-submitted bug reports and feature requests
+  FeedbackReportsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: FeedbackReportsDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: reportId
+          AttributeType: S
+        - AttributeName: gsiPk
+          AttributeType: S
+        - AttributeName: submittedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: reportId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: submittedAt-index
+          KeySchema:
+            - AttributeName: gsiPk
+              KeyType: HASH
+            - AttributeName: submittedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
 
   # WebSocket API
   ConversationWebSocketApi:
@@ -3396,6 +3429,124 @@ Resources:
           Type: Api
           Properties:
             Path: /log-error
+            Method: OPTIONS
+
+  # ============================================================
+  # Feedback Reports
+  # ============================================================
+
+  FeedbackIngestionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/feedbackIngestion/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt FeedbackReportsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+                - kms:GenerateDataKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        SubmitFeedbackApi:
+          Type: Api
+          Properties:
+            Path: /feedback
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        SubmitFeedbackOptionsApi:
+          Type: Api
+          Properties:
+            Path: /feedback
+            Method: OPTIONS
+
+  AdminFeedbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Layers:
+        - !Ref SharedUtilsLayer
+      CodeUri: functions/adminFunctions/adminFeedback/
+      Handler: app.lambda_handler
+      Architectures:
+        - arm64
+      Timeout: 15
+      MemorySize: 256
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Scan
+              Resource: !GetAtt FeedbackReportsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+              Resource: !Sub ${FeedbackReportsTable.Arn}/index/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        AdminGetFeedbackListApi:
+          Type: Api
+          Properties:
+            Path: /admin/feedback
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminGetFeedbackListOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/feedback
+            Method: OPTIONS
+        AdminGetFeedbackDetailApi:
+          Type: Api
+          Properties:
+            Path: /admin/feedback/{reportId}
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminPatchFeedbackApi:
+          Type: Api
+          Properties:
+            Path: /admin/feedback/{reportId}
+            Method: PATCH
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminDeleteFeedbackApi:
+          Type: Api
+          Properties:
+            Path: /admin/feedback/{reportId}
+            Method: DELETE
+            Auth:
+              Authorizer: CognitoAuthorizer
+        AdminFeedbackDetailOptionsApi:
+          Type: Api
+          Properties:
+            Path: /admin/feedback/{reportId}
             Method: OPTIONS
 
   # ============================================================

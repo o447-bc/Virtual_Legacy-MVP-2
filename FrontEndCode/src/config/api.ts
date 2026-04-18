@@ -67,6 +67,10 @@ export const API_CONFIG = {
 
     // Error Logging
     LOG_ERROR: '/log-error',
+
+    // Feedback Reports
+    SUBMIT_FEEDBACK: '/feedback',
+    ADMIN_FEEDBACK: '/admin/feedback',
   }
 };
 

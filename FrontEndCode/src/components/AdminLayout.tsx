@@ -14,6 +14,7 @@ import {
   LogOut,
   ClipboardList,
   Settings,
+  MessageSquare,
 } from "lucide-react";
 
 interface NavItem {
@@ -46,6 +47,12 @@ const navSections: NavSection[] = [
     header: "ASSESSMENTS",
     items: [
       { to: "/admin/assessments", label: "Manage", icon: ClipboardList },
+    ],
+  },
+  {
+    header: "FEEDBACK",
+    items: [
+      { to: "/admin/feedback", label: "Bugs & Requests", icon: MessageSquare },
     ],
   },
   {

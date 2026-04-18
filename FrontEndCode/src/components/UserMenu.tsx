@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users, RefreshCw, Crown, HardDrive } from "lucide-react";
+import { ChevronDown, User, UserCircle, Lock, Shield, Settings, LogOut, Palette, Users, RefreshCw, Crown, HardDrive, Lightbulb } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { getPortalUrl } from "@/services/billingService";
@@ -19,6 +19,7 @@ import { StatisticsSection } from "@/components/StatisticsSection";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { PasswordDialog } from "@/components/PasswordDialog";
 import { SecurityDialog } from "@/components/SecurityDialog";
+import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useStatistics } from "@/hooks/useStatistics";
 
 /**
@@ -68,6 +69,7 @@ export const UserMenu: React.FC = () => {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showSecurityDialog, setShowSecurityDialog] = useState(false);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
 
   // Determine if user is a legacy_benefactor (hide Statistics and Question Themes)
   const isLegacyBenefactor = user?.personaType === 'legacy_benefactor';
@@ -271,6 +273,14 @@ export const UserMenu: React.FC = () => {
           </DropdownMenuItem>
 
           <DropdownMenuItem
+            className="cursor-pointer hover:bg-legacy-purple/10 focus:bg-legacy-purple/10 min-h-[44px] py-3"
+            onClick={() => setShowFeedbackDialog(true)}
+          >
+            <Lightbulb className="mr-2 h-4 w-4 text-legacy-purple" />
+            <span className="text-sm text-legacy-navy">Report a Bug or Suggest a Feature</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
             className="cursor-pointer hover:bg-legacy-purple/10 focus:bg-legacy-purple/10 opacity-60 min-h-[44px] py-3"
             disabled
           >
@@ -310,6 +320,11 @@ export const UserMenu: React.FC = () => {
       <SecurityDialog
         open={showSecurityDialog}
         onOpenChange={setShowSecurityDialog}
+      />
+
+      <FeedbackDialog
+        open={showFeedbackDialog}
+        onOpenChange={setShowFeedbackDialog}
       />
     </DropdownMenu>
   );
