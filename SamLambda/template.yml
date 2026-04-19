@@ -919,11 +919,11 @@ Resources:
         AttributeName: ttl
         Enabled: true
 
-  # Email Nurture — SES Configuration Set for open/click/bounce tracking (using SES v2 API)
+  # Email Nurture — SES Configuration Set for open/click/bounce tracking
   NurtureEmailConfigSet:
-    Type: AWS::SESv2::ConfigurationSet
+    Type: AWS::SES::ConfigurationSet
     Properties:
-      ConfigurationSetName: soulreel-nurture
+      Name: soulreel-nurture
 
   # Email Nurture — SNS Topic for SES event notifications
   NurtureSesEventsTopic:
@@ -931,22 +931,23 @@ Resources:
     Properties:
       TopicName: soulreel-ses-nurture-events
 
-  # Email Nurture — SES v2 event destination to SNS
+  # Email Nurture — SES event destination to SNS
   NurtureEmailEventDestination:
-    Type: AWS::SESv2::ConfigurationSetEventDestination
+    Type: AWS::SES::ConfigurationSetEventDestination
     DependsOn: NurtureEmailConfigSet
     Properties:
       ConfigurationSetName: soulreel-nurture
-      EventDestinationName: nurture-events-to-sns
       EventDestination:
+        Name: nurture-events-to-sns
         Enabled: true
         MatchingEventTypes:
-          - OPEN
-          - CLICK
-          - BOUNCE
-          - COMPLAINT
+          - bounce
+          - complaint
+          - delivery
+          - open
+          - click
         SnsDestination:
-          TopicArn: !Ref NurtureSesEventsTopic
+          TopicARN: !Ref NurtureSesEventsTopic
 
   # ============================================================
   # Email Capture & Nurture Lambda Functions
