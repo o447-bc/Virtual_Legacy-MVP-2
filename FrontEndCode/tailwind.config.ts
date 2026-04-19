@@ -70,7 +70,9 @@ export default {
 					navy: '#1A1F2C',
 					purple: '#7c6bc4',
 					lightPurple: '#E5DEFF',
-					white: '#FFFFFF'
+					white: '#FFFFFF',
+					warmAccent: '#B45309',
+					warmAccentHover: '#92400E'
 				}
 			},
 			borderRadius: {
