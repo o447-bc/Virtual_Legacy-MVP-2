@@ -970,6 +970,7 @@ Resources:
           TABLE_RATE_LIMIT: !Ref EmailCaptureRateLimitTable
           SES_CONFIGURATION_SET: !Ref NurtureEmailConfigSet
           SENDER_EMAIL: noreply@soulreel.net
+          API_BASE_URL: https://qu5zn6mns1.execute-api.us-east-1.amazonaws.com/Prod
       Policies:
         - Statement:
             - Effect: Allow
@@ -1076,6 +1077,7 @@ Resources:
           TABLE_EMAIL_CAPTURE: !Ref EmailCaptureTable
           SES_CONFIGURATION_SET: !Ref NurtureEmailConfigSet
           SENDER_EMAIL: noreply@soulreel.net
+          API_BASE_URL: https://qu5zn6mns1.execute-api.us-east-1.amazonaws.com/Prod
       Policies:
         - Statement:
             - Effect: Allow

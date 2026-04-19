@@ -118,10 +118,10 @@ def _send_welcome_email(email: str, variant: str, log=None):
         ref_hash = generate_referral_hash(email, secret)
 
         api_base = os.environ.get('APP_BASE_URL', 'https://www.soulreel.net')
-        api_url = os.environ.get('VITE_API_BASE_URL', '')
+        api_gw = os.environ.get('API_BASE_URL', 'https://qu5zn6mns1.execute-api.us-east-1.amazonaws.com/Prod')
 
         template_name = f'soulreel-nurture-stage-0-{variant}'
-        unsub_url = f'{api_url}/email-capture/unsubscribe?token={unsub_token}'
+        unsub_url = f'{api_gw}/email-capture/unsubscribe?token={unsub_token}'
         signup_url = f'{api_base}/?signup=create-legacy'
         referral_url = f'{api_base}/?ref={ref_hash}'
 
