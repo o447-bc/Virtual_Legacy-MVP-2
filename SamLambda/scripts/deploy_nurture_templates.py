@@ -60,14 +60,14 @@ def _base_html(preheader, body_content):
 </html>"""
 
 
-def _cta_button(text, url='{{{{signup_url}}}}'):
+def _cta_button(text, url='{{signup_url}}'):
     """Render a CTA button with 44x44px minimum touch target."""
-    return f"""<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto;">
-<tr><td align="center" style="background-color:{PURPLE};border-radius:6px;">
-<a href="{url}" target="_blank" style="display:inline-block;min-width:44px;min-height:44px;padding:14px 32px;color:{WHITE};font-size:16px;font-weight:600;text-decoration:none;line-height:1.2;">
-{text}</a>
-</td></tr>
-</table>"""
+    return ('<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto;">'
+            '<tr><td align="center" style="background-color:' + PURPLE + ';border-radius:6px;">'
+            '<a href="' + url + '" target="_blank" style="display:inline-block;min-width:44px;min-height:44px;padding:14px 32px;color:' + WHITE + ';font-size:16px;font-weight:600;text-decoration:none;line-height:1.2;">'
+            + text + '</a>'
+            '</td></tr>'
+            '</table>')
 
 
 def _question_block(question):

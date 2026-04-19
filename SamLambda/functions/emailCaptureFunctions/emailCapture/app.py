@@ -213,7 +213,8 @@ def lambda_handler(event, context):
                 Key={'email': email},
                 UpdateExpression='SET capturedAt = :now, reminderStage = :zero, '
                                'capturedWeek = :week, statusGsi = :status, '
-                               'source = :source, sourceIp = :ip',
+                               '#src = :source, sourceIp = :ip',
+                ExpressionAttributeNames={'#src': 'source'},
                 ExpressionAttributeValues={
                     ':now': now_iso,
                     ':zero': 0,
