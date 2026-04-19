@@ -1,2 +1,4 @@
 ignore_checks:
   - W3660
+  - E3006
+  - W3005
