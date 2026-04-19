@@ -208,8 +208,7 @@ def handle_test_send(event):
                 'signup_url': f'{api_base}/?signup=create-legacy',
                 'referral_url': f'{api_base}/?ref={ref_hash}',
             }),
-            # ConfigurationSetName temporarily disabled
-            # ConfigurationSetName=SES_CONFIG_SET,
+            ConfigurationSetName=SES_CONFIG_SET,
         )
         return _json_response(200, {'success': True, 'stage': stage, 'variant': variant}, event)
     except Exception as e:

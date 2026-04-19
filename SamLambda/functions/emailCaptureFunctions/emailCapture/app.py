@@ -135,8 +135,7 @@ def _send_welcome_email(email: str, variant: str, log=None):
                 'signup_url': signup_url,
                 'referral_url': referral_url,
             }),
-            # ConfigurationSetName temporarily disabled — awstrack.me DNS not resolving
-            # ConfigurationSetName=SES_CONFIG_SET,
+            ConfigurationSetName=SES_CONFIG_SET,
         )
         if log:
             log.info('WelcomeEmailSent', details={'variant': variant})
