@@ -22,12 +22,14 @@ const LegacyCreateChoice = () => {
               Create Your Legacy
             </Button>
           </Link>
+          <p className="text-sm text-gray-500 mt-2 text-center">Preserve your own stories, memories, and wisdom for the people who matter most.</p>
           
           <Link to="/signup-start-their-legacy" className="block">
             <Button className="w-full text-lg py-6 px-8 bg-legacy-purple hover:bg-legacy-navy">
               Start Their Legacy
             </Button>
           </Link>
+          <p className="text-sm text-gray-500 mt-2 text-center">Set it up for a parent, grandparent, or loved one — you'll manage the account and they'll record their stories.</p>
         </div>
         
         <div className="text-center">
@@ -37,6 +39,7 @@ const LegacyCreateChoice = () => {
               Sign in
             </Link>
           </p>
+          <Link to="/discover" className="text-legacy-purple hover:underline text-sm">Learn more about SoulReel →</Link>
         </div>
       </div>
     </div>

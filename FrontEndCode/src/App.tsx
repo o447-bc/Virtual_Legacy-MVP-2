@@ -29,6 +29,7 @@ import LifeEvents from "./pages/LifeEvents";
 import PersonalInsights from "./pages/PersonalInsights";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
+import Discover from "./pages/Discover";
 import { TestS3 } from "./pages/TestS3";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -78,6 +79,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/discover" element={<Discover />} />
 
             {/* Protected routes — require authentication */}
             <Route path="/dashboard" element={<ProtectedRoute requiredPersona="legacy_maker"><Dashboard /></ProtectedRoute>} />

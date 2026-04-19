@@ -3,11 +3,14 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
+import { trackEvent } from "@/lib/analytics";
 import HeroSection from "@/components/landing/HeroSection";
+import EaseOfUseStrip from "@/components/landing/EaseOfUseStrip";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import SampleQuestionsSection from "@/components/landing/SampleQuestionsSection";
-import TestimonialSection from "@/components/landing/TestimonialSection";
+import FounderStorySection from "@/components/landing/FounderStorySection";
 import ClosingCTASection from "@/components/landing/ClosingCTASection";
+import EmailCaptureSection from "@/components/landing/EmailCaptureSection";
 import TrustStrip from "@/components/landing/TrustStrip";
 
 const Home = () => {
@@ -15,7 +18,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="w-full border-b">
+      <header className="w-full border-b sticky top-0 z-50 bg-white/95 backdrop-blur-sm">
         <div className="container mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
           <Logo />
           <div className="flex gap-4">
@@ -39,10 +42,12 @@ const Home = () => {
 
       <main className="flex-1">
         <HeroSection user={user} />
+        <EaseOfUseStrip />
         <HowItWorksSection />
         <SampleQuestionsSection />
-        <TestimonialSection />
+        <FounderStorySection />
         <ClosingCTASection user={user} />
+        <EmailCaptureSection />
         <TrustStrip />
       </main>
 
@@ -72,7 +77,7 @@ const Home = () => {
                   <Link to="/pricing" className="text-gray-300 hover:text-white">Pricing</Link>
                 </li>
                 <li>
-                  <Link to="/your-data" className="text-gray-300 hover:text-white">Privacy &amp; Your Data</Link>
+                  <Link to="/your-data" className="text-gray-300 hover:text-white" onClick={() => trackEvent('footer_privacy_click')}>Privacy &amp; Your Data</Link>
                 </li>
               </ul>
             </div>

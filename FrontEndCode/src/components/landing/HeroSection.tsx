@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PRIMARY_CTA_CLASSES } from "./colorConfig";
 import VideoEmbed from "./VideoEmbed";
+import SignupModal from "./SignupModal";
+import MicroSocialProof from "./MicroSocialProof";
+import { trackEvent } from "@/lib/analytics";
 
 interface HeroSectionProps {
   user: any | null;
@@ -10,6 +13,9 @@ interface HeroSectionProps {
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ user, videoSrc }) => {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalVariant, setModalVariant] = useState<'create-legacy' | 'start-their-legacy'>('create-legacy');
+
   return (
     <section className="py-12 md:py-20">
       <div className="container mx-auto px-4 sm:px-8">
@@ -34,24 +40,32 @@ const HeroSection: React.FC<HeroSectionProps> = ({ user, videoSrc }) => {
               ) : (
                 <>
                   <div className="flex flex-col items-center">
-                    <Link to="/signup-create-legacy">
-                      <Button className={`text-lg py-6 px-8 ${PRIMARY_CTA_CLASSES}`}>
-                        Start Free
-                      </Button>
-                    </Link>
+                    <Button
+                      className={`text-lg py-6 px-8 ${PRIMARY_CTA_CLASSES}`}
+                      onClick={() => {
+                        setModalVariant('create-legacy');
+                        setModalOpen(true);
+                        trackEvent('hero_cta_click', { variant: 'start-free' });
+                      }}
+                    >
+                      Start Free
+                    </Button>
                     <p className="text-sm text-gray-500 mt-2">
-                      Preserve your own stories and memories
+                      Free forever. No credit card required.
                     </p>
                   </div>
                   <div className="flex flex-col items-center">
-                    <Link to="/signup-start-their-legacy">
-                      <Button
-                        variant="outline"
-                        className="text-lg py-6 px-8 border-legacy-purple text-legacy-purple hover:bg-legacy-purple hover:text-white"
-                      >
-                        Start Their Legacy
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="outline"
+                      className="text-lg py-6 px-8 border-legacy-purple text-legacy-purple hover:bg-legacy-purple hover:text-white"
+                      onClick={() => {
+                        setModalVariant('start-their-legacy');
+                        setModalOpen(true);
+                        trackEvent('hero_cta_click', { variant: 'start-their-legacy' });
+                      }}
+                    >
+                      Start Their Legacy
+                    </Button>
                     <p className="text-sm text-gray-500 mt-2">
                       Set it up for a parent, grandparent, or loved one
                     </p>
@@ -59,6 +73,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ user, videoSrc }) => {
                 </>
               )}
             </div>
+
+            <MicroSocialProof />
           </div>
 
           {/* Video column */}
@@ -67,6 +83,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ user, videoSrc }) => {
           </div>
         </div>
       </div>
+
+      <SignupModal open={modalOpen} onOpenChange={setModalOpen} variant={modalVariant} />
     </section>
   );
 };

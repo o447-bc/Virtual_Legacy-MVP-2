@@ -234,8 +234,12 @@ const PricingPage: React.FC = () => {
               }`}
             >
               Annual
+              <Badge className={`ml-1.5 text-xs ${
+                billingPeriod === "annual"
+                  ? "bg-white/20 text-white border-white/30"
+                  : "bg-green-100 text-green-800 border-green-300"
+              }`}>Best Value</Badge>
             </button>
-            <Badge className="ml-2 bg-green-100 text-green-800 border-green-300 text-xs">Best Value</Badge>
           </div>
         </div>
 

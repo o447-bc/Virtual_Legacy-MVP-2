@@ -25,7 +25,7 @@ export const Header: React.FC = () => {
   const showTrialIndicator = trialDaysRemaining !== null && trialDaysRemaining <= 5 && trialDaysRemaining > 0;
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="container mx-auto py-3 px-4 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
         {/* Application Title */}
         <div className="flex items-center gap-3">

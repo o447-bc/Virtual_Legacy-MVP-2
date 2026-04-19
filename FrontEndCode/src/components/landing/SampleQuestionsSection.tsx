@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import SampleQuestionCard from "./SampleQuestionCard";
+import { trackEvent } from "@/lib/analytics";
 
 const SAMPLE_QUESTIONS = [
   {
@@ -25,7 +26,7 @@ const SampleQuestionsSection: React.FC = () => {
           Questions That Spark Your Story
         </h2>
         <p className="text-lg text-gray-600 text-center max-w-2xl mx-auto mb-12">
-          Here are a few of the questions waiting for you
+          Three paths to explore: your life story, the events that shaped you, and the values you hold dear.
         </p>
         <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
           {SAMPLE_QUESTIONS.map((q) => (
@@ -38,8 +39,9 @@ const SampleQuestionsSection: React.FC = () => {
         </div>
         <div className="text-center mt-10">
           <Link
-            to="/legacy-create-choice"
+            to="/discover"
             className="text-legacy-purple hover:underline font-medium"
+            onClick={() => trackEvent('explore_questions_click')}
           >
             Explore more questions →
           </Link>
