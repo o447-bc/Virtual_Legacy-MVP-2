@@ -4,6 +4,7 @@ import boto3
 from botocore.client import Config
 import traceback
 import time
+from datetime import datetime, timezone, timedelta
 
 from conversation_state import ConversationState, get_conversation, set_conversation, remove_conversation
 from config import get_conversation_config
@@ -21,6 +22,44 @@ apigateway = None  # Initialized lazily in lambda_handler (endpoint URL comes fr
 s3_client = boto3.client('s3', config=Config(signature_version='s3v4'))
 
 S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
+
+# DynamoDB resource for subscription table updates (conversation counter)
+_dynamodb = boto3.resource('dynamodb')
+
+
+def _increment_weekly_conversation_count(user_id: str):
+    """Increment conversationsThisWeek, resetting if past weekResetDate.
+
+    Uses a conditional update to handle the week-boundary reset atomically,
+    avoiding race conditions when multiple conversations start simultaneously.
+    """
+    table = _dynamodb.Table(os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB'))
+    now = datetime.now(timezone.utc)
+    # Monday of current ISO week
+    monday = (now - timedelta(days=now.weekday())).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    monday_iso = monday.isoformat()
+
+    try:
+        # Attempt atomic increment for the current week
+        table.update_item(
+            Key={'userId': user_id},
+            UpdateExpression='SET conversationsThisWeek = if_not_exists(conversationsThisWeek, :zero) + :one, updatedAt = :now',
+            ConditionExpression='attribute_not_exists(weekResetDate) OR weekResetDate >= :mon',
+            ExpressionAttributeValues={
+                ':one': 1, ':zero': 0, ':now': now.isoformat(), ':mon': monday_iso
+            },
+        )
+    except table.meta.client.exceptions.ConditionalCheckFailedException:
+        # weekResetDate is from a previous week — reset counter
+        table.update_item(
+            Key={'userId': user_id},
+            UpdateExpression='SET conversationsThisWeek = :one, weekResetDate = :mon, updatedAt = :now',
+            ExpressionAttributeValues={
+                ':one': 1, ':mon': monday_iso, ':now': now.isoformat()
+            },
+        )
 
 def send_message(connection_id: str, message: dict):
     """Send message to WebSocket client"""
@@ -70,6 +109,12 @@ def handle_start_conversation(connection_id: str, user_id: str, body: dict, conf
     # Create conversation state
     state = ConversationState(connection_id, user_id, question_id, question_text)
     set_conversation(connection_id, state)
+
+    # Track weekly conversation count (never block conversation on counter failure)
+    try:
+        _increment_weekly_conversation_count(user_id)
+    except Exception as e:
+        print(f"[START] Warning: failed to increment weekly conversation count: {e}")
     
     # Send initial greeting
     greeting = question_text

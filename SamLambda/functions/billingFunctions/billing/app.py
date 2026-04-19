@@ -258,6 +258,9 @@ def handle_status(event, user_id):
             'couponCode': None,
             'couponExpiresAt': None,
             'benefactorCount': 0,
+            'conversationsThisWeek': 0,
+            'weekResetDate': None,
+            'conversationsPerWeek': free_plan_def.get('conversationsPerWeek', 3),
             'planLimits': free_plan_def,
             'freePlanLimits': free_plan_def,
         }, event)
@@ -273,6 +276,9 @@ def handle_status(event, user_id):
         'couponCode': item.get('couponCode'),
         'couponExpiresAt': item.get('couponExpiresAt'),
         'benefactorCount': int(item.get('benefactorCount', 0)),
+        'conversationsThisWeek': int(item.get('conversationsThisWeek', 0)),
+        'weekResetDate': item.get('weekResetDate'),
+        'conversationsPerWeek': plan_def.get('conversationsPerWeek', 3),
         'planLimits': plan_def,
         'freePlanLimits': free_plan_def,
     }, event)

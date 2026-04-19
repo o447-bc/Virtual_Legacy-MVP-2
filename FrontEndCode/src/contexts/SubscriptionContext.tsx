@@ -12,6 +12,10 @@ interface SubscriptionState {
   benefactorCount: number;
   planLimits: PlanLimits;
   freePlanLimits: PlanLimits;
+  previewQuestions: string[];
+  conversationsThisWeek: number;
+  weekResetDate: string | null;
+  conversationsPerWeek: number;
   isLoading: boolean;
   isPremium: boolean;
   refetch: () => void;
@@ -22,6 +26,7 @@ const FREE_PLAN_LIMITS: PlanLimits = {
   maxBenefactors: 2,
   accessConditionTypes: ['immediate'],
   features: ['basic'],
+  previewQuestions: [],
 };
 
 const DEFAULT_STATE: Omit<SubscriptionState, 'isLoading' | 'refetch'> = {
@@ -33,6 +38,10 @@ const DEFAULT_STATE: Omit<SubscriptionState, 'isLoading' | 'refetch'> = {
   benefactorCount: 0,
   planLimits: FREE_PLAN_LIMITS,
   freePlanLimits: FREE_PLAN_LIMITS,
+  previewQuestions: [],
+  conversationsThisWeek: 0,
+  weekResetDate: null,
+  conversationsPerWeek: 3,
   isPremium: false,
 };
 
@@ -86,6 +95,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       benefactorCount: data.benefactorCount,
       planLimits: data.planLimits,
       freePlanLimits: data.freePlanLimits,
+      previewQuestions: data.planLimits?.previewQuestions ?? [],
+      conversationsThisWeek: data.conversationsThisWeek ?? 0,
+      weekResetDate: data.weekResetDate ?? null,
+      conversationsPerWeek: data.conversationsPerWeek ?? data.planLimits?.conversationsPerWeek ?? 3,
       isLoading: false,
       isPremium,
       refetch: () => refetch(),

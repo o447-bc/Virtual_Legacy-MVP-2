@@ -17,7 +17,7 @@ import {
   type CouponResult,
 } from "@/services/billingService";
 import { toastError } from "@/utils/toastError";
-import { Check, Crown, Loader2 } from "lucide-react";
+import { Check, Crown, Loader2, ShieldCheck } from "lucide-react";
 
 const STRIPE_MONTHLY_PRICE_ID = import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID || "price_monthly_placeholder";
 const STRIPE_ANNUAL_PRICE_ID = import.meta.env.VITE_STRIPE_ANNUAL_PRICE_ID || "price_annual_placeholder";
@@ -45,12 +45,13 @@ const PricingPage: React.FC = () => {
   // Only call useSubscription for rendering — context is always available
   const subscription = useSubscription();
 
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("annual");
   const [couponExpanded, setCouponExpanded] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMessage, setCouponMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [ctaLoading, setCtaLoading] = useState(false);
+  const [showComebackBanner, setShowComebackBanner] = useState(false);
 
   // For unauthenticated visitors, fetch public plans
   const [publicPlans, setPublicPlans] = useState<Record<string, PlanDefinition> | null>(null);
@@ -65,6 +66,20 @@ const PricingPage: React.FC = () => {
         });
     }
   }, [isAuthenticated]);
+
+  // Re-engagement banner: track pricing page visits in localStorage
+  useEffect(() => {
+    try {
+      const prev = localStorage.getItem('sr_pricing_first_visit');
+      if (prev === null) {
+        localStorage.setItem('sr_pricing_first_visit', new Date().toISOString());
+      } else {
+        setShowComebackBanner(true);
+      }
+    } catch {
+      // Private browsing or localStorage unavailable — no banner
+    }
+  }, []);
 
   // Derive plan limits from the right source
   const premiumLimits = isAuthenticated
@@ -184,6 +199,19 @@ const PricingPage: React.FC = () => {
           </div>
         </section>
 
+        {/* Re-engagement Banner */}
+        {showComebackBanner && isFreePlan && !isTrialing && (
+          <div className="container mx-auto px-4 mb-6">
+            <div className="max-w-4xl mx-auto rounded-lg bg-amber-50 border border-amber-200 px-6 py-4 text-center">
+              <p className="text-amber-900 font-medium">
+                Welcome back! Use code{' '}
+                <span className="font-bold bg-amber-200 px-2 py-0.5 rounded text-amber-950">COMEBACK20</span>{' '}
+                for 20% off Premium
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Billing Toggle */}
         <div className="flex justify-center mb-8">
           <div className="inline-flex rounded-lg bg-white border p-1 shadow-sm">
@@ -207,6 +235,7 @@ const PricingPage: React.FC = () => {
             >
               Annual
             </button>
+            <Badge className="ml-2 bg-green-100 text-green-800 border-green-300 text-xs">Best Value</Badge>
           </div>
         </div>
 
@@ -256,6 +285,11 @@ const PricingPage: React.FC = () => {
                   Trial Active
                 </Badge>
               )}
+              {!isPremiumActive && !isTrialing && (
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-legacy-purple text-white">
+                  Recommended
+                </Badge>
+              )}
               <CardHeader className="text-center pb-2">
                 <div className="flex items-center justify-center gap-2">
                   <Crown className="h-5 w-5 text-legacy-purple" />
@@ -267,10 +301,11 @@ const PricingPage: React.FC = () => {
                     <span className="text-base font-normal text-gray-500">/mo</span>
                   </p>
                   {savingsNote && (
-                    <p className="text-sm text-legacy-purple font-medium mt-1">
-                      {savingsNote}
-                    </p>
+                    <span className="inline-block mt-2 px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-semibold">
+                      🎉 Save {annualSavings}% with annual billing
+                    </span>
                   )}
+                  <p className="text-sm text-gray-500 mt-2">Less than a cup of coffee a week</p>
                 </div>
               </CardHeader>
               <CardContent className="pt-4">
@@ -386,20 +421,30 @@ const PricingPage: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Trust Messaging */}
+          <div className="flex items-start gap-3 max-w-2xl mx-auto mt-12 text-center justify-center">
+            <ShieldCheck className="h-6 w-6 text-legacy-purple shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-600">
+              Your stories are always yours. All recordings, transcripts, and summaries remain
+              fully accessible regardless of your plan. Benefactors you've already shared with
+              keep their access too. Premium unlocks new content paths and features — it never
+              restricts what you've already created.
+            </p>
+          </div>
+
+          {/* Social Proof */}
+          <div className="max-w-2xl mx-auto mt-10 text-center space-y-6">
+            <blockquote className="italic text-gray-600 text-sm">
+              "SoulReel helped me capture stories from my grandmother that our family will treasure forever."
+              <span className="block mt-2 text-gray-400 text-xs not-italic">— A SoulReel family</span>
+            </blockquote>
+            <p className="text-sm text-gray-500 font-medium">
+              Join hundreds of families preserving their legacy
+            </p>
+          </div>
         </section>
       </main>
-
-      {/* Trust messaging */}
-      <section className="bg-gray-100 py-8">
-        <div className="container mx-auto px-4 text-center max-w-2xl">
-          <p className="text-sm text-gray-600">
-            Your stories are always yours. All recordings, transcripts, and summaries remain
-            fully accessible regardless of your plan. Benefactors you've already shared with
-            keep their access too. Premium unlocks new content paths and features — it never
-            restricts what you've already created.
-          </p>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="bg-legacy-navy text-white py-8">

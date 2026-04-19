@@ -6,6 +6,51 @@ to verify a user's subscription tier before allowing operations.
 
 Design principle: FAIL-OPEN on all DynamoDB/SSM errors — never block users
 due to billing infrastructure issues. Log the error and allow access.
+
+SSM plan definition updates (run via CLI or AWS Console):
+
+  Free plan — includes previewQuestions and conversationsPerWeek:
+  (Replace placeholder question IDs with real IDs from allQuestionDB at deploy time)
+
+  aws ssm put-parameter --name "/soulreel/plans/free" --type String --overwrite --value '{
+    "planId": "free",
+    "allowedQuestionCategories": ["life_story_reflections_L1"],
+    "maxBenefactors": 2,
+    "accessConditionTypes": ["immediate"],
+    "features": ["basic"],
+    "previewQuestions": [
+      "life_events-milestones-L1-Q1",
+      "psych_values_emotions-core-L1-Q1"
+    ],
+    "conversationsPerWeek": 3
+  }'
+
+  Premium plan — includes conversationsPerWeek:
+
+  aws ssm put-parameter --name "/soulreel/plans/premium" --type String --overwrite --value '{
+    "planId": "premium",
+    "allowedQuestionCategories": ["life_story_reflections", "life_events", "psych_values_emotions"],
+    "maxBenefactors": -1,
+    "accessConditionTypes": ["immediate", "time_delayed", "inactivity_trigger", "manual_release"],
+    "features": ["basic", "dead_mans_switch", "pdf_export"],
+    "conversationsPerWeek": -1
+  }'
+
+  COMEBACK20 coupon (re-engagement for returning pricing page visitors):
+  Also create a matching Stripe Coupon in the Stripe Dashboard:
+    ID: COMEBACK20, 20% off, duration: repeating, duration_in_months: 3
+
+  aws ssm put-parameter --name "/soulreel/coupons/COMEBACK20" --type String --value '{
+    "code": "COMEBACK20",
+    "type": "percentage",
+    "percentOff": 20,
+    "durationMonths": 3,
+    "stripeCouponId": "COMEBACK20",
+    "maxRedemptions": 0,
+    "currentRedemptions": 0,
+    "expiresAt": null,
+    "createdBy": "system-config"
+  }'
 """
 import os
 import json
@@ -23,6 +68,7 @@ _dynamodb = boto3.resource('dynamodb')
 _ssm = boto3.client('ssm')
 
 _TABLE_NAME = os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB')
+_QUESTION_STATUS_TABLE = os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB')
 
 # ---------------------------------------------------------------------------
 # Module-level SSM cache (survives warm Lambda invocations)
@@ -155,6 +201,29 @@ def is_premium_active(subscription_record: dict) -> bool:
 
 
 # ===================================================================
+# Preview-question helpers
+# ===================================================================
+
+def _has_completed_preview(user_id: str, question_id: str) -> bool:
+    """
+    Check whether *user_id* has already completed the preview for *question_id*.
+
+    Queries ``userQuestionStatusDB`` — if an item exists the preview is done.
+    Fail-open: returns False on any error (allows the preview attempt).
+    """
+    try:
+        table = _dynamodb.Table(_QUESTION_STATUS_TABLE)
+        resp = table.get_item(Key={'userId': user_id, 'questionId': question_id})
+        return 'Item' in resp
+    except Exception as exc:
+        logger.error(
+            '[PLAN_CHECK] Error checking preview completion for %s / %s: %s',
+            user_id, question_id, exc,
+        )
+        return False
+
+
+# ===================================================================
 # Access-check public API
 # ===================================================================
 
@@ -184,6 +253,7 @@ def check_question_category_access(user_id: str, question_id: str) -> dict:
             return {'allowed': True, 'reason': None, 'message': None}
 
         # Check 2: is a level-restricted variant allowed?
+        deny_response = None
         for entry in allowed_categories:
             if entry.startswith(category + '_L'):
                 # e.g. 'life_story_reflections_L1'
@@ -195,7 +265,7 @@ def check_question_category_access(user_id: str, question_id: str) -> dict:
                     return {'allowed': True, 'reason': None, 'message': None}
                 else:
                     # Level too high
-                    return {
+                    deny_response = {
                         'allowed': False,
                         'reason': 'question_level',
                         'message': (
@@ -203,16 +273,26 @@ def check_question_category_access(user_id: str, question_id: str) -> dict:
                             "Upgrade to Premium to go deeper into your life story."
                         ),
                     }
+                    break
 
-        # Category not in the allowed list at all
-        return {
-            'allowed': False,
-            'reason': 'question_category',
-            'message': (
-                "Life Events questions are available with Premium. "
-                "Upgrade to preserve the moments that shaped who you are."
-            ),
-        }
+        # Default deny if no level-restricted match was found at all
+        if deny_response is None:
+            deny_response = {
+                'allowed': False,
+                'reason': 'question_category',
+                'message': (
+                    "Life Events questions are available with Premium. "
+                    "Upgrade to preserve the moments that shaped who you are."
+                ),
+            }
+
+        # Preview check: allow one-time preview before denying
+        preview_questions = plan_def.get('previewQuestions', [])
+        if question_id in preview_questions:
+            if not _has_completed_preview(user_id, question_id):
+                return {'allowed': True, 'isPreview': True, 'reason': None, 'message': None}
+
+        return deny_response
 
     except Exception as exc:
         logger.error('[PLAN_CHECK] Error in check_question_category_access for %s: %s', user_id, exc)

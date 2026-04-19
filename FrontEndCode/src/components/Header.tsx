@@ -22,7 +22,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
  */
 export const Header: React.FC = () => {
   const { trialDaysRemaining } = useSubscription();
-  const showTrialIndicator = trialDaysRemaining !== null && trialDaysRemaining <= 3 && trialDaysRemaining > 0;
+  const showTrialIndicator = trialDaysRemaining !== null && trialDaysRemaining <= 5 && trialDaysRemaining > 0;
 
   return (
     <header className="bg-white shadow-sm">

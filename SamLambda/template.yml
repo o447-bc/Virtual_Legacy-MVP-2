@@ -1110,6 +1110,7 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:GetItem
+                - dynamodb:UpdateItem
               Resource: !GetAtt UserSubscriptionsTable.Arn
         - Statement:
             - Effect: Allow

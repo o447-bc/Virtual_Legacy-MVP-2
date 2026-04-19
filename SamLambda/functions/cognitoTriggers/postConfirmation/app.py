@@ -209,7 +209,7 @@ def lambda_handler(event, context):
     try:
         dynamodb_resource = boto3.resource('dynamodb')
         subscriptions_table = dynamodb_resource.Table(os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB'))
-        trial_expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        trial_expires = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
         subscriptions_table.put_item(Item={
             'userId': username,
             'planId': 'premium',

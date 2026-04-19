@@ -26,7 +26,7 @@ import type { PsychTest } from "@/types/psychTests";
 
 const Dashboard = () => {
   const { user, hasCompletedSurvey, refreshSurveyStatus } = useAuth();
-  const { isPremium, trialDaysRemaining } = useSubscription();
+  const { isPremium, trialDaysRemaining, previewQuestions, conversationsThisWeek, conversationsPerWeek } = useSubscription();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
@@ -67,6 +67,12 @@ const Dashboard = () => {
   // Life Events progress from useLifeEventsProgress
   const lifeEventsTotal = lifeEventsData?.totalQuestions ?? 0;
   const lifeEventsCompleted = lifeEventsData?.completedQuestions ?? 0;
+
+  // Preview question availability per locked category
+  const hasLifeEventsPreview = previewQuestions.some(q => q.startsWith('life_events'));
+  const hasValuesEmotionsPreview = previewQuestions.some(q => q.startsWith('psych_') || q.startsWith('values_emotions'));
+  const lifeEventsPreviewCompleted = lifeEventsCompleted > 0;
+  const valuesEmotionsPreviewCompleted = psychTests.filter(t => t.completedAt).length > 0;
 
   // Defensive camera cleanup
   useEffect(() => {
@@ -181,7 +187,7 @@ const Dashboard = () => {
         )}
 
         {/* Trial nudge banner */}
-        {trialDaysRemaining !== null && trialDaysRemaining <= 3 && trialDaysRemaining > 0 && (
+        {trialDaysRemaining !== null && trialDaysRemaining <= 5 && trialDaysRemaining > 0 && (
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
             <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-600" />
             <p className="text-sm text-amber-800">
@@ -190,6 +196,23 @@ const Dashboard = () => {
                 View plans
               </Link>
             </p>
+          </div>
+        )}
+
+        {/* Conversation usage indicator — free users only */}
+        {!isPremium && conversationsPerWeek > 0 && (
+          <div className="mb-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
+            <div className="flex-1">
+              <p className="text-sm text-gray-700 font-medium">
+                {conversationsThisWeek} of {conversationsPerWeek} conversations used this week
+              </p>
+              <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
+                <div
+                  className="bg-legacy-purple h-1.5 rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (conversationsThisWeek / conversationsPerWeek) * 100)}%` }}
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -211,14 +234,19 @@ const Dashboard = () => {
             progressLabel={`${lifeEventsCompleted} out of ${lifeEventsTotal} questions completed`}
             accentColor="border-blue-500"
             locked={!isPremium}
-            onLockedClick={() => {
-              setUpgradeDialogContent({
-                title: "Life Events",
-                message: "These are the moments that shaped who you are. Upgrade to Premium to start preserving them.",
-                questionCount: lifeEventsTotal || undefined,
-              });
-              setShowUpgradeDialog(true);
-            }}
+            badge={!isPremium && hasLifeEventsPreview && !lifeEventsPreviewCompleted ? "Try 1 free question" : undefined}
+            onLockedClick={
+              !isPremium && hasLifeEventsPreview && !lifeEventsPreviewCompleted
+                ? () => navigate("/life-events")
+                : () => {
+                    setUpgradeDialogContent({
+                      title: "Life Events",
+                      message: "These are the moments that shaped who you are. Upgrade to Premium to start preserving them.",
+                      questionCount: lifeEventsTotal || undefined,
+                    });
+                    setShowUpgradeDialog(true);
+                  }
+            }
             onClick={() => navigate("/life-events")}
           />
           <ContentPathCard
@@ -228,13 +256,18 @@ const Dashboard = () => {
             progressLabel={`${psychTests.filter(t => t.completedAt).length} of ${psychTests.length} assessments completed`}
             accentColor="border-amber-500"
             locked={!isPremium}
-            onLockedClick={() => {
-              setUpgradeDialogContent({
-                title: "Values & Emotions",
-                message: "Explore the deeper dimensions of who you are. Upgrade to Premium to unlock these insights.",
-              });
-              setShowUpgradeDialog(true);
-            }}
+            badge={!isPremium && hasValuesEmotionsPreview && !valuesEmotionsPreviewCompleted ? "Try 1 free question" : undefined}
+            onLockedClick={
+              !isPremium && hasValuesEmotionsPreview && !valuesEmotionsPreviewCompleted
+                ? () => navigate("/personal-insights")
+                : () => {
+                    setUpgradeDialogContent({
+                      title: "Values & Emotions",
+                      message: "Explore the deeper dimensions of who you are. Upgrade to Premium to unlock these insights.",
+                    });
+                    setShowUpgradeDialog(true);
+                  }
+            }
             onClick={() => navigate("/personal-insights")}
           />
         </div>

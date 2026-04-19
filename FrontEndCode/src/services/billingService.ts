@@ -10,6 +10,8 @@ export interface PlanLimits {
   annualPriceDisplay?: string;
   annualMonthlyEquivalentDisplay?: string;
   annualSavingsPercent?: number;
+  previewQuestions?: string[];
+  conversationsPerWeek?: number;
 }
 
 export interface SubscriptionStatus {
@@ -22,6 +24,9 @@ export interface SubscriptionStatus {
   benefactorCount: number;
   planLimits: PlanLimits;
   freePlanLimits: PlanLimits;
+  conversationsThisWeek: number;
+  weekResetDate: string | null;
+  conversationsPerWeek: number;
 }
 
 export interface CouponResult {
