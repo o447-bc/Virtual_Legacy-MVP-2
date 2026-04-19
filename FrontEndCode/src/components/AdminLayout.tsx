@@ -56,6 +56,12 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    header: "BILLING",
+    items: [
+      { to: "/admin/coupons", label: "Coupons", icon: Tags },
+    ],
+  },
+  {
     header: "SYSTEM",
     items: [
       { to: "/admin/settings", label: "Settings", icon: Settings },

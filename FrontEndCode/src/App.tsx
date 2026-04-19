@@ -46,6 +46,7 @@ import ExportView from "./pages/admin/ExportView";
 import AssessmentManager from "./pages/admin/AssessmentManager";
 import SystemSettings from "./pages/admin/SystemSettings";
 import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
+import AdminCoupons from "./pages/admin/AdminCoupons";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="export" element={<ExportView />} />
               <Route path="assessments" element={<AssessmentManager />} />
               <Route path="feedback" element={<AdminFeedbackPage />} />
+              <Route path="coupons" element={<AdminCoupons />} />
               <Route path="settings" element={<SystemSettings />} />
             </Route>
 
