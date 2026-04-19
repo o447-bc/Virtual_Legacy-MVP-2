@@ -91,7 +91,8 @@ def _send_email(email: str, stage: int, variant: str, secret: str):
                 'signup_url': signup_url,
                 'referral_url': referral_url,
             }),
-            ConfigurationSetName=SES_CONFIG_SET,
+            # ConfigurationSetName temporarily disabled — awstrack.me DNS not resolving
+            # ConfigurationSetName=SES_CONFIG_SET,
         )
         return True
     except ses_client.exceptions.TemplateDoesNotExistException:
@@ -109,7 +110,8 @@ def _send_email(email: str, stage: int, variant: str, secret: str):
                         'signup_url': signup_url,
                         'referral_url': referral_url,
                     }),
-                    ConfigurationSetName=SES_CONFIG_SET,
+                    # ConfigurationSetName temporarily disabled
+                    # ConfigurationSetName=SES_CONFIG_SET,
                 )
                 return True
             except Exception as e:
