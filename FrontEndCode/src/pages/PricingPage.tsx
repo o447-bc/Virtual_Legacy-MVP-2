@@ -74,7 +74,11 @@ const PricingPage: React.FC = () => {
       if (prev === null) {
         localStorage.setItem('sr_pricing_first_visit', new Date().toISOString());
       } else {
-        setShowComebackBanner(true);
+        const firstVisit = new Date(prev);
+        const hoursSince = (Date.now() - firstVisit.getTime()) / (1000 * 60 * 60);
+        if (hoursSince >= 24) {
+          setShowComebackBanner(true);
+        }
       }
     } catch {
       // Private browsing or localStorage unavailable — no banner
@@ -206,7 +210,7 @@ const PricingPage: React.FC = () => {
               <p className="text-amber-900 font-medium">
                 Welcome back! Use code{' '}
                 <span className="font-bold bg-amber-200 px-2 py-0.5 rounded text-amber-950">COMEBACK20</span>{' '}
-                for 20% off Premium
+                for 20% off your first 3 months of Premium
               </p>
             </div>
           </div>

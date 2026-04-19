@@ -287,7 +287,7 @@ const Discover = () => {
                   className="bg-legacy-purple hover:bg-legacy-navy"
                   onClick={() => openSignup("create-legacy")}
                 >
-                  Start Your Legacy
+                  Preserve Your First Memory
                 </Button>
               </div>
 
@@ -302,7 +302,7 @@ const Discover = () => {
                   className="bg-legacy-purple hover:bg-legacy-navy"
                   onClick={() => openSignup("start-their-legacy")}
                 >
-                  Start Their Legacy
+                  Help Them Preserve Theirs
                 </Button>
               </div>
             </div>
@@ -396,7 +396,7 @@ const Discover = () => {
                   openSignup("create-legacy");
                 }}
               >
-                Get Started Free
+                Get Started Free — Preserve Your First Memory
               </Button>
               <Button
                 size="lg"

@@ -44,7 +44,7 @@ const HowItWorksCard: React.FC<HowItWorksCardProps> = ({
           className="text-legacy-purple hover:underline text-sm font-medium"
           onClick={(e) => e.stopPropagation()}
         >
-          Try it now →
+          Preserve your first memory →
         </Link>
       </div>
 
