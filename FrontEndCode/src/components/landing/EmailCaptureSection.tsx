@@ -1,12 +1,18 @@
 import React, { useState } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { EMAIL_CAPTURE_URL } from "@/config/api";
 
-const EmailCaptureSection: React.FC = () => {
+interface EmailCaptureSectionProps {
+  source?: string;
+}
+
+const EmailCaptureSection: React.FC<EmailCaptureSectionProps> = ({ source = "landing-page" }) => {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -16,9 +22,35 @@ const EmailCaptureSection: React.FC = () => {
       return;
     }
 
-    setSubmitted(true);
-    setEmail("");
-    trackEvent("email_capture_submit");
+    setLoading(true);
+
+    try {
+      const referredBy = sessionStorage.getItem("sr_referral_hash") || undefined;
+
+      const res = await fetch(EMAIL_CAPTURE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source, ...(referredBy ? { referredBy } : {}) }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        setEmail("");
+        sessionStorage.setItem("sr_email_captured", "true");
+        trackEvent("email_capture_submit");
+      } else if (res.status === 429) {
+        setError("Too many requests. Please try again later.");
+      } else if (res.status >= 400 && res.status < 500) {
+        const data = await res.json().catch(() => null);
+        setError(data?.error || "Please check your input and try again.");
+      } else {
+        setError("Something went wrong. Please try again later.");
+      }
+    } catch {
+      setError("Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,17 +65,21 @@ const EmailCaptureSection: React.FC = () => {
             placeholder="your@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-legacy-purple focus:border-transparent"
           />
           <button
             type="submit"
-            className="px-6 py-2 bg-legacy-purple text-white rounded-md text-sm font-medium hover:bg-legacy-navy transition-colors"
+            disabled={loading}
+            className="px-6 py-2 bg-legacy-purple text-white rounded-md text-sm font-medium hover:bg-legacy-navy transition-colors disabled:opacity-50"
           >
-            Subscribe
+            {loading ? "Sending..." : "Subscribe"}
           </button>
         </form>
         {submitted && (
-          <p className="text-green-600 text-sm mt-2">You're on the list!</p>
+          <p className="text-green-600 text-sm mt-2">
+            Check your inbox — your first question is on its way!
+          </p>
         )}
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
       </div>

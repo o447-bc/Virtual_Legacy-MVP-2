@@ -48,6 +48,7 @@ import AssessmentManager from "./pages/admin/AssessmentManager";
 import SystemSettings from "./pages/admin/SystemSettings";
 import AdminFeedbackPage from "./pages/admin/AdminFeedbackPage";
 import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminEmailCapture from "./pages/admin/AdminEmailCapture";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -108,6 +109,7 @@ const App = () => (
               <Route path="assessments" element={<AssessmentManager />} />
               <Route path="feedback" element={<AdminFeedbackPage />} />
               <Route path="coupons" element={<AdminCoupons />} />
+              <Route path="email-capture" element={<AdminEmailCapture />} />
               <Route path="settings" element={<SystemSettings />} />
             </Route>
 

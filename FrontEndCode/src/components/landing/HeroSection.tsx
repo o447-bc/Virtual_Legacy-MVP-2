@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PRIMARY_CTA_CLASSES } from "./colorConfig";
 import VideoEmbed from "./VideoEmbed";
@@ -15,6 +15,16 @@ interface HeroSectionProps {
 const HeroSection: React.FC<HeroSectionProps> = ({ user, videoSrc }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalVariant, setModalVariant] = useState<'create-legacy' | 'start-their-legacy'>('create-legacy');
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const signup = searchParams.get("signup");
+    if (signup === "create-legacy" || signup === "start-their-legacy") {
+      setModalVariant(signup);
+      setModalOpen(true);
+      trackEvent("signup_modal_auto_open", { variant: signup, source: "email" });
+    }
+  }, [searchParams]);
 
   return (
     <section className="py-12 md:py-20">

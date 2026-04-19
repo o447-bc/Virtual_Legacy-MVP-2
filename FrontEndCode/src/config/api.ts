@@ -71,8 +71,24 @@ export const API_CONFIG = {
     // Feedback Reports
     SUBMIT_FEEDBACK: '/feedback',
     ADMIN_FEEDBACK: '/admin/feedback',
+
+    // Email Capture & Nurture
+    EMAIL_CAPTURE: '/email-capture',
+    ADMIN_EMAIL_CAPTURE_METRICS: '/admin/email-capture/metrics',
+    ADMIN_EMAIL_CAPTURE_EMAILS: '/admin/email-capture/emails',
+    ADMIN_EMAIL_CAPTURE_TEST_SEND: '/admin/email-capture/test-send',
+    ADMIN_EMAIL_CAPTURE_CONFIG: '/admin/email-capture/config',
+    ADMIN_EMAIL_CAPTURE_AB_RESULTS: '/admin/email-capture/ab-results',
   }
 };
+
+// Email Capture & Nurture — standalone URL constants
+export const EMAIL_CAPTURE_URL = `${apiBaseUrl}/email-capture`;
+export const ADMIN_EMAIL_CAPTURE_METRICS_URL = `${apiBaseUrl}/admin/email-capture/metrics`;
+export const ADMIN_EMAIL_CAPTURE_EMAILS_URL = `${apiBaseUrl}/admin/email-capture/emails`;
+export const ADMIN_EMAIL_CAPTURE_TEST_SEND_URL = `${apiBaseUrl}/admin/email-capture/test-send`;
+export const ADMIN_EMAIL_CAPTURE_CONFIG_URL = `${apiBaseUrl}/admin/email-capture/config`;
+export const ADMIN_EMAIL_CAPTURE_AB_RESULTS_URL = `${apiBaseUrl}/admin/email-capture/ab-results`;
 
 // Helper function to build full URL
 export const buildApiUrl = (endpoint: string, params?: Record<string, string>) => {

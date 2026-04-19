@@ -1,5 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,12 +9,21 @@ import EaseOfUseStrip from "@/components/landing/EaseOfUseStrip";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import SampleQuestionsSection from "@/components/landing/SampleQuestionsSection";
 import FounderStorySection from "@/components/landing/FounderStorySection";
+import SecondaryEmailCapture from "@/components/landing/SecondaryEmailCapture";
 import ClosingCTASection from "@/components/landing/ClosingCTASection";
 import EmailCaptureSection from "@/components/landing/EmailCaptureSection";
 import TrustStrip from "@/components/landing/TrustStrip";
 
 const Home = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      sessionStorage.setItem("sr_referral_hash", ref);
+    }
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -46,6 +55,7 @@ const Home = () => {
         <HowItWorksSection />
         <SampleQuestionsSection />
         <FounderStorySection />
+        <SecondaryEmailCapture />
         <ClosingCTASection user={user} />
         <EmailCaptureSection />
         <TrustStrip />

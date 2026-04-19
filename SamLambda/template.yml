@@ -861,6 +861,392 @@ Resources:
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
 
+  # Email Capture & Nurture System — Stores captured email addresses and nurture state
+  EmailCaptureTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: EmailCaptureDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: statusGsi
+          AttributeType: S
+        - AttributeName: capturedAt
+          AttributeType: S
+        - AttributeName: capturedWeek
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: StatusIndex
+          KeySchema:
+            - AttributeName: statusGsi
+              KeyType: HASH
+            - AttributeName: capturedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: CapturedWeekIndex
+          KeySchema:
+            - AttributeName: capturedWeek
+              KeyType: HASH
+            - AttributeName: capturedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt DataEncryptionKey.Arn
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Email Capture Rate Limiting — IP-based request throttling with TTL auto-cleanup
+  EmailCaptureRateLimitTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: EmailCaptureRateLimitDB
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: ipAddress
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ipAddress
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # Email Nurture — SES Configuration Set for open/click/bounce tracking
+  NurtureEmailConfigSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: soulreel-nurture
+
+  # Email Nurture — SNS Topic for SES event notifications
+  NurtureSesEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: soulreel-ses-nurture-events
+
+  # Email Nurture — SES event destination to SNS
+  NurtureEmailEventDestination:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    Properties:
+      ConfigurationSetName: !Ref NurtureEmailConfigSet
+      EventDestination:
+        Name: nurture-events-to-sns
+        Enabled: true
+        MatchingEventTypes:
+          - open
+          - click
+          - bounce
+          - complaint
+        SnsDestination:
+          TopicARN: !Ref NurtureSesEventsTopic
+
+  # ============================================================
+  # Email Capture & Nurture Lambda Functions
+  # ============================================================
+
+  EmailCaptureFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/emailCaptureFunctions/emailCapture/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 10
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          TABLE_EMAIL_CAPTURE: !Ref EmailCaptureTable
+          TABLE_RATE_LIMIT: !Ref EmailCaptureRateLimitTable
+          SES_CONFIGURATION_SET: !Ref NurtureEmailConfigSet
+          SENDER_EMAIL: noreply@soulreel.net
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt EmailCaptureTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt EmailCaptureRateLimitTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendTemplatedEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/email-nurture/unsubscribe-secret
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/email-nurture/disposable-domains
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        CaptureEmail:
+          Type: Api
+          Properties:
+            Path: /email-capture
+            Method: POST
+        CaptureEmailOptions:
+          Type: Api
+          Properties:
+            Path: /email-capture
+            Method: OPTIONS
+
+  UnsubscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/emailCaptureFunctions/unsubscribe/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 10
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          TABLE_EMAIL_CAPTURE: !Ref EmailCaptureTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt EmailCaptureTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/email-nurture/unsubscribe-secret
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        Unsubscribe:
+          Type: Api
+          Properties:
+            Path: /email-capture/unsubscribe
+            Method: GET
+        UnsubscribeOptions:
+          Type: Api
+          Properties:
+            Path: /email-capture/unsubscribe
+            Method: OPTIONS
+
+  NurtureSchedulerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/emailCaptureFunctions/nurtureScheduler/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 300
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          TABLE_EMAIL_CAPTURE: !Ref EmailCaptureTable
+          SES_CONFIGURATION_SET: !Ref NurtureEmailConfigSet
+          SENDER_EMAIL: noreply@soulreel.net
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:UpdateItem
+              Resource: !GetAtt EmailCaptureTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendTemplatedEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/email-nurture/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 14 * * ? *)
+            Description: Daily nurture email processing at 2 PM UTC
+            Enabled: true
+
+  SesEventTrackingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/emailCaptureFunctions/sesEventTracking/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_EMAIL_CAPTURE: !Ref EmailCaptureTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt EmailCaptureTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        SesEvents:
+          Type: SNS
+          Properties:
+            Topic: !Ref NurtureSesEventsTopic
+
+  AdminEmailCaptureFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/adminFunctions/adminEmailCapture/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Timeout: 30
+      MemorySize: 256
+      Layers:
+        - !Ref SharedUtilsLayer
+      Environment:
+        Variables:
+          TABLE_EMAIL_CAPTURE: !Ref EmailCaptureTable
+          SES_CONFIGURATION_SET: !Ref NurtureEmailConfigSet
+          SENDER_EMAIL: noreply@soulreel.net
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:Query
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt EmailCaptureTable.Arn
+                - !Sub "${EmailCaptureTable.Arn}/index/*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+                - ssm:GetParameters
+                - ssm:PutParameter
+              Resource:
+                - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/soulreel/email-nurture/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendTemplatedEmail
+              Resource: '*'
+        - Statement:
+            - Effect: Allow
+              Action:
+                - kms:Decrypt
+                - kms:DescribeKey
+              Resource: !GetAtt DataEncryptionKey.Arn
+      Events:
+        GetMetrics:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/metrics
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetMetricsOptions:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/metrics
+            Method: OPTIONS
+        GetEmails:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/emails
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetEmailsOptions:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/emails
+            Method: OPTIONS
+        TestSend:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/test-send
+            Method: POST
+            Auth:
+              Authorizer: CognitoAuthorizer
+        TestSendOptions:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/test-send
+            Method: OPTIONS
+        UpdateConfig:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/config
+            Method: PUT
+            Auth:
+              Authorizer: CognitoAuthorizer
+        UpdateConfigOptions:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/config
+            Method: OPTIONS
+        GetAbResults:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/ab-results
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        GetAbResultsOptions:
+          Type: Api
+          Properties:
+            Path: /admin/email-capture/ab-results
+            Method: OPTIONS
+
   # WebSocket API
   ConversationWebSocketApi:
     Type: AWS::ApiGatewayV2::Api
@@ -1185,6 +1571,7 @@ Resources:
       Environment:
         Variables:
           SENDER_EMAIL: noreply@soulreel.net
+          TABLE_EMAIL_CAPTURE: !Ref EmailCaptureTable
       Policies:
         - Statement:
             - Effect: Allow
@@ -1193,6 +1580,12 @@ Resources:
                 - dynamodb:PutItem
                 - dynamodb:DeleteItem
               Resource: !GetAtt PersonaSignupTempTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+              Resource: !GetAtt EmailCaptureTable.Arn
         - Statement:
             - Effect: Allow
               Action:

@@ -13,16 +13,21 @@ import {
   BarChart3,
   AlertTriangle,
   Puzzle,
+  Mail,
 } from "lucide-react";
+import { fetchAuthSession } from "aws-amplify/auth";
+import { ADMIN_EMAIL_CAPTURE_METRICS_URL } from "@/config/api";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [migrating, setMigrating] = useState(false);
+  const [emailMetrics, setEmailMetrics] = useState<any>(null);
 
   useEffect(() => {
     loadStats();
+    loadEmailMetrics();
   }, []);
 
   const loadStats = async () => {
@@ -35,6 +40,20 @@ const AdminDashboard = () => {
       toastError(msg, 'AdminDashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadEmailMetrics = async () => {
+    try {
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken?.toString();
+      if (!idToken) return;
+      const res = await fetch(ADMIN_EMAIL_CAPTURE_METRICS_URL, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (res.ok) setEmailMetrics(await res.json());
+    } catch {
+      // non-critical — card just won't show
     }
   };
 
@@ -117,6 +136,54 @@ const AdminDashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* Email Capture summary card */}
+      {emailMetrics && (
+        <Card
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate("/admin/email-capture")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Mail className="h-5 w-5 text-legacy-purple" />
+              <p className="font-semibold text-legacy-navy">Email Capture</p>
+            </div>
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-3 text-center text-sm">
+              <div>
+                <p className="text-xl font-bold">{emailMetrics.total ?? 0}</p>
+                <p className="text-xs text-gray-500">Captured</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold">
+                  {emailMetrics.total ? ((emailMetrics.converted / emailMetrics.total) * 100).toFixed(1) : "0"}%
+                </p>
+                <p className="text-xs text-gray-500">Conversion</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold">{emailMetrics.active ?? 0}</p>
+                <p className="text-xs text-gray-500">Active</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold">{emailMetrics.expired ?? 0}</p>
+                <p className="text-xs text-gray-500">Expired</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold">{emailMetrics.unsubscribed ?? 0}</p>
+                <p className="text-xs text-gray-500">Unsubscribed</p>
+              </div>
+            </div>
+            {emailMetrics.funnelStages && (
+              <div className="flex gap-2 mt-3 text-xs text-gray-500">
+                {[0, 1, 2, 3, 4].map((s) => (
+                  <span key={s} className="bg-gray-100 rounded px-2 py-0.5">
+                    S{s}: {emailMetrics.funnelStages[s] ?? 0}
+                  </span>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Question Type × Difficulty Grid */}
       <div className="overflow-x-auto">

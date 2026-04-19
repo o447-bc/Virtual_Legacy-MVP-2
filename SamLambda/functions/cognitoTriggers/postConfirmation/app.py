@@ -223,6 +223,29 @@ def lambda_handler(event, context):
     except Exception as e:
         print(f"WARNING: Failed to create trial subscription for {username}: {e}")
     
+    # --- Email Capture Conversion Tracking ---
+    try:
+        email_capture_table_name = os.environ.get('TABLE_EMAIL_CAPTURE', 'EmailCaptureDB')
+        ec_table = boto3.resource('dynamodb').Table(email_capture_table_name)
+        user_email = event['request']['userAttributes'].get('email', '').lower()
+        
+        if user_email:
+            ec_resp = ec_table.get_item(Key={'email': user_email})
+            ec_item = ec_resp.get('Item')
+            if ec_item:
+                ec_table.update_item(
+                    Key={'email': user_email},
+                    UpdateExpression='SET convertedAt = :now, convertedAtStage = :stage, statusGsi = :status',
+                    ExpressionAttributeValues={
+                        ':now': datetime.now(timezone.utc).isoformat(),
+                        ':stage': ec_item.get('reminderStage', 0),
+                        ':status': 'converted',
+                    },
+                )
+    except Exception as e:
+        print(f'[WARN] Email capture conversion tracking failed: {e}')
+        # Never block signup — continue normally
+    
     return event
 
 def create_benefactor_relationship(benefactor_id, legacy_maker_id):

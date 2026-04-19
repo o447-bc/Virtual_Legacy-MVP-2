@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Settings,
   MessageSquare,
+  Mail,
 } from "lucide-react";
 
 interface NavItem {
@@ -59,6 +60,12 @@ const navSections: NavSection[] = [
     header: "BILLING",
     items: [
       { to: "/admin/coupons", label: "Coupons", icon: Tags },
+    ],
+  },
+  {
+    header: "MARKETING",
+    items: [
+      { to: "/admin/email-capture", label: "Email Capture", icon: Mail },
     ],
   },
   {
