@@ -10,6 +10,21 @@ import { reportError } from '@/services/errorReporter';
 
 const WS_URL = (import.meta.env.VITE_WS_URL || 'wss://tfdjq4d1r6.execute-api.us-east-1.amazonaws.com/prod').trim();
 
+const UPGRADE_PROMPT_INTERVAL = 2; // Show upgrade prompt every Nth conversation
+const UPGRADE_COUNTER_KEY = 'sr_trial_conversation_count';
+
+function getTrialConversationCount(): number {
+  try {
+    return parseInt(localStorage.getItem(UPGRADE_COUNTER_KEY) || '0', 10) || 0;
+  } catch (_) { return 0; }
+}
+
+function incrementTrialConversationCount(): number {
+  const next = getTrialConversationCount() + 1;
+  try { localStorage.setItem(UPGRADE_COUNTER_KEY, String(next)); } catch (_) { /* private browsing */ }
+  return next;
+}
+
 interface ConversationInterfaceProps {
   questionId: string;
   questionText: string;
@@ -35,7 +50,6 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState('');
-  
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -176,8 +190,15 @@ export const ConversationInterface: React.FC<ConversationInterfaceProps> = ({
         break;
       
       case 'limit_reached':
-        setUpgradeMessage(data.message || 'Upgrade to Premium to continue.');
-        setShowUpgradeDialog(true);
+        // Show upgrade dialog only every 2nd time to avoid breaking the flow.
+        // On off-turns, show a gentle inline message instead.
+        const count = incrementTrialConversationCount();
+        if (count % UPGRADE_PROMPT_INTERVAL === 0) {
+          setUpgradeMessage(data.message || 'Upgrade to Premium to continue.');
+          setShowUpgradeDialog(true);
+        } else {
+          setAiText(data.message || 'You\'ve reached your conversation limit for this week. Come back soon or upgrade for unlimited access.');
+        }
         setStatus('ready');
         break;
     }

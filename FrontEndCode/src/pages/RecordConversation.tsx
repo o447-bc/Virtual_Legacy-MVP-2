@@ -9,8 +9,7 @@ import { ArrowRight } from "lucide-react";
 import { buildApiUrl, API_CONFIG } from '@/config/api';
 import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { useToast } from "@/hooks/use-toast";
-import { StreakCounter } from "@/components/StreakCounter";
-import { streakService, StreakData } from "@/services/streakService";
+
 import { ConversationInterface } from "@/components/ConversationInterface";
 import VideoMemoryRecorder from "@/components/VideoMemoryRecorder";
 import { videoStorageService } from "@/services/videoService";
@@ -37,8 +36,6 @@ const RecordResponse = () => {
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [questionError, setQuestionError] = useState(null);
   const [levelCompleted, setLevelCompleted] = useState(false);
-  const [streakData, setStreakData] = useState<StreakData | null>(null);
-  const [streakLoading, setStreakLoading] = useState(true);
   const [conversationStarted, setConversationStarted] = useState(false);
   const [showVideoMemory, setShowVideoMemory] = useState(false);
   const [audioDetailedSummary, setAudioDetailedSummary] = useState<string>('');
@@ -78,22 +75,6 @@ const RecordResponse = () => {
     }
   }, [categoryQuestions, categoryQuestionIds, currentCategoryQuestion]);
 
-  // Load streak data
-  useEffect(() => {
-    const loadStreak = async () => {
-      if (!user?.id) return;
-      try {
-        const data = await streakService.getCachedStreak(user.id);
-        setStreakData(data);
-      } catch (error) {
-        console.error('Error loading streak:', error);
-      } finally {
-        setStreakLoading(false);
-      }
-    };
-    loadStreak();
-  }, [user?.id]);
-  
   // Skip question function
   const handleSkipQuestion = () => {
     if (categoryQuestions.length <= 1) {
@@ -216,15 +197,6 @@ const RecordResponse = () => {
       </div>
 
       <main className="container mx-auto px-4 py-8">
-        {/* STREAK DISPLAY */}
-        <div className="mb-6">
-          <StreakCounter 
-            streakData={streakData} 
-            loading={streakLoading}
-            showFreeze={true}
-          />
-        </div>
-
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex justify-between items-center mb-2">
