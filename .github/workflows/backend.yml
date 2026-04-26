@@ -73,7 +73,7 @@ jobs:
 
       - name: Deploy (code-only via sam sync)
         if: steps.change-type.outputs.template_changed == '0'
-        run: sam sync --code --stack-name Virtual-Legacy-MVP-1 --no-watch --region us-east-1
+        run: echo Y | sam sync --code --stack-name Virtual-Legacy-MVP-1 --no-watch --region us-east-1
         working-directory: SamLambda
 
       - name: Deploy (full via CloudFormation)
