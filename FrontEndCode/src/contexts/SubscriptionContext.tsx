@@ -56,9 +56,12 @@ const DEFAULT_STATE: Omit<SubscriptionState, 'isLoading' | 'refetch'> = {
 const SubscriptionContext = createContext<SubscriptionState | undefined>(undefined);
 
 export function computeIsPremium(
+  planId: string,
   status: string,
   couponExpiresAt: string | null,
 ): boolean {
+  // Free plan is never premium, regardless of status
+  if (planId === 'free') return false;
   if (status === 'active' || status === 'comped') return true;
   if (status === 'trialing' && couponExpiresAt) {
     return new Date(couponExpiresAt).getTime() > Date.now();
@@ -87,7 +90,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       };
     }
 
-    const isPremium = computeIsPremium(data.status, data.couponExpiresAt ?? null);
+    const isPremium = computeIsPremium(data.planId, data.status, data.couponExpiresAt ?? null);
 
     return {
       planId: data.planId,

@@ -6,20 +6,37 @@
 
 ## What Gets Deleted
 
-### S3 Data
-- `user-responses/{userId}/` - All video responses (.webm files)
-- `user-responses/{userId}/` - All thumbnails (.jpg files)
-- `user-responses/{userId}/` - All transcripts (.json files)
-- `conversations/{userId}/` - All conversation audio and transcripts
+### S3 Data (virtual-legacy bucket)
+- `user-responses/{userId}/` — Video responses, thumbnails, transcripts
+- `conversations/{userId}/` — Conversation audio and transcripts
+- `psych-exports/{userId}/` — Psychological test export files (PDF/CSV)
 
-### DynamoDB Data
-- `userQuestionStatusDB` - All answered questions tracking
-- `userQuestionLevelProgressDB` - All level progress records
-- `userStatusDB` - Current level status
-- `PersonaRelationshipsDB` - All relationships (as initiator or related user)
-- `PersonaSignupTempDB` - Temporary signup data
-- `EngagementDB` - Streak and engagement data
-- `WebSocketConnectionsDB` - Active WebSocket connections
+### S3 Data (soulreel-exports-temp-{accountId} bucket)
+- `exports/{userId}/` — Data export ZIP archives (GDPR/content packages)
+
+### DynamoDB Data (14 tables)
+- `userQuestionStatusDB` — Answered questions tracking
+- `userQuestionLevelProgressDB` — Level progress per question type
+- `userStatusDB` — Current global level
+- `PersonaRelationshipsDB` — All relationships (as initiator or related user)
+- `AccessConditionsDB` — Access conditions (cascade-deleted with relationships)
+- `PersonaSignupTempDB` — Temporary signup / invitation data
+- `EngagementDB` — Streak and engagement data
+- `UserSubscriptionsDB` — Stripe subscription and billing tier
+- `UserTestProgressDB` — In-progress psych test responses
+- `UserTestResultsDB` — Completed psych test results and scores
+- `DataRetentionDB` — Export requests, deletion requests, dormancy tracking
+- `WebSocketConnectionsDB` — Active WebSocket connections
+- `ConversationStateDB` — In-flight conversation state
+- `FeedbackReportsDB` — User-submitted bug reports and feature requests
+
+### ⚠️ Data Retention Warning
+- If the user has pending data export requests, they will be deleted.
+- If the user has a pending account deletion (grace period), it will be cleared.
+- Any exported ZIP archives in the temp bucket will be removed immediately.
+- Psychological test results are permanently destroyed — no undo.
+- Stripe subscription DynamoDB record is deleted (does NOT cancel Stripe itself).
+- This utility is intended for **test accounts only**.
 
 ## What Gets Preserved
 
@@ -185,6 +202,16 @@ After running this script, you can test the first-time login initialization:
 | Includes EngagementDB | ❌ No | ✅ Yes |
 | Includes WebSocketConnectionsDB | ❌ No | ✅ Yes |
 | Includes conversations/ S3 | ❌ No | ✅ Yes |
+| Includes psych-exports/ S3 | ❌ No | ✅ Yes |
+| Includes exports temp bucket | ❌ No | ✅ Yes |
+| Includes UserSubscriptionsDB | ❌ No | ✅ Yes |
+| Includes UserTestProgressDB | ❌ No | ✅ Yes |
+| Includes UserTestResultsDB | ❌ No | ✅ Yes |
+| Includes DataRetentionDB | ❌ No | ✅ Yes |
+| Includes ConversationStateDB | ❌ No | ✅ Yes |
+| Includes FeedbackReportsDB | ❌ No | ✅ Yes |
+| Cascade AccessConditionsDB | ❌ No | ✅ Yes |
+| Data retention warning | ❌ No | ✅ Yes |
 | Dry run mode | ❌ No | ✅ Yes |
 | Batch mode | ❌ No | ✅ Yes |
 | Use case | Complete user removal | Testing first-time login |
@@ -196,8 +223,9 @@ After running this script, you can test the first-time login initialization:
 - AWS credentials configured (AWS CLI)
 - Appropriate IAM permissions:
   - Cognito: `cognito-idp:ListUsers`, `cognito-idp:AdminGetUser`
-  - S3: `s3:ListBucket`, `s3:DeleteObject`
-  - DynamoDB: `dynamodb:Query`, `dynamodb:Scan`, `dynamodb:DeleteItem`
+  - STS: `sts:GetCallerIdentity` (to discover account ID for exports bucket)
+  - S3: `s3:ListBucket`, `s3:DeleteObject` (on both `virtual-legacy` and `soulreel-exports-temp-*` buckets)
+  - DynamoDB: `dynamodb:Query`, `dynamodb:Scan`, `dynamodb:DeleteItem` (on all 14 tables)
 
 ## Troubleshooting
 
@@ -223,3 +251,8 @@ aws configure
 ## Author
 
 Created by Kiro AI Assistant on 2026-02-21 to support testing of the first-time login initialization fix.
+
+Updated 2026-04-26: Added 7 new DynamoDB tables (UserSubscriptionsDB, DataRetentionDB,
+UserTestProgressDB, UserTestResultsDB, ConversationStateDB, AccessConditionsDB,
+FeedbackReportsDB), 2 new S3 prefixes (psych-exports, exports temp bucket),
+cascade delete of AccessConditionsDB from PersonaRelationships, and data retention warning.

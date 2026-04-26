@@ -288,24 +288,26 @@ class TestPremiumStatus:
     @patch('plan_check._get_plan_definition', side_effect=_mock_get_plan_definition)
     @patch('plan_check.get_user_plan')
     def test_no_subscription_record_fail_open(self, mock_get_user_plan, mock_plan_def):
-        """User with no subscription record → _FREE_PLAN_DEFAULT has status='active',
-        so is_premium_active returns True (fail-open design). All access allowed."""
+        """User with no subscription record → _FREE_PLAN_DEFAULT has planId='free',
+        status='active'. Since planId is 'free', is_premium_active returns False,
+        so the user is gated by plan limits (Level 1 only)."""
         from plan_check import check_question_category_access
 
-        # get_user_plan returns the free default when no record exists;
-        # that default has status='active' which is treated as premium (fail-open).
+        # get_user_plan returns the free default when no record exists
         mock_get_user_plan.return_value = {
             'userId': 'user-1',
             'planId': 'free',
             'status': 'active',
             'benefactorCount': 0,
         }
+        # Level 1 allowed for free users
         result = check_question_category_access('user-1', 'life_story_reflections-general-L1-Q1')
         assert result['allowed'] is True
 
-        # Even Level 2 is allowed because status='active' → premium path
+        # Level 2 denied for free users (planId='free' → not premium → level check applies)
         result = check_question_category_access('user-1', 'life_story_reflections-general-L2-Q1')
-        assert result['allowed'] is True
+        assert result['allowed'] is False
+        assert result['reason'] == 'question_level'
 
     @patch('plan_check._get_plan_definition', side_effect=_mock_get_plan_definition)
     @patch('plan_check.get_user_plan')
@@ -333,39 +335,39 @@ class TestIsPremiumActive:
 
     def test_active_status(self):
         from plan_check import is_premium_active
-        assert is_premium_active({'status': 'active'}) is True
+        assert is_premium_active({'planId': 'premium', 'status': 'active'}) is True
 
     def test_comped_status(self):
         from plan_check import is_premium_active
-        assert is_premium_active({'status': 'comped'}) is True
+        assert is_premium_active({'planId': 'premium', 'status': 'comped'}) is True
 
     def test_trialing_with_future_trial_expires(self):
         from plan_check import is_premium_active
         future = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-        assert is_premium_active({'status': 'trialing', 'trialExpiresAt': future}) is True
+        assert is_premium_active({'planId': 'premium', 'status': 'trialing', 'trialExpiresAt': future}) is True
 
     def test_trialing_with_past_trial_expires(self):
         from plan_check import is_premium_active
         past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
-        assert is_premium_active({'status': 'trialing', 'trialExpiresAt': past}) is False
+        assert is_premium_active({'planId': 'premium', 'status': 'trialing', 'trialExpiresAt': past}) is False
 
     def test_trialing_with_future_coupon_expires(self):
         from plan_check import is_premium_active
         future = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
-        assert is_premium_active({'status': 'trialing', 'couponExpiresAt': future}) is True
+        assert is_premium_active({'planId': 'premium', 'status': 'trialing', 'couponExpiresAt': future}) is True
 
     def test_trialing_with_past_coupon_expires(self):
         from plan_check import is_premium_active
         past = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
-        assert is_premium_active({'status': 'trialing', 'couponExpiresAt': past}) is False
+        assert is_premium_active({'planId': 'premium', 'status': 'trialing', 'couponExpiresAt': past}) is False
 
     def test_trialing_no_expiry_fields(self):
         from plan_check import is_premium_active
-        assert is_premium_active({'status': 'trialing'}) is False
+        assert is_premium_active({'planId': 'premium', 'status': 'trialing'}) is False
 
     def test_canceled_status(self):
         from plan_check import is_premium_active
-        assert is_premium_active({'status': 'canceled'}) is False
+        assert is_premium_active({'planId': 'premium', 'status': 'canceled'}) is False
 
     def test_empty_status(self):
         from plan_check import is_premium_active
@@ -374,6 +376,16 @@ class TestIsPremiumActive:
     def test_missing_status(self):
         from plan_check import is_premium_active
         assert is_premium_active({}) is False
+
+    def test_free_plan_active_status_returns_false(self):
+        """Free plan with status=active should NOT be premium."""
+        from plan_check import is_premium_active
+        assert is_premium_active({'planId': 'free', 'status': 'active'}) is False
+
+    def test_free_plan_comped_status_returns_false(self):
+        """Free plan with status=comped should NOT be premium."""
+        from plan_check import is_premium_active
+        assert is_premium_active({'planId': 'free', 'status': 'comped'}) is False
 
 
 # ===================================================================

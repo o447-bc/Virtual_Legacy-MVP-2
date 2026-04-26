@@ -157,6 +157,10 @@ def is_trial_active(subscription_record: dict) -> bool:
 
 def is_premium_active(subscription_record: dict) -> bool:
     """Return True when the user should be treated as having Premium access."""
+    plan_id = subscription_record.get('planId', 'free')
+    # Free plan is never premium, regardless of status
+    if plan_id == 'free':
+        return False
     status = subscription_record.get('status')
     if status in ('active', 'comped'):
         return True
