@@ -228,7 +228,6 @@ const Dashboard = () => {
             progressLabel={`${lifeEventsCompleted} out of ${lifeEventsTotal} questions completed`}
             accentColor="border-blue-500"
             locked={!isPremium}
-            badge={!isPremium ? "Premium" : undefined}
             onLockedClick={() => {
               setUpgradeDialogContent({
                 title: "Life Events",
@@ -246,7 +245,6 @@ const Dashboard = () => {
             progressLabel={`${psychTests.filter(t => t.completedAt).length} of ${psychTests.length} assessments completed`}
             accentColor="border-amber-500"
             locked={!isPremium}
-            badge={!isPremium ? "Premium" : undefined}
             onLockedClick={() => {
               setUpgradeDialogContent({
                 title: "Values & Emotions",

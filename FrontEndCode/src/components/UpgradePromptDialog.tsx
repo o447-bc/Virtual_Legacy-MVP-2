@@ -38,8 +38,8 @@ export const UpgradePromptDialog: React.FC<UpgradePromptDialogProps> = ({
   const { planLimits } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  const monthlyPrice = planLimits.monthlyPriceDisplay ?? "$9.99";
-  const annualEquivalent = planLimits.annualMonthlyEquivalentDisplay ?? "$6.58";
+  const monthlyPrice = planLimits.monthlyPriceDisplay ?? "$14.99";
+  const annualEquivalent = planLimits.annualMonthlyEquivalentDisplay ?? "$12.42";
 
   const handleSubscribeNow = async () => {
     setCheckoutLoading(true);
