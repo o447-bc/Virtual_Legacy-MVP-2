@@ -76,6 +76,10 @@ HANDLERS = [
     'functions.dataRetentionFunctions.storageLifecycle.app',
     'functions.dataRetentionFunctions.legacyProtection.app',
     'functions.dataRetentionFunctions.adminLifecycle.app',
+    'functions.billingFunctions.billing.app',
+    'functions.billingFunctions.stripeWebhook.app',
+    'functions.billingFunctions.couponExpiration.app',
+    'functions.billingFunctions.winBack.app',
 ]
 
 

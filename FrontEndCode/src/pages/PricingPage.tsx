@@ -23,19 +23,18 @@ const STRIPE_MONTHLY_PRICE_ID = import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID || 
 const STRIPE_ANNUAL_PRICE_ID = import.meta.env.VITE_STRIPE_ANNUAL_PRICE_ID || "price_annual_placeholder";
 
 const FREE_FEATURES = [
-  "Life Story Reflections (Level 1)",
-  "Up to 2 benefactors",
-  "Immediate access conditions",
-  "Basic features",
+  "Complete Level 1 — Childhood, Family, School & Friends",
+  "Full AI interview quality (same as Premium)",
+  "Share with 1 family member",
+  "Your stories are yours forever",
 ];
 
 const PREMIUM_FEATURES = [
-  "All Life Story Reflections levels",
-  "Life Events questions",
-  "Values & Emotions questions",
-  "Unlimited benefactors",
-  "All access condition types",
-  "PDF export, legacy export & more",
+  "All 10 levels — from Childhood to Messages to Loved Ones",
+  "Personalized Life Events questions",
+  "Values & Emotions assessments",
+  "Unlimited benefactors with all access conditions",
+  "Data export & legacy protection",
 ];
 
 const PricingPage: React.FC = () => {
@@ -55,17 +54,23 @@ const PricingPage: React.FC = () => {
 
   // For unauthenticated visitors, fetch public plans
   const [publicPlans, setPublicPlans] = useState<Record<string, PlanDefinition> | null>(null);
+  const [foundingMemberAvailable, setFoundingMemberAvailable] = useState(false);
+  const [foundingMemberSlotsRemaining, setFoundingMemberSlotsRemaining] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      getPublicPlans()
-        .then((data) => setPublicPlans(data.plans))
-        .catch(() => {
-          // Silently fail — pricing will show without dynamic data
-        });
-    }
-  }, [isAuthenticated]);
+    // Fetch public plans for both authenticated and unauthenticated users
+    // (founding member availability is only in the plans endpoint)
+    getPublicPlans()
+      .then((data) => {
+        setPublicPlans(data.plans);
+        setFoundingMemberAvailable(data.foundingMemberAvailable ?? false);
+        setFoundingMemberSlotsRemaining(data.foundingMemberSlotsRemaining ?? 0);
+      })
+      .catch(() => {
+        // Silently fail — pricing will show without dynamic data
+      });
+  }, []);
 
   // Re-engagement banner: track pricing page visits in localStorage
   useEffect(() => {
@@ -90,9 +95,9 @@ const PricingPage: React.FC = () => {
     ? subscription.planLimits
     : publicPlans?.premium;
 
-  const monthlyPrice = premiumLimits?.monthlyPriceDisplay ?? "$9.99";
-  const annualEquivalent = premiumLimits?.annualMonthlyEquivalentDisplay ?? "$6.58";
-  const annualSavings = premiumLimits?.annualSavingsPercent ?? 34;
+  const monthlyPrice = premiumLimits?.monthlyPriceDisplay ?? "$14.99";
+  const annualEquivalent = premiumLimits?.annualMonthlyEquivalentDisplay ?? "$12.42";
+  const annualSavings = premiumLimits?.annualSavingsPercent ?? 17;
 
   const savingsNote =
     billingPeriod === "annual" ? `save ${annualSavings}%` : null;
@@ -114,7 +119,14 @@ const PricingPage: React.FC = () => {
         billingPeriod === "monthly"
           ? STRIPE_MONTHLY_PRICE_ID
           : STRIPE_ANNUAL_PRICE_ID;
-      const { sessionUrl } = await createCheckoutSession(priceId);
+
+      // Apply founding member coupon automatically for annual billing
+      const couponId =
+        foundingMemberAvailable && billingPeriod === "annual"
+          ? premiumLimits?.foundingMemberCouponCode ?? undefined
+          : undefined;
+
+      const { sessionUrl } = await createCheckoutSession(priceId, couponId);
       window.location.href = sessionUrl;
     } catch (err: any) {
       toastError(err.message || "Failed to start checkout. Please try again.", 'PricingPage');
@@ -313,6 +325,16 @@ const PricingPage: React.FC = () => {
                       🎉 Save {annualSavings}% with annual billing
                     </span>
                   )}
+                  {foundingMemberAvailable && billingPeriod === "annual" && (
+                    <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                      <p className="text-sm font-semibold text-amber-900">
+                        🌟 Founding Member Rate: $99/year
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        {foundingMemberSlotsRemaining} of 100 spots remaining — locked in for life
+                      </p>
+                    </div>
+                  )}
                   <p className="text-sm text-gray-500 mt-2">Less than a cup of coffee a week</p>
                 </div>
               </CardHeader>
@@ -332,7 +354,7 @@ const PricingPage: React.FC = () => {
                     className="w-full bg-legacy-purple hover:bg-legacy-navy"
                     onClick={() => navigate("/signup-create-legacy")}
                   >
-                    Start Free Trial
+                    Start Free
                   </Button>
                 )}
                 {isAuthenticated && isFreePlan && !isTrialing && (

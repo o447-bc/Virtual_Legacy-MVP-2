@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/inviteFunctions/sendInviteEmail/app.py
+# hypothesis_version: 6.151.12
+
+[200, 400, 401, 500, 'ALLOWED_ORIGIN', 'Body', 'Data', 'Html', 'OPTIONS', 'POST,OPTIONS', 'PersonaSignupTempDB', 'Subject', 'TABLE_SIGNUP_TEMP', 'Text', 'ToAddresses', 'authorizer', 'benefactor_email', 'benefactor_id', 'body', 'claims', 'created_at', 'dynamodb', 'error', 'headers', 'httpMethod', 'invite_token', 'invite_type', 'invitee_email', 'legacy_maker_invite', 'message', 'requestContext', 'sent_to', 'ses', 'statusCode', 'sub', 'ttl', 'us-east-1', 'userName', '{}']

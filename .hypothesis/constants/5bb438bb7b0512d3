@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/relationshipFunctions/getRelationships/app.py
+# hypothesis_version: 6.151.12
+
+[200, 400, 500, ':uid', 'ALLOWED_ORIGIN', 'ExclusiveStartKey', 'Items', 'LastEvaluatedKey', 'Name', 'RelatedUserIndex', 'TABLE_RELATIONSHIPS', 'USER_POOL_ID', 'UserAttributes', 'Value', 'body', 'cognito-idp', 'dynamodb', 'email', 'error', 'family_name', 'given_name', 'headers', 'initiator_id = :uid', 'pending#', 'related_user_email', 'related_user_id', 'relationships', 'statusCode', 'userId']

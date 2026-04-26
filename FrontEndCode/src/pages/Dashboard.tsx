@@ -19,6 +19,8 @@ import { useProgress, computeLifeStoryProgress } from "@/hooks/useProgress";
 import { useLifeEventsProgress } from "@/hooks/useLifeEventsProgress";
 import LifeEventsSurvey from "@/components/LifeEventsSurvey";
 import { getSurveyStatus, type LifeEventInstanceGroup } from "@/services/surveyService";
+import { Level1CelebrationScreen } from "@/components/Level1CelebrationScreen";
+import { HalfwayBanner, PostCompletionBanner, BenefactorAwareBanner, LifeEventsTeaser } from "@/components/UpgradeBanner";
 import { BookOpen, Calendar, Sparkles, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { listPsychTests } from "@/services/psychTestService";
@@ -26,7 +28,7 @@ import type { PsychTest } from "@/types/psychTests";
 
 const Dashboard = () => {
   const { user, hasCompletedSurvey, refreshSurveyStatus } = useAuth();
-  const { isPremium, trialDaysRemaining, previewQuestions, conversationsThisWeek, conversationsPerWeek } = useSubscription();
+  const { isPremium, level1CompletionPercent, level1CompletedAt, benefactorCount, totalQuestionsCompleted } = useSubscription();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
@@ -40,6 +42,7 @@ const Dashboard = () => {
   const [streakData, setStreakData] = useState<StreakData | null>(null);
   const [streakLoading, setStreakLoading] = useState(true);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [upgradeDialogContent, setUpgradeDialogContent] = useState<{
     title: string;
     message: string;
@@ -68,11 +71,13 @@ const Dashboard = () => {
   const lifeEventsTotal = lifeEventsData?.totalQuestions ?? 0;
   const lifeEventsCompleted = lifeEventsData?.completedQuestions ?? 0;
 
-  // Preview question availability per locked category
-  const hasLifeEventsPreview = previewQuestions.some(q => q.startsWith('life_events'));
-  const hasValuesEmotionsPreview = previewQuestions.some(q => q.startsWith('psych_') || q.startsWith('values_emotions'));
-  const lifeEventsPreviewCompleted = lifeEventsCompleted > 0;
-  const valuesEmotionsPreviewCompleted = psychTests.filter(t => t.completedAt).length > 0;
+  // Level 1 celebration screen trigger
+  useEffect(() => {
+    if (level1CompletedAt && !localStorage.getItem('level1CelebrationShown')) {
+      setShowCelebration(true);
+      localStorage.setItem('level1CelebrationShown', 'true');
+    }
+  }, [level1CompletedAt]);
 
   // Defensive camera cleanup
   useEffect(() => {
@@ -186,34 +191,23 @@ const Dashboard = () => {
           />
         )}
 
-        {/* Trial nudge banner */}
-        {trialDaysRemaining !== null && trialDaysRemaining <= 5 && trialDaysRemaining > 0 && (
-          <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-600" />
-            <p className="text-sm text-amber-800">
-              Your trial ends in {trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''}. You'll lose access to Life Events, deeper questions, and unlimited benefactors.{' '}
-              <Link to="/pricing" className="font-semibold text-legacy-purple underline">
-                View plans
-              </Link>
-            </p>
+        {/* V2 Upgrade banners — shown for free users based on Level 1 progress */}
+        {!isPremium && (
+          <div className="mb-4 space-y-3">
+            <HalfwayBanner />
+            <PostCompletionBanner />
+            <BenefactorAwareBanner />
+            {lifeEventsTotal > 0 && <LifeEventsTeaser questionCount={lifeEventsTotal} />}
           </div>
         )}
 
-        {/* Conversation usage indicator — free users only */}
-        {!isPremium && conversationsPerWeek > 0 && (
-          <div className="mb-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
-            <div className="flex-1">
-              <p className="text-sm text-gray-700 font-medium">
-                {conversationsThisWeek} of {conversationsPerWeek} conversations used this week
-              </p>
-              <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5">
-                <div
-                  className="bg-legacy-purple h-1.5 rounded-full transition-all"
-                  style={{ width: `${Math.min(100, (conversationsThisWeek / conversationsPerWeek) * 100)}%` }}
-                />
-              </div>
-            </div>
-          </div>
+        {/* Level 1 Celebration Screen */}
+        {showCelebration && (
+          <Level1CelebrationScreen
+            onDismiss={() => setShowCelebration(false)}
+            storiesCount={totalQuestionsCompleted}
+            lifeEventsQuestionCount={lifeEventsTotal}
+          />
         )}
 
         {/* Content path cards */}
@@ -234,19 +228,15 @@ const Dashboard = () => {
             progressLabel={`${lifeEventsCompleted} out of ${lifeEventsTotal} questions completed`}
             accentColor="border-blue-500"
             locked={!isPremium}
-            badge={!isPremium && hasLifeEventsPreview && !lifeEventsPreviewCompleted ? "Try 1 free question" : undefined}
-            onLockedClick={
-              !isPremium && hasLifeEventsPreview && !lifeEventsPreviewCompleted
-                ? () => navigate("/life-events")
-                : () => {
-                    setUpgradeDialogContent({
-                      title: "Life Events",
-                      message: "These are the moments that shaped who you are. Upgrade to Premium to start preserving them.",
-                      questionCount: lifeEventsTotal || undefined,
-                    });
-                    setShowUpgradeDialog(true);
-                  }
-            }
+            badge={!isPremium ? "Premium" : undefined}
+            onLockedClick={() => {
+              setUpgradeDialogContent({
+                title: "Life Events",
+                message: "These are the moments that shaped who you are. Upgrade to Premium to start preserving them.",
+                questionCount: lifeEventsTotal || undefined,
+              });
+              setShowUpgradeDialog(true);
+            }}
             onClick={() => navigate("/life-events")}
           />
           <ContentPathCard
@@ -256,18 +246,14 @@ const Dashboard = () => {
             progressLabel={`${psychTests.filter(t => t.completedAt).length} of ${psychTests.length} assessments completed`}
             accentColor="border-amber-500"
             locked={!isPremium}
-            badge={!isPremium && hasValuesEmotionsPreview && !valuesEmotionsPreviewCompleted ? "Try 1 free question" : undefined}
-            onLockedClick={
-              !isPremium && hasValuesEmotionsPreview && !valuesEmotionsPreviewCompleted
-                ? () => navigate("/personal-insights")
-                : () => {
-                    setUpgradeDialogContent({
-                      title: "Values & Emotions",
-                      message: "Explore the deeper dimensions of who you are. Upgrade to Premium to unlock these insights.",
-                    });
-                    setShowUpgradeDialog(true);
-                  }
-            }
+            badge={!isPremium ? "Premium" : undefined}
+            onLockedClick={() => {
+              setUpgradeDialogContent({
+                title: "Values & Emotions",
+                message: "Explore the deeper dimensions of who you are. Upgrade to Premium to unlock these insights.",
+              });
+              setShowUpgradeDialog(true);
+            }}
             onClick={() => navigate("/personal-insights")}
           />
         </div>

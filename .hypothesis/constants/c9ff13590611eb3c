@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/relationshipFunctions/validateAccess/app.py
+# hypothesis_version: 6.151.12
+
+[200, 400, 500, '+00:00', ':init_id', ':rel_id', ':rkey', 'AccessConditionsDB', 'Items', 'OPTIONS', 'RelatedUserIndex', 'TABLE_RELATIONSHIPS', 'Z', 'access_expiry', 'activated', 'activation_date', 'active', 'body', 'condition_type', 'conditions_not_met', 'database_error', 'dynamodb', 'error', 'expired', 'hasAccess', 'headers', 'httpMethod', 'immediate', 'inactivity_months', 'inactivity_trigger', 'manual_release', 'no_relationship', 'pending', 'reason', 'relationship_access', 'released_at', 'requestingUserId', 'self_access', 'status', 'statusCode', 'targetUserId', 'time_delayed', 'unmet_conditions']

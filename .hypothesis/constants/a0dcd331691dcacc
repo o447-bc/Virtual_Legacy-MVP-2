@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/assignmentFunctions/manualRelease/app.py
+# hypothesis_version: 6.151.12
+
+[200, 401, 500, '#', '#status', '../../shared', '/opt/python', ':ctype', ':released_at', ':released_by', ':status', 'ALLOWED_ORIGIN', 'AccessConditionsDB', 'Body', 'ConditionTypeIndex', 'Data', 'Html', 'Items', 'Name', 'OPTIONS', 'POST,OPTIONS', 'SENDER_EMAIL', 'Subject', 'Text', 'ToAddresses', 'USER_POOL_ID', 'UserAttributes', 'Value', 'activated', 'active', 'already_released', 'authorizer', 'benefactor_email', 'body', 'claims', 'cognito-idp', 'condition_id', 'details', 'dynamodb', 'email', 'error', 'errors', 'headers', 'httpMethod', 'manual_release', 'message', 'newly_released', 'notification_sent', 'notifications_sent', 'pending#', 'relationship_key', 'released', 'released_at', 'requestContext', 'ses', 'status', 'statusCode', 'sub', 'success', 'summary', 'total_conditions', 'unknown', 'unknown@example.com', 'us-east-1']

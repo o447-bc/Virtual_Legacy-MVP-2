@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/cognitoTriggers/preSignup/app.py
+# hypothesis_version: 6.151.12
+
+[3600, 'PersonaSignupTempDB', 'TABLE_SIGNUP_TEMP', 'autoConfirmUser', 'autoVerifyEmail', 'benefactor_invited', 'clientMetadata', 'create_legacy', 'dynamodb', 'first_name', 'invite_token', 'last_name', 'legacy_benefactor', 'legacy_maker', 'persona_choice', 'persona_type', 'request', 'response', 'setup_for_someone', 'ttl', 'userName']

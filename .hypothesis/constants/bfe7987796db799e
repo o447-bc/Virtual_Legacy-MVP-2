@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/assignmentFunctions/checkInResponse/app.py
+# hypothesis_version: 6.151.12
+
+[200, 400, 404, 500, '../../shared', '/opt/python', ':check_in_time', ':zero', 'ALLOWED_ORIGIN', 'AccessConditionsDB', 'CheckInResponse', 'Content-Type', 'Invalid token data', 'Item', 'PersonaSignupTempDB', 'TABLE_SIGNUP_TEMP', 'body', 'condition_id', 'condition_type', 'dynamodb', 'event_type', 'headers', 'inactivity_trigger', 'processor', 'relationship_key', 'statusCode', 'text/html', 'timestamp', 'token', 'userName', 'user_id']

@@ -202,7 +202,7 @@ Backend: Python (pytest + Hypothesis for tests)
     - Verify COMEBACK20 banner is visible iff `!isPremium && hasLocalStorageTimestamp`
     - **Validates: Requirements 9.2, 9.4, 9.5**
 
-- [-] 11. Final checkpoint — Ensure all tests pass
+- [x] 11. Final checkpoint — Ensure all tests pass
   - Run full test suites: `npx vitest --run` in `FrontEndCode/` and `pytest` in `SamLambda/`
   - Run `npm run lint && npm run build` in `FrontEndCode/` to verify production build
   - Run `sam build && sam validate --lint` in `SamLambda/` to verify backend build

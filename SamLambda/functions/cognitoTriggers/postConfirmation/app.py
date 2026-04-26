@@ -205,23 +205,29 @@ def lambda_handler(event, context):
         print(f"CRITICAL: Error preparing persona attributes for user {username}: {str(e)}")
         # Don't fail the signup process
     
-    # Create 7-day Premium trial subscription record
+    # Create free-plan subscription record for new user
     try:
         dynamodb_resource = boto3.resource('dynamodb')
         subscriptions_table = dynamodb_resource.Table(os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB'))
-        trial_expires = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
-        subscriptions_table.put_item(Item={
-            'userId': username,
-            'planId': 'premium',
-            'status': 'trialing',
-            'trialExpiresAt': trial_expires,
-            'benefactorCount': 0,
-            'createdAt': datetime.now(timezone.utc).isoformat(),
-            'updatedAt': datetime.now(timezone.utc).isoformat(),
-        })
-        print(f"Created trial subscription for user: {username}")
+        now_iso = datetime.now(timezone.utc).isoformat()
+        subscriptions_table.put_item(
+            Item={
+                'userId': username,
+                'planId': 'free',
+                'status': 'active',
+                'benefactorCount': 0,
+                'level1CompletionPercent': 0,
+                'totalQuestionsCompleted': 0,
+                'createdAt': now_iso,
+                'updatedAt': now_iso,
+            },
+            ConditionExpression='attribute_not_exists(userId)',
+        )
+        print(f"Created free-plan subscription for user: {username}")
+    except dynamodb_resource.meta.client.exceptions.ConditionalCheckFailedException:
+        print(f"Subscription record already exists for user: {username} — skipping")
     except Exception as e:
-        print(f"WARNING: Failed to create trial subscription for {username}: {e}")
+        print(f"WARNING: Failed to create subscription for {username}: {e}")
     
     # --- Email Capture Conversion Tracking ---
     try:

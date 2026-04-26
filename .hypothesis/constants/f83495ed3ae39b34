@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/scheduledJobs/checkInSender/app.py
+# hypothesis_version: 6.151.12
+
+[200, '#', '#status', '+00:00', '../../shared', '/opt/python', ':ctype', ':missed_count', ':pending_status', ':sent_time', 'APP_BASE_URL', 'AccessConditionsDB', 'CheckInSender', 'ConditionTypeIndex', 'Items', 'Name', 'PersonaSignupTempDB', 'SENDER_EMAIL', 'TABLE_SIGNUP_TEMP', 'USER_POOL_ID', 'UserAttributes', 'Value', 'Z', 'body', 'check_in', 'check_in_email_sent', 'cognito-idp', 'condition_id', 'created_at', 'dynamodb', 'email', 'emails_failed', 'emails_processed', 'emails_sent', 'errors', 'event_type', 'inactivity_trigger', 'last_check_in_sent', 'pending', 'processor', 'relationship_key', 'status', 'statusCode', 'success', 'timestamp', 'token', 'token_type', 'ttl', 'userName', 'user_id']

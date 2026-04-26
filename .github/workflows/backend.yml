@@ -60,6 +60,23 @@ jobs:
         run: python -m pytest tests/test_imports.py -v --tb=short
         working-directory: SamLambda
 
-      - name: Deploy
+      - name: Detect change type
+        id: change-type
+        run: |
+          TEMPLATE_CHANGED=$(git diff --name-only HEAD~1 HEAD -- SamLambda/template.yml | wc -l | tr -d ' ')
+          echo "template_changed=$TEMPLATE_CHANGED" >> "$GITHUB_OUTPUT"
+          if [ "$TEMPLATE_CHANGED" -eq "0" ]; then
+            echo "Code-only change detected — will use sam sync --code"
+          else
+            echo "Infrastructure change detected — will use sam deploy"
+          fi
+
+      - name: Deploy (code-only via sam sync)
+        if: steps.change-type.outputs.template_changed == '0'
+        run: sam sync --code --stack-name Virtual-Legacy-MVP-1 --no-watch --region us-east-1
+        working-directory: SamLambda
+
+      - name: Deploy (full via CloudFormation)
+        if: steps.change-type.outputs.template_changed != '0'
         run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
         working-directory: SamLambda

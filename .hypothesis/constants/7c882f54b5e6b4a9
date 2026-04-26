@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/questionDbFunctions/getTotalValidAllQuestions/app.py
+# hypothesis_version: 6.151.12
+
+[200, 500, 86400, ':active_true', ':valid', 'ALLOWED_ORIGIN', 'COUNT', 'Count', 'LastEvaluatedKey', 'OPTIONS', 'Parameter', 'String', 'Value', 'allQuestionDB', 'body', 'cached', 'count', 'dynamodb', 'error', 'headers', 'httpMethod', 'ssm', 'statusCode', 'timestamp']

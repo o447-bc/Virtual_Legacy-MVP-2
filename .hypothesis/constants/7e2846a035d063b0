@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/scheduledJobs/inactivityProcessor/app.py
+# hypothesis_version: 6.151.12
+
+[200, '#', '#status', '+00:00', '../../shared', '/opt/python', ':activated_at', ':activated_status', ':ctype', ':pending_status', 'AccessConditionsDB', 'ConditionTypeIndex', 'InactivityProcessor', 'Items', 'Name', 'SENDER_EMAIL', 'USER_POOL_ID', 'UserAttributes', 'Value', 'Z', 'activated', 'activation_time', 'activation_type', 'activations_failed', 'active', 'body', 'cognito-idp', 'condition_id', 'created_at', 'dynamodb', 'email', 'errors', 'event_type', 'inactivity_months', 'inactivity_trigger', 'last_check_in', 'pending', 'pending#', 'processor', 'relationship_key', 'status', 'statusCode', 'success', 'timestamp']

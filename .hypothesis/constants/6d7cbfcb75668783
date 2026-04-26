@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/questionDbFunctions/getQuestionTypeData/app.py
+# hypothesis_version: 6.151.12
+
+[200, 300, 500, 'ALLOWED_ORIGIN', 'GET,OPTIONS', 'Items', 'Question', 'TABLE_ALL_QUESTIONS', 'Unknown', 'Valid', 'active', 'allQuestionDB', 'body', 'dynamodb', 'error', 'friendlyNames', 'headers', 'numValidQuestions', 'questionId', 'questionType', 'questionTypes', 'statusCode', 'themeName']

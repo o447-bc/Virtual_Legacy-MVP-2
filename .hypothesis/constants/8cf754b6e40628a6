@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/videoFunctions/processTranscript/app.py
+# hypothesis_version: 6.151.12
+
+[200, 400, ', ', '-', '.json', '.txt', '300000', 'Body', 'COMPLETED', 'Event', 'FAILED', 'FailureReason', 'Invalid job name', 'Item', 'Parameter', 'Processing complete', 'S3_BUCKET', 'SET ', 'Transcript', 'TranscriptFileUri', 'TranscriptionJob', 'TranscriptionJobName', 'Unknown error', 'Value', 'body', 'detail', 'dynamodb', 'lambda', 'questionId', 'regular_video', 'results', 's3', 's3://', 'ssm', 'statusCode', 'text/plain', 'transcribe', 'transcript', 'transcript-', 'transcriptionError', 'transcriptionStatus', 'transcripts', 'userId', 'userQuestionStatusDB', 'utf-8', 'video', 'videoMemory', 'videoType', 'video_memory', 'virtual-legacy']

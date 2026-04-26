@@ -100,8 +100,9 @@ def _get_plan_definition(plan_id: str) -> dict:
         return _plan_cache[plan_id]
     return {
         'planId': 'free',
-        'allowedQuestionCategories': ['life_story_reflections_L1'],
-        'maxBenefactors': 2,
+        'maxLevel': 1,
+        'allowedQuestionCategories': ['life_story_reflections'],
+        'maxBenefactors': 1,
         'accessConditionTypes': ['immediate'],
         'features': ['basic'],
     }
@@ -220,7 +221,7 @@ def handle_create_checkout(event, user_id, log):
         )
 
     # Create Checkout Session
-    session = stripe.checkout.Session.create(
+    checkout_params = dict(
         customer=customer_id,
         mode='subscription',
         line_items=[{'price': price_id, 'quantity': 1}],
@@ -229,6 +230,15 @@ def handle_create_checkout(event, user_id, log):
         metadata={'userId': user_id},
         allow_promotion_codes=True,
     )
+
+    # Apply coupon discount if provided (e.g., founding member pricing)
+    coupon_id = body.get('couponId')
+    if coupon_id:
+        checkout_params['discounts'] = [{'coupon': coupon_id}]
+        # Disable promotion codes when a specific coupon is applied
+        checkout_params['allow_promotion_codes'] = False
+
+    session = stripe.checkout.Session.create(**checkout_params)
 
     log.info('CheckoutSessionCreated', details={'priceId': price_id})
 
@@ -254,13 +264,13 @@ def handle_status(event, user_id):
             'planId': 'free',
             'status': 'active',
             'currentPeriodEnd': None,
-            'trialExpiresAt': None,
             'couponCode': None,
             'couponExpiresAt': None,
+            'billingInterval': None,
             'benefactorCount': 0,
-            'conversationsThisWeek': 0,
-            'weekResetDate': None,
-            'conversationsPerWeek': free_plan_def.get('conversationsPerWeek', 3),
+            'level1CompletionPercent': 0,
+            'level1CompletedAt': None,
+            'totalQuestionsCompleted': 0,
             'planLimits': free_plan_def,
             'freePlanLimits': free_plan_def,
         }, event)
@@ -272,13 +282,13 @@ def handle_status(event, user_id):
         'planId': plan_id,
         'status': item.get('status', 'active'),
         'currentPeriodEnd': item.get('currentPeriodEnd'),
-        'trialExpiresAt': item.get('trialExpiresAt'),
         'couponCode': item.get('couponCode'),
         'couponExpiresAt': item.get('couponExpiresAt'),
+        'billingInterval': item.get('billingInterval'),
         'benefactorCount': int(item.get('benefactorCount', 0)),
-        'conversationsThisWeek': int(item.get('conversationsThisWeek', 0)),
-        'weekResetDate': item.get('weekResetDate'),
-        'conversationsPerWeek': plan_def.get('conversationsPerWeek', 3),
+        'level1CompletionPercent': int(item.get('level1CompletionPercent', 0)),
+        'level1CompletedAt': item.get('level1CompletedAt'),
+        'totalQuestionsCompleted': int(item.get('totalQuestionsCompleted', 0)),
         'planLimits': plan_def,
         'freePlanLimits': free_plan_def,
     }, event)
@@ -422,11 +432,30 @@ def handle_apply_coupon(event, user_id, log):
 # ===================================================================
 
 def handle_get_plans(event):
-    """Return plan definitions for the public pricing page."""
+    """Return plan definitions and founding member availability for the public pricing page."""
     _load_all_plans()
 
     plans = {}
     for plan_id in ('free', 'premium'):
         plans[plan_id] = _get_plan_definition(plan_id)
 
-    return cors_response(200, {'plans': plans}, event)
+    # Check founding member coupon availability
+    founding_member_available = False
+    founding_member_slots_remaining = 0
+    premium_def = plans.get('premium', {})
+    founding_code = premium_def.get('foundingMemberCouponCode')
+
+    if founding_code:
+        coupon = _get_coupon(founding_code)
+        if coupon:
+            max_r = coupon.get('maxRedemptions', 0)
+            cur_r = coupon.get('currentRedemptions', 0)
+            if max_r > 0 and cur_r < max_r:
+                founding_member_available = True
+                founding_member_slots_remaining = max_r - cur_r
+
+    return cors_response(200, {
+        'plans': plans,
+        'foundingMemberAvailable': founding_member_available,
+        'foundingMemberSlotsRemaining': founding_member_slots_remaining,
+    }, event)

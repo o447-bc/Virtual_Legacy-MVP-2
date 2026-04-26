@@ -2,6 +2,7 @@ import { buildApiUrl, API_CONFIG } from '@/config/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 export interface PlanLimits {
+  maxLevel?: number;
   allowedQuestionCategories: string[];
   maxBenefactors: number;
   accessConditionTypes: string[];
@@ -10,23 +11,24 @@ export interface PlanLimits {
   annualPriceDisplay?: string;
   annualMonthlyEquivalentDisplay?: string;
   annualSavingsPercent?: number;
-  previewQuestions?: string[];
-  conversationsPerWeek?: number;
+  foundingMemberPrice?: number;
+  foundingMemberCouponCode?: string;
+  totalLevel1Questions?: number;
 }
 
 export interface SubscriptionStatus {
   planId: 'free' | 'premium';
   status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'comped' | 'expired';
   currentPeriodEnd: string | null;
-  trialExpiresAt: string | null;
   couponCode: string | null;
   couponExpiresAt: string | null;
+  billingInterval: 'monthly' | 'annual' | null;
   benefactorCount: number;
+  level1CompletionPercent: number;
+  level1CompletedAt: string | null;
+  totalQuestionsCompleted: number;
   planLimits: PlanLimits;
   freePlanLimits: PlanLimits;
-  conversationsThisWeek: number;
-  weekResetDate: string | null;
-  conversationsPerWeek: number;
 }
 
 export interface CouponResult {
@@ -40,6 +42,7 @@ export interface CouponResult {
 
 export interface PlanDefinition {
   planId: string;
+  maxLevel?: number;
   allowedQuestionCategories: string[];
   maxBenefactors: number;
   accessConditionTypes: string[];
@@ -48,6 +51,8 @@ export interface PlanDefinition {
   annualPriceDisplay?: string;
   annualMonthlyEquivalentDisplay?: string;
   annualSavingsPercent?: number;
+  foundingMemberPrice?: number;
+  foundingMemberCouponCode?: string;
 }
 
 /**
@@ -85,7 +90,10 @@ export const getSubscriptionStatus = async (): Promise<SubscriptionStatus> => {
 /**
  * Create a Stripe Checkout Session for subscribing to a plan.
  */
-export const createCheckoutSession = async (priceId: string): Promise<{ sessionUrl: string }> => {
+export const createCheckoutSession = async (
+  priceId: string,
+  couponId?: string,
+): Promise<{ sessionUrl: string }> => {
   try {
     const authSession = await fetchAuthSession();
     const idToken = authSession.tokens?.idToken?.toString();
@@ -94,13 +102,18 @@ export const createCheckoutSession = async (priceId: string): Promise<{ sessionU
       throw new Error('No authentication token available. Please log in again.');
     }
 
+    const body: Record<string, string> = { priceId };
+    if (couponId) {
+      body.couponId = couponId;
+    }
+
     const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.BILLING_CREATE_CHECKOUT), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ priceId }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -183,7 +196,11 @@ export const applyCoupon = async (code: string): Promise<CouponResult> => {
 /**
  * Get public plan definitions (no auth required).
  */
-export const getPublicPlans = async (): Promise<{ plans: Record<string, PlanDefinition> }> => {
+export const getPublicPlans = async (): Promise<{
+  plans: Record<string, PlanDefinition>;
+  foundingMemberAvailable: boolean;
+  foundingMemberSlotsRemaining: number;
+}> => {
   try {
     const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.BILLING_PLANS), {
       method: 'GET',

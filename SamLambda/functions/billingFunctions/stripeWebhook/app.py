@@ -51,10 +51,24 @@ _ssm_cache: dict = {}
 
 # ---------------------------------------------------------------------------
 # Price-to-plan mapping (Stripe Price IDs → internal plan IDs)
+# TODO: Replace these Price IDs after creating new $14.99/$149 products in
+#       Stripe Dashboard. Also update FrontEndCode/.env with the new IDs.
 # ---------------------------------------------------------------------------
 PRICE_PLAN_MAP = {
-    'price_1TL03V6hMyNf0PnbOaSd399o': 'premium',  # Premium Monthly
-    'price_1TL06w6hMyNf0PnbCgehYyZB': 'premium',   # Premium Annual
+    # V2 pricing ($14.99/month, $149/year)
+    'price_1TQRZB6hMyNf0PnbX55g9YZy': 'premium',  # Premium Monthly $14.99
+    'price_1TQRZU6hMyNf0PnbmD3aQGbL': 'premium',  # Premium Annual $149
+    # V1 pricing (kept for existing subscribers until they cancel/migrate)
+    'price_1TL03V6hMyNf0PnbOaSd399o': 'premium',   # Legacy Monthly $9.99
+    'price_1TL06w6hMyNf0PnbCgehYyZB': 'premium',   # Legacy Annual $79
+}
+
+# Price ID → billing interval (monthly or annual)
+PRICE_INTERVAL_MAP = {
+    'price_1TQRZB6hMyNf0PnbX55g9YZy': 'monthly',
+    'price_1TQRZU6hMyNf0PnbmD3aQGbL': 'annual',
+    'price_1TL03V6hMyNf0PnbOaSd399o': 'monthly',
+    'price_1TL06w6hMyNf0PnbCgehYyZB': 'annual',
 }
 
 
@@ -194,6 +208,7 @@ def _handle_checkout_completed(stripe_event, api_event):
 
     # Retrieve subscription details from Stripe
     plan_id = 'premium'
+    billing_interval = None
     current_period_end = None
     if subscription_id:
         try:
@@ -201,39 +216,49 @@ def _handle_checkout_completed(stripe_event, api_event):
             current_period_end = datetime.fromtimestamp(
                 sub.current_period_end, tz=timezone.utc
             ).isoformat()
-            # Determine plan from price ID
+            # Determine plan and billing interval from price ID
             if hasattr(sub, 'items') and sub.items and sub.items.data:
                 price_id = sub.items.data[0].price.id if sub.items.data[0].price else ''
                 plan_id = PRICE_PLAN_MAP.get(price_id, 'premium')
+                billing_interval = PRICE_INTERVAL_MAP.get(price_id)
         except Exception as exc:
             logger.error('[WEBHOOK] Error retrieving subscription %s: %s', subscription_id, exc)
 
     now_iso = datetime.now(timezone.utc).isoformat()
     table = _dynamodb.Table(_TABLE_NAME)
 
-    # Use UpdateExpression to preserve benefactorCount from existing record
+    # Use UpdateExpression to preserve benefactorCount and Level 1 tracking fields
+    update_expr = (
+        'SET planId = :plan, #st = :status, '
+        'stripeCustomerId = :cid, stripeSubscriptionId = :sid, '
+        'currentPeriodEnd = :cpe, updatedAt = :now, '
+        'createdAt = if_not_exists(createdAt, :now), '
+        'benefactorCount = if_not_exists(benefactorCount, :zero)'
+    )
+    expr_values = {
+        ':plan': plan_id,
+        ':status': 'active',
+        ':cid': customer_id,
+        ':sid': subscription_id,
+        ':cpe': current_period_end,
+        ':now': now_iso,
+        ':zero': 0,
+    }
+
+    if billing_interval:
+        update_expr += ', billingInterval = :bi'
+        expr_values[':bi'] = billing_interval
+
+    # Remove trial fields — no longer used in V2 pricing model
+    update_expr += ' REMOVE trialExpiresAt'
+
     table.update_item(
         Key={'userId': user_id},
-        UpdateExpression=(
-            'SET planId = :plan, #st = :status, '
-            'stripeCustomerId = :cid, stripeSubscriptionId = :sid, '
-            'currentPeriodEnd = :cpe, updatedAt = :now, '
-            'createdAt = if_not_exists(createdAt, :now), '
-            'benefactorCount = if_not_exists(benefactorCount, :zero) '
-            'REMOVE trialExpiresAt'
-        ),
+        UpdateExpression=update_expr,
         ExpressionAttributeNames={
             '#st': 'status',
         },
-        ExpressionAttributeValues={
-            ':plan': plan_id,
-            ':status': 'active',
-            ':cid': customer_id,
-            ':sid': subscription_id,
-            ':cpe': current_period_end,
-            ':now': now_iso,
-            ':zero': 0,
-        },
+        ExpressionAttributeValues=expr_values,
     )
 
     # --- Check for Glacier content and trigger reactivation restore (Req 3.6) ---

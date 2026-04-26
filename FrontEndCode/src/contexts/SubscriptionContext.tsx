@@ -6,58 +6,62 @@ import { getSubscriptionStatus, type PlanLimits } from '@/services/billingServic
 interface SubscriptionState {
   planId: 'free' | 'premium';
   status: string;
-  trialExpiresAt: string | null;
-  trialDaysRemaining: number | null;
   couponCode: string | null;
+  couponExpiresAt: string | null;
   benefactorCount: number;
+  billingInterval: 'monthly' | 'annual' | null;
+  level1CompletionPercent: number;
+  level1CompletedAt: string | null;
+  totalQuestionsCompleted: number;
   planLimits: PlanLimits;
   freePlanLimits: PlanLimits;
-  previewQuestions: string[];
-  conversationsThisWeek: number;
-  weekResetDate: string | null;
-  conversationsPerWeek: number;
   isLoading: boolean;
   isPremium: boolean;
   refetch: () => void;
+  // Deprecated V1 fields — kept for backward compat until Dashboard/Header/UserMenu are updated
+  trialDaysRemaining: number | null;
+  previewQuestions: string[];
+  conversationsThisWeek: number;
+  conversationsPerWeek: number;
 }
 
 const FREE_PLAN_LIMITS: PlanLimits = {
-  allowedQuestionCategories: ['life_story_reflections_L1'],
-  maxBenefactors: 2,
+  maxLevel: 1,
+  allowedQuestionCategories: ['life_story_reflections'],
+  maxBenefactors: 1,
   accessConditionTypes: ['immediate'],
   features: ['basic'],
-  previewQuestions: [],
 };
 
 const DEFAULT_STATE: Omit<SubscriptionState, 'isLoading' | 'refetch'> = {
   planId: 'free',
   status: 'active',
-  trialExpiresAt: null,
-  trialDaysRemaining: null,
   couponCode: null,
+  couponExpiresAt: null,
   benefactorCount: 0,
+  billingInterval: null,
+  level1CompletionPercent: 0,
+  level1CompletedAt: null,
+  totalQuestionsCompleted: 0,
   planLimits: FREE_PLAN_LIMITS,
   freePlanLimits: FREE_PLAN_LIMITS,
+  isPremium: false,
+  // Deprecated V1 fields
+  trialDaysRemaining: null,
   previewQuestions: [],
   conversationsThisWeek: 0,
-  weekResetDate: null,
-  conversationsPerWeek: 3,
-  isPremium: false,
+  conversationsPerWeek: 0,
 };
 
 const SubscriptionContext = createContext<SubscriptionState | undefined>(undefined);
 
-export function computeTrialDaysRemaining(trialExpiresAt: string | null): number | null {
-  if (!trialExpiresAt) return null;
-  const diff = new Date(trialExpiresAt).getTime() - Date.now();
-  if (diff <= 0) return 0;
-  return Math.ceil(diff / 86400000);
-}
-
-export function computeIsPremium(status: string, trialExpiresAt: string | null): boolean {
+export function computeIsPremium(
+  status: string,
+  couponExpiresAt: string | null,
+): boolean {
   if (status === 'active' || status === 'comped') return true;
-  if (status === 'trialing' && trialExpiresAt) {
-    return new Date(trialExpiresAt).getTime() > Date.now();
+  if (status === 'trialing' && couponExpiresAt) {
+    return new Date(couponExpiresAt).getTime() > Date.now();
   }
   return false;
 }
@@ -83,25 +87,28 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       };
     }
 
-    const trialDaysRemaining = computeTrialDaysRemaining(data.trialExpiresAt);
-    const isPremium = computeIsPremium(data.status, data.trialExpiresAt);
+    const isPremium = computeIsPremium(data.status, data.couponExpiresAt ?? null);
 
     return {
       planId: data.planId,
       status: data.status,
-      trialExpiresAt: data.trialExpiresAt,
-      trialDaysRemaining,
       couponCode: data.couponCode,
+      couponExpiresAt: data.couponExpiresAt ?? null,
       benefactorCount: data.benefactorCount,
+      billingInterval: data.billingInterval ?? null,
+      level1CompletionPercent: data.level1CompletionPercent ?? 0,
+      level1CompletedAt: data.level1CompletedAt ?? null,
+      totalQuestionsCompleted: data.totalQuestionsCompleted ?? 0,
       planLimits: data.planLimits,
       freePlanLimits: data.freePlanLimits,
-      previewQuestions: data.planLimits?.previewQuestions ?? [],
-      conversationsThisWeek: data.conversationsThisWeek ?? 0,
-      weekResetDate: data.weekResetDate ?? null,
-      conversationsPerWeek: data.conversationsPerWeek ?? data.planLimits?.conversationsPerWeek ?? 3,
       isLoading: false,
       isPremium,
       refetch: () => refetch(),
+      // Deprecated V1 fields — will be removed when Dashboard/Header/UserMenu are updated
+      trialDaysRemaining: null,
+      previewQuestions: [],
+      conversationsThisWeek: 0,
+      conversationsPerWeek: 0,
     };
   }, [isAuthenticated, data, isLoading, refetch]);
 

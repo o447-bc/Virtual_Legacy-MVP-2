@@ -55,9 +55,9 @@ def lambda_handler(event, context):
 
     table = _dynamodb.Table(_TABLE_NAME)
 
-    # Find users whose trial expired 3-4 days ago
+    # --- Part 1: Trial-expired win-back (existing logic) ---
     target_users = _scan_winback_cohort(table, now)
-    logger.info('[WINBACK] Found %d users in win-back window', len(target_users))
+    logger.info('[WINBACK] Found %d users in trial win-back window', len(target_users))
 
     sent = 0
     failed = 0
@@ -67,13 +67,31 @@ def lambda_handler(event, context):
             sent += 1
         except Exception as exc:
             logger.error(
-                '[WINBACK] Failed to process userId=%s: %s',
+                '[WINBACK] Failed to process trial userId=%s: %s',
                 user.get('userId'), exc,
             )
             failed += 1
 
-    logger.info('[WINBACK] Completed: %d sent, %d failed', sent, failed)
-    return {'sent': sent, 'failed': failed}
+    # --- Part 2: Level 1 completer re-engagement (V2 pricing) ---
+    l1_users = _scan_level1_completers(table, now)
+    logger.info('[WINBACK] Found %d Level 1 completers for re-engagement', len(l1_users))
+
+    l1_sent = 0
+    l1_failed = 0
+    for user in l1_users:
+        try:
+            _send_level1_reengagement(user, table, now)
+            l1_sent += 1
+        except Exception as exc:
+            logger.error(
+                '[WINBACK] Failed to send L1 re-engagement for userId=%s: %s',
+                user.get('userId'), exc,
+            )
+            l1_failed += 1
+
+    logger.info('[WINBACK] Completed: trial=%d sent/%d failed, L1=%d sent/%d failed',
+                sent, failed, l1_sent, l1_failed)
+    return {'sent': sent + l1_sent, 'failed': failed + l1_failed}
 
 
 def _scan_winback_cohort(table, now: datetime) -> list[dict]:
@@ -200,3 +218,100 @@ def _send_winback_email(to_email: str, coupon_code: str, pricing_url: str) -> No
             },
         },
     )
+
+
+# ===================================================================
+# Level 1 completer re-engagement (V2 pricing model)
+# ===================================================================
+
+def _scan_level1_completers(table, now: datetime) -> list[dict]:
+    """Scan for free users who completed Level 1 more than 7 days ago
+    and haven't received a re-engagement email in the last 7 days."""
+    seven_days_ago = (now - timedelta(days=7)).isoformat()
+
+    users: list[dict] = []
+    params = {
+        'FilterExpression': (
+            Attr('planId').eq('free')
+            & Attr('level1CompletedAt').exists()
+            & Attr('level1CompletedAt').lt(seven_days_ago)
+            & (
+                Attr('lastReengagementEmailAt').not_exists()
+                | Attr('lastReengagementEmailAt').lt(seven_days_ago)
+            )
+        ),
+    }
+
+    while True:
+        resp = table.scan(**params)
+        users.extend(resp.get('Items', []))
+        last_key = resp.get('LastEvaluatedKey')
+        if not last_key:
+            break
+        params['ExclusiveStartKey'] = last_key
+
+    return users
+
+
+def _send_level1_reengagement(user: dict, table, now: datetime) -> None:
+    """Send re-engagement email to a Level 1 completer and update timestamp."""
+    user_id = user['userId']
+    user_email = user.get('email', '')
+
+    if not user_email:
+        logger.warning('[WINBACK] No email for L1 completer userId=%s, skipping', user_id)
+        return
+
+    pricing_url = f'{_FRONTEND_URL}/pricing'
+    subject = 'Your stories are preserved. Your family is waiting for the deeper ones.'
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+        <h2>Your legacy is off to a beautiful start</h2>
+        <p>You've completed Level 1 and recorded stories about your childhood,
+        family, school days, and early friendships. Those memories are safe and
+        preserved.</p>
+        <p>But the deeper questions are waiting — your proudest moments, your
+        hardest times, and the messages you want your loved ones to hear.</p>
+        <p>
+            <a href="{pricing_url}" style="display: inline-block; padding: 12px 24px;
+               background-color: #6B46C1; color: white; text-decoration: none;
+               border-radius: 6px;">
+                Continue Your Legacy
+            </a>
+        </p>
+        <p style="font-size: 12px; color: #888;">
+            If you no longer wish to receive these emails,
+            <a href="{_FRONTEND_URL}/settings?unsubscribe=reengagement">unsubscribe here</a>.
+        </p>
+    </body>
+    </html>
+    """
+    text_body = (
+        "Your legacy is off to a beautiful start. "
+        "You've completed Level 1 and recorded stories about your childhood, "
+        "family, school days, and early friendships. "
+        "But the deeper questions are waiting. "
+        f"Continue your legacy: {pricing_url}\n\n"
+        f"Unsubscribe: {_FRONTEND_URL}/settings?unsubscribe=reengagement"
+    )
+
+    _ses.send_email(
+        Source=_SENDER_EMAIL,
+        Destination={'ToAddresses': [user_email]},
+        Message={
+            'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+            'Body': {
+                'Html': {'Data': html_body, 'Charset': 'UTF-8'},
+                'Text': {'Data': text_body, 'Charset': 'UTF-8'},
+            },
+        },
+    )
+
+    # Update lastReengagementEmailAt to prevent duplicate sends
+    table.update_item(
+        Key={'userId': user_id},
+        UpdateExpression='SET lastReengagementEmailAt = :now, updatedAt = :now',
+        ExpressionAttributeValues={':now': now.isoformat()},
+    )
+    logger.info('[WINBACK] L1 re-engagement email sent to userId=%s', user_id)

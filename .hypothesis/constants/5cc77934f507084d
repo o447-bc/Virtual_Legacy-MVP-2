@@ -1,0 +1,4 @@
+# file: /Users/Oliver/dev/Virtual_Legacy-MVP-2/SamLambda/functions/adminFunctions/adminSettings/seed.py
+# hypothesis_version: 6.151.12
+
+['0', '0.7', '1024', '12', '120', '180', '20', '2048', '30', '30000', '300000', '365', '60', '72', '730', '86400', 'AI & Models', 'ALLOWED_ORIGIN', 'APP_BASE_URL', 'Application Base URL', 'Assessments', 'BEDROCK_MAX_TOKENS', 'BEDROCK_TEMPERATURE', 'CORS Allowed Origin', 'Code', 'Conversations', 'Data Retention', 'Error', 'FRONTEND_URL', 'Joanna', 'MAX_TRANSCRIPT_SIZE', 'POLLY_ENGINE', 'POLLY_VOICE_ID', 'Parameter', 'Polly Engine', 'Polly Voice ID', 'SENDER_EMAIL', 'SUMMARIZE_MAX_TOKENS', 'Security', 'SystemSettingsDB', 'Value', 'Video & Media', '__main__', 'boolean', 'description', 'disabled', 'dynamodb', 'false', 'float', 'integer', 'label', 'model', 'neural', 'noreply@soulreel.net', 'section', 'seed-script', 'settingKey', 'ssm', 'ssm_path', 'string', 'text', 'true', 'updatedAt', 'updatedBy', 'value', 'valueType']

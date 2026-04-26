@@ -7,50 +7,16 @@ to verify a user's subscription tier before allowing operations.
 Design principle: FAIL-OPEN on all DynamoDB/SSM errors — never block users
 due to billing infrastructure issues. Log the error and allow access.
 
-SSM plan definition updates (run via CLI or AWS Console):
+Pricing model (V2 — April 2026):
+  - Free: Complete Level 1 at full quality, 1 benefactor, immediate access only
+  - Premium: $14.99/month or $149/year, all levels, unlimited benefactors
 
-  Free plan — includes previewQuestions and conversationsPerWeek:
-  (Replace placeholder question IDs with real IDs from allQuestionDB at deploy time)
-
-  aws ssm put-parameter --name "/soulreel/plans/free" --type String --overwrite --value '{
-    "planId": "free",
-    "allowedQuestionCategories": ["life_story_reflections_L1"],
-    "maxBenefactors": 2,
-    "accessConditionTypes": ["immediate"],
-    "features": ["basic"],
-    "previewQuestions": [
-      "life_events-milestones-L1-Q1",
-      "psych_values_emotions-core-L1-Q1"
-    ],
-    "conversationsPerWeek": 3
-  }'
-
-  Premium plan — includes conversationsPerWeek:
-
-  aws ssm put-parameter --name "/soulreel/plans/premium" --type String --overwrite --value '{
-    "planId": "premium",
-    "allowedQuestionCategories": ["life_story_reflections", "life_events", "psych_values_emotions"],
-    "maxBenefactors": -1,
-    "accessConditionTypes": ["immediate", "time_delayed", "inactivity_trigger", "manual_release"],
-    "features": ["basic", "dead_mans_switch", "pdf_export"],
-    "conversationsPerWeek": -1
-  }'
-
-  COMEBACK20 coupon (re-engagement for returning pricing page visitors):
-  Also create a matching Stripe Coupon in the Stripe Dashboard:
-    ID: COMEBACK20, 20% off, duration: repeating, duration_in_months: 3
-
-  aws ssm put-parameter --name "/soulreel/coupons/COMEBACK20" --type String --value '{
-    "code": "COMEBACK20",
-    "type": "percentage",
-    "percentOff": 20,
-    "durationMonths": 3,
-    "stripeCouponId": "COMEBACK20",
-    "maxRedemptions": 0,
-    "currentRedemptions": 0,
-    "expiresAt": null,
-    "createdBy": "system-config"
-  }'
+SSM plan definitions are set by scripts/deploy_ssm_params_v2.sh.
+Key fields:
+  - maxLevel: highest question level allowed (1 for free, 10 for premium)
+  - allowedQuestionCategories: list of allowed category prefixes
+  - maxBenefactors: -1 = unlimited
+  - accessConditionTypes: list of allowed access condition types
 """
 import os
 import json
@@ -68,7 +34,6 @@ _dynamodb = boto3.resource('dynamodb')
 _ssm = boto3.client('ssm')
 
 _TABLE_NAME = os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB')
-_QUESTION_STATUS_TABLE = os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB')
 
 # ---------------------------------------------------------------------------
 # Module-level SSM cache (survives warm Lambda invocations)
@@ -84,7 +49,6 @@ _FREE_PLAN_DEFAULT = {
     'planId': 'free',
     'status': 'active',
     'benefactorCount': 0,
-    'trialExpiresAt': None,
 }
 
 
@@ -117,8 +81,9 @@ def _get_plan_definition(plan_id: str) -> dict:
     # Fallback: if SSM failed or plan_id is unknown, return a safe free default
     return {
         'planId': 'free',
-        'allowedQuestionCategories': ['life_story_reflections_L1'],
-        'maxBenefactors': 2,
+        'maxLevel': 1,
+        'allowedQuestionCategories': ['life_story_reflections'],
+        'maxBenefactors': 1,
         'accessConditionTypes': ['immediate'],
         'features': ['basic'],
     }
@@ -195,32 +160,20 @@ def is_premium_active(subscription_record: dict) -> bool:
     status = subscription_record.get('status')
     if status in ('active', 'comped'):
         return True
-    if status == 'trialing' and is_trial_active(subscription_record):
-        return True
+    if status == 'trialing':
+        # Backward compat: existing trial users with trialExpiresAt
+        if is_trial_active(subscription_record):
+            return True
+        # Coupon-based trials: check couponExpiresAt
+        coupon_expires = subscription_record.get('couponExpiresAt')
+        if coupon_expires:
+            try:
+                expiry = datetime.fromisoformat(coupon_expires.replace('Z', '+00:00'))
+                if expiry > datetime.now(timezone.utc):
+                    return True
+            except (ValueError, AttributeError):
+                pass
     return False
-
-
-# ===================================================================
-# Preview-question helpers
-# ===================================================================
-
-def _has_completed_preview(user_id: str, question_id: str) -> bool:
-    """
-    Check whether *user_id* has already completed the preview for *question_id*.
-
-    Queries ``userQuestionStatusDB`` — if an item exists the preview is done.
-    Fail-open: returns False on any error (allows the preview attempt).
-    """
-    try:
-        table = _dynamodb.Table(_QUESTION_STATUS_TABLE)
-        resp = table.get_item(Key={'userId': user_id, 'questionId': question_id})
-        return 'Item' in resp
-    except Exception as exc:
-        logger.error(
-            '[PLAN_CHECK] Error checking preview completion for %s / %s: %s',
-            user_id, question_id, exc,
-        )
-        return False
 
 
 # ===================================================================
@@ -230,6 +183,10 @@ def _has_completed_preview(user_id: str, question_id: str) -> bool:
 def check_question_category_access(user_id: str, question_id: str) -> dict:
     """
     Verify whether *user_id* may start a conversation for *question_id*.
+
+    Checks two things for non-premium users:
+      1. Category: is the question's category in allowedQuestionCategories?
+      2. Level: is the question's level <= the plan's maxLevel?
 
     Returns ``{'allowed': True}`` or
     ``{'allowed': False, 'reason': ..., 'message': ...}``.
@@ -245,39 +202,13 @@ def check_question_category_access(user_id: str, question_id: str) -> dict:
 
         plan_def = _get_plan_definition(record.get('planId', 'free'))
         allowed_categories = plan_def.get('allowedQuestionCategories', [])
+        max_level = plan_def.get('maxLevel', 1)
 
         category, level = _parse_question_id(question_id)
 
-        # Check 1: is the full category allowed (no level suffix)?
-        if category in allowed_categories:
-            return {'allowed': True, 'reason': None, 'message': None}
-
-        # Check 2: is a level-restricted variant allowed?
-        deny_response = None
-        for entry in allowed_categories:
-            if entry.startswith(category + '_L'):
-                # e.g. 'life_story_reflections_L1'
-                try:
-                    allowed_level = int(entry.split('_L')[-1])
-                except (ValueError, IndexError):
-                    continue
-                if level <= allowed_level:
-                    return {'allowed': True, 'reason': None, 'message': None}
-                else:
-                    # Level too high
-                    deny_response = {
-                        'allowed': False,
-                        'reason': 'question_level',
-                        'message': (
-                            "You've explored the first chapter. "
-                            "Upgrade to Premium to go deeper into your life story."
-                        ),
-                    }
-                    break
-
-        # Default deny if no level-restricted match was found at all
-        if deny_response is None:
-            deny_response = {
+        # Check 1: is the category allowed?
+        if category not in allowed_categories:
+            return {
                 'allowed': False,
                 'reason': 'question_category',
                 'message': (
@@ -286,13 +217,18 @@ def check_question_category_access(user_id: str, question_id: str) -> dict:
                 ),
             }
 
-        # Preview check: allow one-time preview before denying
-        preview_questions = plan_def.get('previewQuestions', [])
-        if question_id in preview_questions:
-            if not _has_completed_preview(user_id, question_id):
-                return {'allowed': True, 'isPreview': True, 'reason': None, 'message': None}
+        # Check 2: is the level within the plan's maxLevel?
+        if level > max_level:
+            return {
+                'allowed': False,
+                'reason': 'question_level',
+                'message': (
+                    "You've explored the first chapter. "
+                    "Upgrade to Premium to go deeper into your life story."
+                ),
+            }
 
-        return deny_response
+        return {'allowed': True, 'reason': None, 'message': None}
 
     except Exception as exc:
         logger.error('[PLAN_CHECK] Error in check_question_category_access for %s: %s', user_id, exc)
@@ -312,7 +248,7 @@ def check_benefactor_limit(user_id: str) -> dict:
         record = get_user_plan(user_id)
         plan_def = _get_plan_definition(record.get('planId', 'free'))
 
-        max_benefactors = plan_def.get('maxBenefactors', 2)
+        max_benefactors = plan_def.get('maxBenefactors', 1)
         current_count = int(record.get('benefactorCount', 0))
 
         # -1 means unlimited
@@ -328,8 +264,7 @@ def check_benefactor_limit(user_id: str) -> dict:
             return {
                 'allowed': False,
                 'message': (
-                    f"You've chosen {max_benefactors} people to receive your legacy. "
-                    "Upgrade to share your story with everyone who matters."
+                    "Upgrade to Premium to share your story with everyone who matters."
                 ),
                 'currentCount': current_count,
                 'limit': max_benefactors,
@@ -350,3 +285,38 @@ def check_benefactor_limit(user_id: str) -> dict:
             'currentCount': 0,
             'limit': -1,
         }
+
+
+def check_access_condition_type(user_id: str, condition_type: str) -> dict:
+    """
+    Verify whether *user_id*'s plan allows the given access condition type.
+
+    Free users can only use 'immediate'. Premium users can use all types.
+
+    Fail-open: any internal error returns ``{'allowed': True}``.
+    """
+    try:
+        record = get_user_plan(user_id)
+
+        # Premium users have unrestricted access
+        if is_premium_active(record):
+            return {'allowed': True, 'reason': None, 'message': None}
+
+        plan_def = _get_plan_definition(record.get('planId', 'free'))
+        allowed_types = plan_def.get('accessConditionTypes', ['immediate'])
+
+        if condition_type not in allowed_types:
+            return {
+                'allowed': False,
+                'reason': 'access_condition_restricted',
+                'message': (
+                    "Upgrade to Premium to unlock time-delay, inactivity, "
+                    "and dead man's switch access conditions."
+                ),
+            }
+
+        return {'allowed': True, 'reason': None, 'message': None}
+
+    except Exception as exc:
+        logger.error('[PLAN_CHECK] Error in check_access_condition_type for %s: %s', user_id, exc)
+        return {'allowed': True, 'reason': None, 'message': None}

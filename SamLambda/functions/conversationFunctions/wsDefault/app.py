@@ -15,7 +15,7 @@ from storage import (save_transcript_to_s3, update_question_status,
 from transcribe import transcribe_audio
 from transcribe_streaming import transcribe_audio_streaming
 from transcribe_deepgram import transcribe_audio_deepgram
-from plan_check import check_question_category_access
+from plan_check import check_question_category_access, get_user_plan, is_premium_active, _parse_question_id, _get_plan_definition
 
 apigateway = None  # Initialized lazily in lambda_handler (endpoint URL comes from env at runtime)
 # Configure S3 client to use Signature Version 4 (required for KMS-encrypted objects)
@@ -27,39 +27,78 @@ S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 _dynamodb = boto3.resource('dynamodb')
 
 
-def _increment_weekly_conversation_count(user_id: str):
-    """Increment conversationsThisWeek, resetting if past weekResetDate.
+def _update_subscription_progress(user_id: str, question_id: str):
+    """Update Level 1 completion tracking and total questions completed.
 
-    Uses a conditional update to handle the week-boundary reset atomically,
-    avoiding race conditions when multiple conversations start simultaneously.
+    Called after every successful conversation completion. Only updates
+    Level 1 progress for free-plan users. Always increments totalQuestionsCompleted.
+
+    Fail-open: errors are logged but never block the conversation flow.
     """
-    table = _dynamodb.Table(os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB'))
-    now = datetime.now(timezone.utc)
-    # Monday of current ISO week
-    monday = (now - timedelta(days=now.weekday())).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    monday_iso = monday.isoformat()
-
     try:
-        # Attempt atomic increment for the current week
+        table = _dynamodb.Table(os.environ.get('TABLE_SUBSCRIPTIONS', 'UserSubscriptionsDB'))
+        now_iso = datetime.now(timezone.utc).isoformat()
+
+        # Always increment totalQuestionsCompleted (for all users)
         table.update_item(
             Key={'userId': user_id},
-            UpdateExpression='SET conversationsThisWeek = if_not_exists(conversationsThisWeek, :zero) + :one, updatedAt = :now',
-            ConditionExpression='attribute_not_exists(weekResetDate) OR weekResetDate >= :mon',
-            ExpressionAttributeValues={
-                ':one': 1, ':zero': 0, ':now': now.isoformat(), ':mon': monday_iso
-            },
+            UpdateExpression=(
+                'SET totalQuestionsCompleted = if_not_exists(totalQuestionsCompleted, :zero) + :one, '
+                'updatedAt = :now'
+            ),
+            ExpressionAttributeValues={':one': 1, ':zero': 0, ':now': now_iso},
         )
-    except table.meta.client.exceptions.ConditionalCheckFailedException:
-        # weekResetDate is from a previous week — reset counter
+
+        # Level 1 tracking only for free users
+        record = get_user_plan(user_id)
+        if is_premium_active(record):
+            return
+
+        category, level = _parse_question_id(question_id)
+        if level != 1:
+            return  # Not a Level 1 question
+
+        # Count completed L1 questions from userQuestionStatusDB
+        status_table = _dynamodb.Table(os.environ.get('TABLE_QUESTION_STATUS', 'userQuestionStatusDB'))
+        resp = status_table.query(
+            KeyConditionExpression=boto3.dynamodb.conditions.Key('userId').eq(user_id),
+        )
+        completed_items = resp.get('Items', [])
+
+        # Count how many completed questions are Level 1
+        l1_completed = 0
+        for item in completed_items:
+            qid = item.get('questionId', '')
+            _, q_level = _parse_question_id(qid)
+            if q_level == 1:
+                l1_completed += 1
+
+        # Get total L1 questions from plan definition
+        plan_def = _get_plan_definition('free')
+        total_l1 = plan_def.get('totalLevel1Questions', 20)
+
+        if total_l1 <= 0:
+            return
+
+        percent = min(100, int((l1_completed / total_l1) * 100))
+
+        update_expr = 'SET level1CompletionPercent = :pct, updatedAt = :now'
+        expr_values = {':pct': percent, ':now': now_iso}
+
+        if percent >= 100 and not record.get('level1CompletedAt'):
+            update_expr += ', level1CompletedAt = :completed'
+            expr_values[':completed'] = now_iso
+
         table.update_item(
             Key={'userId': user_id},
-            UpdateExpression='SET conversationsThisWeek = :one, weekResetDate = :mon, updatedAt = :now',
-            ExpressionAttributeValues={
-                ':one': 1, ':mon': monday_iso, ':now': now.isoformat()
-            },
+            UpdateExpression=update_expr,
+            ExpressionAttributeValues=expr_values,
         )
+        print(f"[PROGRESS] Updated L1 progress for {user_id}: {l1_completed}/{total_l1} = {percent}%")
+
+    except Exception as e:
+        print(f"[PROGRESS] Error updating subscription progress: {e}")
+        # Fail open — never block conversations
 
 def send_message(connection_id: str, message: dict):
     """Send message to WebSocket client"""
@@ -110,11 +149,8 @@ def handle_start_conversation(connection_id: str, user_id: str, body: dict, conf
     state = ConversationState(connection_id, user_id, question_id, question_text)
     set_conversation(connection_id, state)
 
-    # Track weekly conversation count (never block conversation on counter failure)
-    try:
-        _increment_weekly_conversation_count(user_id)
-    except Exception as e:
-        print(f"[START] Warning: failed to increment weekly conversation count: {e}")
+    # Note: weekly conversation counting removed in V2 pricing model
+    # Level 1 progress tracking happens in handle_end_conversation / completion paths
     
     # Send initial greeting
     greeting = question_text
@@ -233,6 +269,9 @@ def handle_user_response(connection_id: str, user_id: str, body: dict, config: d
                 'audioDetailedSummary': detailed_summary
             })
             print(f"[VIDEO MEMORY] Sent conversation_complete with audioDetailedSummary: {bool(detailed_summary)}")
+            
+            # Track subscription progress (Level 1 completion, total questions)
+            _update_subscription_progress(user_id, state.question_id)
             
             # Clean up
             remove_conversation(connection_id)
@@ -426,6 +465,9 @@ def handle_audio_response(connection_id: str, user_id: str, body: dict, config: 
             })
             print(f"[VIDEO MEMORY] Sent conversation_complete with audioDetailedSummary: {bool(detailed_summary)}")
             
+            # Track subscription progress (Level 1 completion, total questions)
+            _update_subscription_progress(user_id, state.question_id)
+            
             # Clean up
             remove_conversation(connection_id)
             return
@@ -571,6 +613,9 @@ def handle_end_conversation(connection_id: str, user_id: str):
             print(f"[VIDEO MEMORY] Sent conversation_ended with audioDetailedSummary: {bool(detailed_summary)}")
         except Exception as e:
             print(f"[END] Error saving transcript: {e}")
+        
+        # Track subscription progress (Level 1 completion, total questions)
+        _update_subscription_progress(user_id, state.question_id)
         
         remove_conversation(connection_id)
     else:
