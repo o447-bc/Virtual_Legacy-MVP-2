@@ -50,7 +50,6 @@ const PricingPage: React.FC = () => {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponMessage, setCouponMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [ctaLoading, setCtaLoading] = useState(false);
-  const [showComebackBanner, setShowComebackBanner] = useState(false);
 
   // For unauthenticated visitors, fetch public plans
   const [publicPlans, setPublicPlans] = useState<Record<string, PlanDefinition> | null>(null);
@@ -70,24 +69,6 @@ const PricingPage: React.FC = () => {
       .catch(() => {
         // Silently fail — pricing will show without dynamic data
       });
-  }, []);
-
-  // Re-engagement banner: track pricing page visits in localStorage
-  useEffect(() => {
-    try {
-      const prev = localStorage.getItem('sr_pricing_first_visit');
-      if (prev === null) {
-        localStorage.setItem('sr_pricing_first_visit', new Date().toISOString());
-      } else {
-        const firstVisit = new Date(prev);
-        const hoursSince = (Date.now() - firstVisit.getTime()) / (1000 * 60 * 60);
-        if (hoursSince >= 24) {
-          setShowComebackBanner(true);
-        }
-      }
-    } catch {
-      // Private browsing or localStorage unavailable — no banner
-    }
   }, []);
 
   // Derive plan limits from the right source
@@ -216,18 +197,6 @@ const PricingPage: React.FC = () => {
         </section>
 
         {/* Re-engagement Banner */}
-        {showComebackBanner && isFreePlan && !isTrialing && (
-          <div className="container mx-auto px-4 mb-6">
-            <div className="max-w-4xl mx-auto rounded-lg bg-amber-50 border border-amber-200 px-6 py-4 text-center">
-              <p className="text-amber-900 font-medium">
-                Welcome back! Use code{' '}
-                <span className="font-bold bg-amber-200 px-2 py-0.5 rounded text-amber-950">COMEBACK20</span>{' '}
-                for 20% off your first 3 months of Premium
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Billing Toggle */}
         <div className="flex justify-center mb-8">
           <div className="inline-flex rounded-lg bg-white border p-1 shadow-sm">
