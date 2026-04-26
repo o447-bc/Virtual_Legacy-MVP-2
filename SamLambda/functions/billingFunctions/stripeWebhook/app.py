@@ -57,7 +57,7 @@ _ssm_cache: dict = {}
 PRICE_PLAN_MAP = {
     # V2 pricing ($14.99/month, $149/year)
     'price_1TQRZB6hMyNf0PnbX55g9YZy': 'premium',  # Premium Monthly $14.99
-    'price_1TQRZU6hMyNf0PnbmD3aQGbL': 'premium',  # Premium Annual $149
+    'price_1TQY566hMyNf0PnbOZGav1ze': 'premium',  # Premium Annual $149
     # V1 pricing (kept for existing subscribers until they cancel/migrate)
     'price_1TL03V6hMyNf0PnbOaSd399o': 'premium',   # Legacy Monthly $9.99
     'price_1TL06w6hMyNf0PnbCgehYyZB': 'premium',   # Legacy Annual $79
@@ -66,7 +66,7 @@ PRICE_PLAN_MAP = {
 # Price ID → billing interval (monthly or annual)
 PRICE_INTERVAL_MAP = {
     'price_1TQRZB6hMyNf0PnbX55g9YZy': 'monthly',
-    'price_1TQRZU6hMyNf0PnbmD3aQGbL': 'annual',
+    'price_1TQY566hMyNf0PnbOZGav1ze': 'annual',
     'price_1TL03V6hMyNf0PnbOaSd399o': 'monthly',
     'price_1TL06w6hMyNf0PnbCgehYyZB': 'annual',
 }

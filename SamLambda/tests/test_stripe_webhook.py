@@ -229,7 +229,7 @@ class TestCheckoutAnnual:
         stripe_event = MockStripeEvent('checkout.session.completed', session)
 
         mock_stripe.Subscription.retrieve.return_value = MockSubscription(
-            price_id='price_1TQRZU6hMyNf0PnbmD3aQGbL',
+            price_id='price_1TQY566hMyNf0PnbOZGav1ze',
         )
 
         api_event = _make_webhook_event()
