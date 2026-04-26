@@ -67,7 +67,7 @@ export const UpgradePromptDialog: React.FC<UpgradePromptDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md overflow-hidden">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-legacy-navy">
             <Crown className="h-5 w-5 text-legacy-purple" />
@@ -91,43 +91,44 @@ export const UpgradePromptDialog: React.FC<UpgradePromptDialogProps> = ({
         )}
 
         {/* Price display */}
-        <div className="rounded-lg bg-gray-50 p-3 my-2 text-center space-y-1">
+        <div className="rounded-lg bg-gray-50 p-4 my-2 text-center space-y-1">
           <p className="text-lg font-bold text-legacy-navy">
             {annualEquivalent}
             <span className="text-sm font-normal text-gray-500">/mo with annual billing</span>
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-gray-500">
             {monthlyPrice}/mo billed monthly
           </p>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+        <DialogFooter className="flex flex-col gap-2 pt-2">
           <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRemindMeLater}
-            className="sm:order-1"
-          >
-            Remind Me Later
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onUpgrade}
-            className="sm:order-2"
-          >
-            <Crown className="h-4 w-4 mr-1" />
-            View Plans
-          </Button>
-          <Button
-            size="sm"
             onClick={handleSubscribeNow}
             disabled={checkoutLoading}
-            className="bg-legacy-purple hover:bg-legacy-purple/90 text-white sm:order-3"
+            className="w-full bg-legacy-purple hover:bg-legacy-purple/90 text-white"
           >
             {checkoutLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Subscribe Now
           </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onUpgrade}
+              className="flex-1"
+            >
+              <Crown className="h-4 w-4 mr-1" />
+              View Plans
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRemindMeLater}
+              className="flex-1 text-gray-500"
+            >
+              Maybe Later
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
