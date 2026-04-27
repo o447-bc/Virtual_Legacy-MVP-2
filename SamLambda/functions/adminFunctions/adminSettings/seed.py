@@ -173,7 +173,7 @@ SEED_SETTINGS = [
         'valueType': 'text',
         'section': 'Conversations',
         'label': 'Conversation System Prompt',
-        'description': 'System prompt used to guide the AI during conversations.',
+        'description': 'System prompt used to guide the AI during conversations. Available placeholders: {question} (replaced with the current question text), {theme_name} (replaced with the current theme name), {theme_description} (replaced with the per-theme prompt description).',
         'ssm_path': '/virtuallegacy/conversation/system-prompt',
     },
     {

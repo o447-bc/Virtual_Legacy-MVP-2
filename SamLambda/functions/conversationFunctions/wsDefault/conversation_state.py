@@ -55,6 +55,7 @@ class ConversationState:
         self.started_at = int(time.time())
         self.completed = False
         self.completion_reason = None
+        self.composed_prompt = ""
 
     @classmethod
     def from_dict(cls, data: dict) -> 'ConversationState':
@@ -73,6 +74,7 @@ class ConversationState:
         state.started_at = int(data.get('startedAt', 0))
         state.completed = bool(data.get('completed', False))
         state.completion_reason = data.get('completionReason')
+        state.composed_prompt = data.get('composedPrompt', '')
         return state
 
     def add_turn(self, user_text: str, ai_response: str, turn_score: float, reasoning: str):
@@ -110,7 +112,8 @@ class ConversationState:
             'turns': self.turns,
             'startedAt': self.started_at,
             'completed': self.completed,
-            'completionReason': self.completion_reason
+            'completionReason': self.completion_reason,
+            'composedPrompt': self.composed_prompt
         }
 
     def to_json(self) -> str:

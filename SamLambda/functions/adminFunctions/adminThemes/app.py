@@ -59,6 +59,15 @@ def lambda_handler(event, context):
         required_events = body.get('requiredLifeEvents', [])
         is_instanceable = body.get('isInstanceable', False)
         instance_placeholder = body.get('instancePlaceholder', '')
+        prompt_description = body.get('promptDescription')
+
+        # Validate promptDescription length if present
+        if prompt_description is not None and len(prompt_description) > 1000:
+            return {
+                'statusCode': 400,
+                'headers': cors_headers(event),
+                'body': json.dumps({'error': 'promptDescription must be 1000 characters or fewer'})
+            }
 
         # Validate life event keys
         invalid_keys = validate_life_event_keys(required_events)
@@ -97,6 +106,28 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': f'No questions found for type: {question_type}'})
             }
 
+        # Build dynamic UpdateExpression
+        update_parts = [
+            'requiredLifeEvents = :rle',
+            'isInstanceable = :inst',
+            'instancePlaceholder = :ph',
+            'lastModifiedBy = :by',
+            'lastModifiedAt = :at',
+        ]
+        expr_values = {
+            ':rle': required_events,
+            ':inst': is_instanceable,
+            ':ph': instance_placeholder,
+            ':by': admin_email,
+            ':at': now,
+        }
+
+        if prompt_description is not None:
+            update_parts.append('promptDescription = :pd')
+            expr_values[':pd'] = prompt_description
+
+        update_expression = 'SET ' + ', '.join(update_parts)
+
         # Update each question individually
         updated = 0
         for item in all_questions:
@@ -106,20 +137,8 @@ def lambda_handler(event, context):
                     'questionId': qid,
                     'questionType': question_type,
                 },
-                UpdateExpression=(
-                    'SET requiredLifeEvents = :rle, '
-                    'isInstanceable = :inst, '
-                    'instancePlaceholder = :ph, '
-                    'lastModifiedBy = :by, '
-                    'lastModifiedAt = :at'
-                ),
-                ExpressionAttributeValues={
-                    ':rle': required_events,
-                    ':inst': is_instanceable,
-                    ':ph': instance_placeholder,
-                    ':by': admin_email,
-                    ':at': now,
-                },
+                UpdateExpression=update_expression,
+                ExpressionAttributeValues=expr_values,
             )
             updated += 1
 

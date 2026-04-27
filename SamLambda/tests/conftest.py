@@ -11,6 +11,8 @@ _SAMLAMBDA_ROOT = os.path.dirname(os.path.dirname(__file__))
 # Directories that contain sibling-module imports
 _FUNCTION_DIRS = [
     os.path.join(_SAMLAMBDA_ROOT, 'functions', 'conversationFunctions', 'wsDefault'),
+    os.path.join(_SAMLAMBDA_ROOT, 'functions', 'adminFunctions', 'adminThemes'),
+    os.path.join(_SAMLAMBDA_ROOT, 'functions', 'shared', 'python'),
 ]
 
 for _d in _FUNCTION_DIRS:

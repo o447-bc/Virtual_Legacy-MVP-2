@@ -13,6 +13,7 @@ interface ThemeInfo {
   currentTags: string[];
   currentInstanceable: boolean;
   currentPlaceholder: string;
+  currentPromptDescription: string;
 }
 
 const ThemeSettings = () => {
@@ -22,6 +23,7 @@ const ThemeSettings = () => {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [editInstanceable, setEditInstanceable] = useState(false);
   const [editPlaceholder, setEditPlaceholder] = useState("");
+  const [editPromptDescription, setEditPromptDescription] = useState("");
   const [applying, setApplying] = useState(false);
 
   const loadThemes = async () => {
@@ -43,6 +45,7 @@ const ThemeSettings = () => {
           currentTags: first.requiredLifeEvents || [],
           currentInstanceable: first.isInstanceable || false,
           currentPlaceholder: first.instancePlaceholder || "",
+          currentPromptDescription: first.promptDescription || "",
         });
       }
       setThemes(result.sort((a, b) => a.questionType.localeCompare(b.questionType)));
@@ -60,6 +63,7 @@ const ThemeSettings = () => {
     setEditTags([...t.currentTags]);
     setEditInstanceable(t.currentInstanceable);
     setEditPlaceholder(t.currentPlaceholder);
+    setEditPromptDescription(t.currentPromptDescription);
   };
 
   const handleApply = async () => {
@@ -73,6 +77,7 @@ const ThemeSettings = () => {
         requiredLifeEvents: editTags,
         isInstanceable: editInstanceable,
         instancePlaceholder: editInstanceable ? editPlaceholder : "",
+        promptDescription: editPromptDescription,
       });
       toast.success(`Updated ${result.questionsUpdated} questions`);
       setEditingTheme(null);
@@ -112,6 +117,13 @@ const ThemeSettings = () => {
               Tags: {t.currentTags.length > 0 ? t.currentTags.join(", ") : "none"}
               {t.currentInstanceable && ` | Instanceable: ${t.currentPlaceholder}`}
             </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Prompt: {t.currentPromptDescription
+                ? (t.currentPromptDescription.length > 100
+                    ? t.currentPromptDescription.slice(0, 100) + "..."
+                    : t.currentPromptDescription)
+                : "No prompt description"}
+            </div>
 
             {editingTheme === t.questionType && (
               <div className="mt-4 pt-4 border-t space-y-4">
@@ -135,10 +147,26 @@ const ThemeSettings = () => {
                     {VALID_PLACEHOLDERS.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 )}
+                <div>
+                  <textarea
+                    aria-label="Prompt description"
+                    placeholder="Describe the theme context for the AI interviewer..."
+                    value={editPromptDescription}
+                    onChange={(e) => setEditPromptDescription(e.target.value)}
+                    className="w-full border rounded-md px-3 py-2 text-sm"
+                    rows={3}
+                  />
+                  <div className={`text-xs mt-1 ${editPromptDescription.length > 1000 ? "text-red-600" : "text-gray-500"}`}>
+                    {editPromptDescription.length}/1000
+                  </div>
+                  {editPromptDescription.length > 1000 && (
+                    <div className="text-xs text-red-600 mt-1">Prompt description must be 1000 characters or fewer</div>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleApply}
-                    disabled={applying}
+                    disabled={applying || editPromptDescription.length > 1000}
                     className="bg-legacy-purple hover:bg-legacy-navy"
                   >
                     {applying ? "Applying..." : `Apply to ${t.count} Questions`}

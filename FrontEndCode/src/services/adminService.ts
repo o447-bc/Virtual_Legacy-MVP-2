@@ -27,6 +27,7 @@ export interface QuestionRecord {
   requiredLifeEvents: string[];
   isInstanceable: boolean;
   instancePlaceholder: string;
+  promptDescription?: string;
   lastModifiedBy: string;
   lastModifiedAt: string;
 }
@@ -195,6 +196,7 @@ export async function applyThemeDefaults(
     requiredLifeEvents: string[];
     isInstanceable: boolean;
     instancePlaceholder: string;
+    promptDescription?: string;
   }
 ): Promise<{ message: string; questionsUpdated: number }> {
   const headers = await getAuthHeaders();

@@ -1416,6 +1416,7 @@ Resources:
           TABLE_QUESTION_PROGRESS: userQuestionLevelProgressDB
           CONVERSATION_STATE_TABLE: !Ref ConversationStateTable
           TABLE_SUBSCRIPTIONS: !Ref UserSubscriptionsTable
+          TABLE_ALL_QUESTIONS: allQuestionDB
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref WebSocketConnectionsTable
@@ -1504,6 +1505,12 @@ Resources:
                 - dynamodb:GetItem
                 - dynamodb:UpdateItem
               Resource: !GetAtt UserSubscriptionsTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource:
+                - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/allQuestionDB
         - Statement:
             - Effect: Allow
               Action:

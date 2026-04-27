@@ -27,6 +27,16 @@ S3_BUCKET = os.environ.get('S3_BUCKET', 'virtual-legacy')
 _dynamodb = boto3.resource('dynamodb')
 
 
+class SafeDict(dict):
+    """Dict subclass that preserves unrecognized format placeholders.
+
+    Used with str.format_map() to substitute known keys while leaving
+    unknown keys (like {question}) as literal placeholder text.
+    """
+    def __missing__(self, key):
+        return '{' + key + '}'
+
+
 def _update_subscription_progress(user_id: str, question_id: str):
     """Update Level 1 completion tracking and total questions completed.
 
@@ -147,6 +157,30 @@ def handle_start_conversation(connection_id: str, user_id: str, body: dict, conf
     
     # Create conversation state
     state = ConversationState(connection_id, user_id, question_id, question_text)
+
+    # Fetch theme metadata and compose theme-aware prompt
+    question_type = question_id.rsplit('-', 1)[0]
+    theme_name = ""
+    theme_description = ""
+    try:
+        all_questions_table = os.environ.get('TABLE_ALL_QUESTIONS', 'allQuestionDB')
+        aq_table = _dynamodb.Table(all_questions_table)
+        resp = aq_table.get_item(Key={'questionId': question_id, 'questionType': question_type})
+        item = resp.get('Item', {})
+        theme_name = item.get('themeName', '')
+        theme_description = item.get('promptDescription', '')
+    except Exception as e:
+        print(f"[START] Error fetching theme metadata: {e}")
+        # Fall back to empty strings — conversation proceeds with base prompt only
+
+    # Compose theme-aware prompt
+    escaped_name = theme_name.replace('{', '{{').replace('}', '}}')
+    escaped_desc = theme_description.replace('{', '{{').replace('}', '}}')
+    composed_prompt = config['system_prompt'].format_map(
+        SafeDict(theme_name=escaped_name, theme_description=escaped_desc)
+    )
+    state.composed_prompt = composed_prompt
+
     set_conversation(connection_id, state)
 
     # Note: weekly conversation counting removed in V2 pricing model
@@ -204,7 +238,7 @@ def handle_user_response(connection_id: str, user_id: str, body: dict, config: d
             state.question_text,
             state.turns,
             user_text,
-            config['system_prompt'],
+            state.composed_prompt if state.composed_prompt else config['system_prompt'],
             config['scoring_prompt'],
             config['llm_conversation_model'],
             config['llm_scoring_model']
@@ -394,7 +428,7 @@ def handle_audio_response(connection_id: str, user_id: str, body: dict, config: 
             state.question_text,
             state.turns,
             user_text,
-            config['system_prompt'],
+            state.composed_prompt if state.composed_prompt else config['system_prompt'],
             config['scoring_prompt'],
             config['llm_conversation_model'],
             config['llm_scoring_model']
